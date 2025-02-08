@@ -23,7 +23,7 @@ const LoginSignupPage = () => {
     setShowPassword(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     console.log('Form submitted:', { email, password, firstName, lastName, isSignUp });
   };
