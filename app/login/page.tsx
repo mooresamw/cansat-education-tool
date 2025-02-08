@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { FaFacebookF, FaLinkedinIn, FaGoogle } from 'react-icons/fa';
+import React, {useEffect, useState} from 'react';
+import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
+import { auth, db } from '@/lib/firebaseConfig'; // Import Firebase config
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useRouter } from "next/navigation";
+
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -10,8 +15,17 @@ const LoginSignupPage = () => {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [role, setRole] = useState('student'); // Default role
   const [showPassword, setShowPassword] = useState(false);
+  const [user, setUser] = useState();
+  const [rememberMe, setRememberMe] = useState();
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    if (storedUser) setUser(storedUser);
+  }, []);
 
   const toggleForm = () => {
     setIsSignUp(!isSignUp);
@@ -23,9 +37,64 @@ const LoginSignupPage = () => {
     setShowPassword(false);
   };
 
-  const handleSubmit = (e) => {
+  // Handle user sign up
+const handleSignUp = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Send user data to Flask server
+    const response = await fetch("http://localhost:8080/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.uid,
+        email,
+        name: `${firstName} ${lastName}`,
+        role,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to register user");
+
+    const data = await response.json();
+    console.log("User registered successfully:", data);
+
+    localStorage.setItem("user", JSON.stringify(data));
+    setUser(data);
+
+    // automatically send user to dashboard
+    router.push(`/dashboard/${role}`);
+
+  } catch (error) {
+    console.error("Error signing up:", error.message);
+  }
+};
+
+
+  // Handle user login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', { email, password, firstName, lastName, isSignUp });
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Fetch user role from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        console.log('User logged in successfully!');
+        // Redirect to dashboard
+        router.push(`/dashboard/${userData.role}`);
+      } else {
+        console.error('User not found in Firestore');
+      }
+    } catch (error) {
+      console.error('Error logging in:', error.message);
+    }
   };
 
   return (
@@ -49,7 +118,7 @@ const LoginSignupPage = () => {
             
             <p className="text-center text-gray-500 mb-6">or use your email account</p>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div className="relative">
                 <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -117,7 +186,7 @@ const LoginSignupPage = () => {
             
             <p className="text-center text-gray-500 mb-6">or use your email for registration</p>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSignUp} className="space-y-6">
               {/* First Name */}
               <div className="relative">
                 <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
