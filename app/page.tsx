@@ -1,7 +1,12 @@
+'use client';
 import Image from "next/image";
 import Link from "next/link"; // Import Link
 
 export default function Home() {
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   return (
     <main className="min-h-screen">
       {/* Navigation */}
@@ -9,7 +14,15 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-blue-600">EduPlatform</h1>
+              {/* Wrap the h1 with Link and add onClick event */}
+              <Link href="/" passHref>
+                <h1 
+                  className="text-2xl font-bold text-blue-600 cursor-pointer"
+                  onClick={handleReload}
+                >
+                  CanSat
+                </h1>
+              </Link>
             </div>
             <div className="hidden md:block">
               <div className="ml-10 flex items-center space-x-4">
@@ -20,7 +33,7 @@ export default function Home() {
                 {/* Wrap the button with Link */}
                 <Link href="/login">
                   <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    Get Started
+                  Login/SignUp
                   </button>
                 </Link>
               </div>
@@ -127,11 +140,11 @@ export default function Home() {
             <span className="block text-blue-200">Start your learning journey today.</span>
           </h2>
           <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
-            <div className="inline-flex rounded-md shadow">
-              <a href="#" className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50">
-                Get started
-              </a>
-            </div>
+              <Link href="/login">
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors border-2 border-white">
+                    Get Started
+                  </button>
+              </Link>
           </div>
         </div>
       </section>
@@ -155,7 +168,7 @@ export default function Home() {
               </a>
             </div>
             <p className="mt-8 text-base text-gray-400 md:mt-0 md:order-1">
-              2025 EduPlatform. All rights reserved.
+              2025 CanSat. All rights reserved.
             </p>
           </div>
         </div>
