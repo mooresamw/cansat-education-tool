@@ -1,8 +1,12 @@
 import { DashboardLayout} from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {checkUserRole} from "@/lib/checkAuth";
 
 export default function StudentDashboard() {
+  const userRole = checkUserRole(["admin", "instructor", "student"]);
+  if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
+
   return (
     <DashboardLayout userType="student">
       <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
