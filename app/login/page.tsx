@@ -1,13 +1,12 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig'; // Import Firebase config
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
-
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,6 +18,7 @@ const LoginSignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState();
   const [rememberMe, setRememberMe] = useState();
+  const [notification, setNotification] = useState(''); // New state for notification
 
   const router = useRouter();
 
@@ -35,43 +35,50 @@ const LoginSignupPage = () => {
     setFirstName('');
     setLastName('');
     setShowPassword(false);
+    setNotification(''); // Clear notification when toggling forms
   };
 
   // Handle user sign up
-const handleSignUp = async (e: React.FormEvent) => {
-  e.preventDefault();
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    // Send user data to Flask server
-    const response = await fetch("http://localhost:8080/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: user.uid,
-        email,
-        name: `${firstName} ${lastName}`,
-        role,
-      }),
-    });
+      // Send user data to Flask server
+      const response = await fetch("http://localhost:8080/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.uid,
+          email,
+          name: `${firstName} ${lastName}`,
+          role,
+        }),
+      });
 
-    if (!response.ok) throw new Error("Failed to register user");
+      if (!response.ok) throw new Error("Failed to register user");
 
-    const data = await response.json();
-    console.log("User registered successfully:", data);
+      const data = await response.json();
+      console.log("User registered successfully:", data);
 
-    localStorage.setItem("user", JSON.stringify(data));
-    setUser(data);
+      localStorage.setItem("user", JSON.stringify(data));
+      setUser(data);
 
-    // automatically send user to dashboard
-    router.push(`/dashboard/${role}`);
+      // Show success notification instead of redirecting
+      setNotification("Account created successfully. Please use sign-in button below to continue.");
 
-  } catch (error) {
-    console.error("Error signing up:", error.message);
-  }
-};
+      // Clear form fields
+      setEmail('');
+      setPassword('');
+      setFirstName('');
+      setLastName('');
 
+    } catch (error) {
+      console.error("Error signing up:", error.message);
+      setNotification("Error creating account. Please try again."); // Show error notification
+    }
+  };
 
   // Handle user login
   const handleLogin = async (e: React.FormEvent) => {
@@ -94,6 +101,7 @@ const handleSignUp = async (e: React.FormEvent) => {
       }
     } catch (error) {
       console.error('Error logging in:', error.message);
+      setNotification("Error logging in. Please check your credentials."); // Show error notification
     }
   };
 
@@ -118,6 +126,13 @@ const handleSignUp = async (e: React.FormEvent) => {
             
             <p className="text-center text-gray-500 mb-6">or use your email account</p>
             
+            {/* Notification for login */}
+            {notification && !isSignUp && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
+                {notification}
+              </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="relative">
                 <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -186,6 +201,13 @@ const handleSignUp = async (e: React.FormEvent) => {
             
             <p className="text-center text-gray-500 mb-6">or use your email for registration</p>
             
+            {/* Notification for signup */}
+            {notification && isSignUp && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
+                {notification}
+              </div>
+            )}
+
             <form onSubmit={handleSignUp} className="space-y-6">
               {/* First Name */}
               <div className="relative">

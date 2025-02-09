@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify
 
 
 # Set up firestore database
-cred = credentials.Certificate('key.json')
+cred = credentials.Certificate(r'C:\Users\vedan\Downloads\cansat-education-tool-firebase-adminsdk-fbsvc-02aeb933c6.json')
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
