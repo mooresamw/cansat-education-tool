@@ -1,7 +1,7 @@
 'use client';
 
-import React, {  useEffect, useState  } from 'react';
-import {FaGoogle } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig'; // Import Firebase config
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -101,14 +101,8 @@ const LoginSignupPage = () => {
       }
     } catch (error) {
       console.error('Error logging in:', error.message);
+      setNotification("Error logging in. Please check your credentials."); // Show error notification
     }
-  };
-
-  const handleForgotPasswordSubmit = (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    console.log('Forgot Password Email Submitted:', forgotPasswordEmail);
-    // Add your logic to send a password reset email here
-    setIsForgotPassword(false); // Close the modal after submission
   };
 
   return (
@@ -119,11 +113,10 @@ const LoginSignupPage = () => {
           {/* Sign In Form */}
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
+              <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
             </div>
             
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to EduPlatform</h2>
-            
             <div className="flex justify-center space-x-4 mb-6">
               <button className="p-2 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-colors">
                 <FaGoogle className="w-5 h-5 text-gray-600" />
@@ -132,6 +125,7 @@ const LoginSignupPage = () => {
             
             <p className="text-center text-gray-500 mb-6">or use your email account</p>
             
+
             {/* Notification for login */}
             {notification && !isSignUp && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
@@ -179,13 +173,7 @@ const LoginSignupPage = () => {
                   />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-sm text-gray-600 hover:text-blue-500"
-                >
-                  Forgot Password?
-                </button>
+                <a href="#" className="text-sm text-gray-600 hover:text-blue-500">Forgot Password?</a>
               </div>
               
               <button
@@ -200,7 +188,7 @@ const LoginSignupPage = () => {
           {/* Sign Up Form */}
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
+              <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
             </div>
             
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Create Account</h2>
@@ -275,28 +263,6 @@ const LoginSignupPage = () => {
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
               </div>
-
-              {/* Password Requirements */}
-              <div className="text-sm text-gray-600">
-                <p>Password must meet the following requirements:</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <div className={/[a-z]/.test(password) ? 'text-blue-500' : 'text-gray-600'}>
-                    • One lowercase character
-                  </div>
-                  <div className={/[A-Z]/.test(password) ? 'text-blue-500' : 'text-gray-600'}>
-                    • One uppercase character
-                  </div>
-                  <div className={/[0-9]/.test(password) ? 'text-blue-500' : 'text-gray-600'}>
-                    • One number
-                  </div>
-                  <div className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-blue-500' : 'text-gray-600'}>
-                    • One special character
-                  </div>
-                  <div className={password.length >= 8 ? 'text-blue-500' : 'text-gray-600'}>
-                    • 8 character minimum
-                  </div>
-                </div>
-              </div>
               
               {/* Sign Up Button */}
               <button
@@ -328,7 +294,7 @@ const LoginSignupPage = () => {
           <div className="h-full w-full flex flex-col justify-center items-center text-center p-12 text-white">
             {!isSignUp ? (
               <>
-                <h2 className="text-3xl font-bold mb-4">Welcome to CanSat</h2>
+                <h2 className="text-3xl font-bold mb-4">Welcome to EduPlatform</h2>
                 <p className="mb-8">Fill up personal information and start your journey with us.</p>
                 <button 
                   onClick={toggleForm}
@@ -352,40 +318,6 @@ const LoginSignupPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Forgot Password Modal */}
-      {isForgotPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Forgot Password</h2>
-            <form onSubmit={handleForgotPasswordSubmit} className="space-y-6">
-              <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={forgotPasswordEmail}
-                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              >
-                Reset Password
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsForgotPassword(false)}
-                className="w-full text-gray-600 hover:text-blue-500"
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
