@@ -117,7 +117,6 @@ const LoginSignupPage = () => {
             </div>
             
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to EduPlatform</h2>
-            
             <div className="flex justify-center space-x-4 mb-6">
               <button className="p-2 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-colors">
                 <FaGoogle className="w-5 h-5 text-gray-600" />
@@ -126,6 +125,7 @@ const LoginSignupPage = () => {
             
             <p className="text-center text-gray-500 mb-6">or use your email account</p>
             
+
             {/* Notification for login */}
             {notification && !isSignUp && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
