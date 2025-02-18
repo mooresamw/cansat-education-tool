@@ -1,12 +1,18 @@
+'use client'
 import { DashboardLayout} from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {checkUserRole} from "@/lib/checkAuth";
+import {router, useRouter} from "next/navigation";
 
 export default function StudentDashboard() {
   const userRole = checkUserRole(["admin", "instructor", "student"]);
   if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
 
+  const router = useRouter();
+  const openIDE = () => {
+    router.push("/dashboard/student/ide")
+  }
   return (
     <DashboardLayout userType="student">
       <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
@@ -24,7 +30,7 @@ export default function StudentDashboard() {
             <CardTitle>Virtual Arduino IDE</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>Open IDE</Button>
+            <Button onClick={() => openIDE()}>Open IDE</Button>
           </CardContent>
         </Card>
         <Card>

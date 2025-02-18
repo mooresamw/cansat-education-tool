@@ -1,12 +1,49 @@
+'use client'
 import { DashboardLayout} from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {checkUserRole} from "@/lib/checkAuth";
+import {useRouter} from "next/navigation";
+import {useEffect, useState} from "react";
+import {onAuthStateChanged} from "firebase/auth";
+import {auth} from "@/lib/firebaseConfig";
 
 export default function InstructorDashboard() {
+  const router = useRouter();
   //User Redirection
-  const userRole = checkUserRole(["admin", "instructor"])//Admin and Instructor have access
-  if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
+  // const userRole = checkUserRole(["admin", "instructor"])//Admin and Instructor have access
+  // if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
+
+  const [loading, setLoading] = useState(true);
+  const [UserRole, setUserRole] = useState();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, get the token
+        const token = await user.getIdToken();
+        //console.log("Firebase Token:", token);
+
+        const response = await fetch("http://127.0.0.1:8080/check-role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: token }),
+        });
+        const data = await response.json();
+        if (data.role == "student") {
+          router.push('/dashboard/student/');
+        } else {
+          setUserRole(data.role);
+        }
+      } else {
+        // User is not signed in, redirect to login
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [auth, router]);
 
   return (
     <DashboardLayout userType="instructor">
