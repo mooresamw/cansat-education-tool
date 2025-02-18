@@ -64,6 +64,93 @@ def check_role():
         return jsonify({"error": str(e)}), 401
 
 
+# API route to return a list of all users
+@app.route("/users", methods=["GET"])
+def get_users():
+    try:
+        users_ref = db.collection("users")
+        users = users_ref.stream()
+        user_list = [{"user_id": user.id, **user.to_dict()} for user in users]
+        return jsonify(user_list)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to send user information edits by admin to the database
+@app.route("/edit-user", methods=["POST"])
+def edit_user():
+    try:
+        data = request.json
+        user_id = data["user_id"]
+        email = data["email"]
+        name = data["name"]
+        role = data["role"]
+
+        # Update user data in Firestore
+        user_ref = db.collection("users").document(user_id)
+        user_ref.update({
+            "email": email,
+            "name": name,
+            "role": role,
+        })
+
+        return jsonify({"message": "User updated successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to delete a user from the database
+@app.route("/delete-user", methods=["POST"])
+def delete_user():
+    try:
+        data = request.json
+        user_id = data["user_id"]
+
+        # Delete user data from Firestore
+        user_ref = db.collection("users").document(user_id)
+        user_ref.delete()
+
+        # Delete user from Firebase Authentication
+        auth.delete_user(user_id)
+
+        return jsonify({"message": "User deleted successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to create a new user in the database
+@app.route("/create-user", methods=["POST"])
+def create_user():
+    try:
+        data = request.json
+        email = data["email"]
+        password = data["password"]
+        name = data["name"]
+        role = data["role"]
+
+        # Create user in Firebase Authentication
+        user = auth.create_user(
+            email=email,
+            password=password
+        )
+
+        # Save user data in Firestore
+        user_ref = db.collection("users").document(user.uid)
+        user_ref.set({
+            "user_id": user.uid,
+            "email": email,
+            "name": name,
+            "role": role,
+        })
+
+        return jsonify({"message": "User created successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # API route to send the code to from student ide to the server
 @app.route('/run', methods=['POST'])
 def run_code():
