@@ -1,59 +1,96 @@
 import type React from "react"
-import { Bell, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+// Import these icons from lucide-react
+import {
+  ActivityIcon,
+  Bell,
+  BookOpenIcon,
+  ClockIcon,
+  CodeIcon,
+  FolderIcon,
+  LogOut,
+  MessageCircleIcon,
+  MessageSquareIcon,
+  Search,
+  User,
+  UsersIcon
+} from "lucide-react"
+import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover"
 import Image from "next/image"
+import { auth, db } from '@/lib/firebaseConfig';
+import {signOut} from "firebase/auth";
+import {useRouter} from "next/navigation"; // Import Firebase config
 
 interface DashboardLayoutProps {
   children: React.ReactNode
   userType: "admin" | "instructor" | "student"
 }
 
+const getUser = () => {
+  return JSON.parse(localStorage.getItem('user') || 'null')
+}
+
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
+  const userData = getUser();
+
+  if(!userData) return <p>Loading...</p>;
+
+  const handleSignOut = async () => {
+    try {
+        await signOut(auth);
+        localStorage.removeItem("user"); // Remove user data from local storage
+        console.log("User signed out successfully!");
+        //router.push("/"); // Redirect to home or login page
+    } catch (error: any) {
+        console.log("Error signing out:", error.message);
+    }
+  };
+  const router = useRouter();
   return (
     <div className="flex h-screen bg-white">
       {/* Sidebar */}
       <div className="w-64 border-r bg-white">
         <div className="p-4">
-          <h1 className="text-xl font-bold">CanSat Educational Tool</h1>
+          <h1 className="text-xl font-bold cursor-pointer" onClick={() => router.push(`/dashboard/${userData.role}`)}>CanSat Educational Tool</h1>
         </div>
         <nav className="space-y-1 px-2">
           {/* Add navigation items based on user type */}
           {userType === "admin" && (
             <>
-              <NavItem href="/admin/accounts" icon={<UserIcon />}>
+              <NavItem href="/admin/accounts" icon={<User className="h-4 w-4" />}>
                 Account Management
               </NavItem>
-              <NavItem href="/admin/activity" icon={<ActivityIcon />}>
+              <NavItem href="/admin/activity" icon={<ActivityIcon className="h-4 w-4" />}>
                 Activity Monitoring
               </NavItem>
             </>
           )}
           {userType === "instructor" && (
             <>
-              <NavItem href="/instructor/materials" icon={<FolderIcon />}>
+              <NavItem href="/instructor/materials" icon={<FolderIcon className="h-4 w-4" />}>
                 Access Materials
               </NavItem>
-              <NavItem href="/instructor/time-tracking" icon={<ClockIcon />}>
+              <NavItem href="/instructor/time-tracking" icon={<ClockIcon className="h-4 w-4" />}>
                 Time Tracking
               </NavItem>
-              <NavItem href="/instructor/communication" icon={<MessageSquareIcon />}>
+              <NavItem href="/instructor/communication" icon={<MessageSquareIcon className="h-4 w-4" />}>
                 Student Communication
               </NavItem>
             </>
           )}
           {userType === "student" && (
             <>
-              <NavItem href="/student/resources" icon={<BookOpenIcon />}>
+              <NavItem href="student/training-materials" icon={<BookOpenIcon className="h-4 w-4" />}>
                 Access Resources
               </NavItem>
-              <NavItem href="/student/arduino-ide" icon={<CodeIcon />}>
+              <NavItem href="ide" icon={<CodeIcon className="h-4 w-4" />}>
                 Virtual Arduino IDE
               </NavItem>
-              <NavItem href="/student/collaboration" icon={<UsersIcon />}>
+              <NavItem href="/student/collaboration" icon={<UsersIcon className="h-4 w-4" />}>
                 Collaboration Tools
               </NavItem>
-              <NavItem href="/student/messages" icon={<MessageCircleIcon />}>
+              <NavItem href="/student/messages" icon={<MessageCircleIcon className="h-4 w-4" />}>
                 Direct Messaging
               </NavItem>
             </>
@@ -74,15 +111,50 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             <Button variant="ghost" size="icon">
               <Bell className="h-4 w-4" />
             </Button>
-            <div className="h-8 w-8 overflow-hidden rounded-full">
-              <Image
-                src="/placeholder.svg"
-                alt="Avatar"
-                width={32}
-                height={32}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                  <Image
+                    src="/placeholder.svg"
+                    alt="Avatar"
+                    width={32}
+                    height={32}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-12 w-12 rounded-full overflow-hidden">
+                      <Image
+                        src="/placeholder.svg"
+                        alt="Avatar"
+                        width={48}
+                        height={48}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold">{userData.name}</h2>
+                      <p className="text-sm text-gray-500">{userData.role}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <strong>Email:</strong> {userData.email}
+                    </p>
+                    <p className="text-sm">
+                      <strong>Role:</strong> {userData.role}
+                    </p>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => handleSignOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
@@ -100,15 +172,3 @@ function NavItem({ href, icon, children }: { href: string; icon: React.ReactNode
   )
 }
 
-// Import these icons from lucide-react
-import {
-  UserIcon,
-  ActivityIcon,
-  FolderIcon,
-  ClockIcon,
-  MessageSquareIcon,
-  BookOpenIcon,
-  CodeIcon,
-  UsersIcon,
-  MessageCircleIcon,
-} from "lucide-react"

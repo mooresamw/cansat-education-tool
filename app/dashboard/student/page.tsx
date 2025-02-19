@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {checkUserRole} from "@/lib/checkAuth";
 import {router, useRouter} from "next/navigation";
+import Link from "next/link";
 
 export default function StudentDashboard() {
   const userRole = checkUserRole(["admin", "instructor", "student"]);
@@ -22,7 +23,9 @@ export default function StudentDashboard() {
             <CardTitle>Access Resources</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>View Training Videos</Button>
+            <Link href="/dashboard/student/training-materials">
+              <Button>View Training Materials</Button>
+            </Link>
           </CardContent>
         </Card>
         <Card>

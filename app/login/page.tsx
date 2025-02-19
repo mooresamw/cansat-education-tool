@@ -74,7 +74,7 @@ const LoginSignupPage = () => {
       setFirstName('');
       setLastName('');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up:", error.message);
       setNotification("Error creating account. Please try again."); // Show error notification
     }
@@ -99,7 +99,7 @@ const LoginSignupPage = () => {
       } else {
         console.error('User not found in Firestore');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error logging in:', error.message);
       setNotification("Error logging in. Please check your credentials."); // Show error notification
     }
