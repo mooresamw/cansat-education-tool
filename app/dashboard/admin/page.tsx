@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { UserList } from "@/components/UserList"
 import { ChatList } from "@/components/ChatList"
-import {checkUserRole} from "@/lib/checkAuth";
 import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import {auth} from "@/lib/firebaseConfig"
+import type { File } from "lucide-react"
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -22,7 +22,11 @@ export default function AdminDashboard() {
   const [UserRole, setUserRole] = useState();
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false)
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "" })
+  const [isUploadPdfDialogOpen, setIsUploadPdfDialogOpen] = useState(false)
+  const [pdfUpload, setPdfUpload] = useState<File | null>(null)
+  const [uploadMessage, setUploadMessage] = useState("");
 
+  // Function to send a new user to the backend
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -57,6 +61,36 @@ export default function AdminDashboard() {
             console.error("Error creating user:", error);
         }
     }
+  }
+
+  const handlePdfUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pdfUpload) {
+      setUploadMessage("Please select a file first.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", pdfUpload); // Send file as "file" key
+
+    try {
+      const response = await fetch("http://localhost:8080/upload-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setUploadMessage(`File uploaded successfully! View: ${data.url}`);
+      } else {
+        setUploadMessage(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      setUploadMessage(`Error uploading file: ${error}`);
+    }
+    console.log("Uploading PDF:", pdfUpload)
+    setIsUploadPdfDialogOpen(false)
+    setPdfUpload(null)
   }
 
 
@@ -177,10 +211,40 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader>
-          <CardTitle>Resource Management</CardTitle>
+            <CardTitle>Resource Management</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>Upload Training Materials</Button>
+            <Dialog open={isUploadPdfDialogOpen} onOpenChange={setIsUploadPdfDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>Upload Training Materials</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Upload PDF</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handlePdfUpload}>
+                  <div className="grid gap-4 py-4">
+                    <p>{uploadMessage}</p>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="pdf-file" className="text-right">
+                        PDF File
+                      </Label>
+                      <div className="col-span-3">
+                        <Input
+                            id="pdf-file"
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => setPdfUpload(e.target.files ? e.target.files[0] : null)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Upload PDF</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       </div>

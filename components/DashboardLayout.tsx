@@ -1,5 +1,4 @@
 import type React from "react"
-// Import these icons from lucide-react
 import {
   ActivityIcon,
   Bell,
@@ -41,16 +40,16 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         await signOut(auth);
         localStorage.removeItem("user"); // Remove user data from local storage
         console.log("User signed out successfully!");
-        //router.push("/"); // Redirect to home or login page
+        router.push("/"); // Redirect to home or login page
     } catch (error: any) {
         console.log("Error signing out:", error.message);
     }
   };
   const router = useRouter();
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="w-64 border-r bg-white">
+      <div className="w-64 border-r">
         <div className="p-4">
           <h1 className="text-xl font-bold cursor-pointer" onClick={() => router.push(`/dashboard/${userData.role}`)}>CanSat Educational Tool</h1>
         </div>

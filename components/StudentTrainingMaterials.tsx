@@ -1,6 +1,6 @@
 "use client"
 
-import {useMemo, useState} from "react"
+import {useEffect, useMemo, useState} from "react"
 import { Document, Page } from "react-pdf"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,20 +10,46 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { pdfjs } from 'react-pdf';
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import Loading from "@/components/Loading";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-// Mock data for PDF files
-const pdfFiles = [
-  { id: "1", name: "Introduction to Space", url: "/pdfs/introduction-to-space.pdf" },
-  { id: "2", name: "Introduction to Satellite", url: "/pdfs/intro-to-satellite.pdf" },
-]
+interface PDFFile {
+  id: string;
+  name: string;
+  url: string;
+}
+
 
 export default function StudentTrainingMaterials() {
-  const [selectedPdf, setSelectedPdf] = useState(pdfFiles[0])
+  const [selectedPdf, setSelectedPdf] = useState<PDFFile>()
   const [numPages, setNumPages] = useState<number | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [notes, setNotes] = useState("")
+  const [pdfs, setPdfs] = useState<PDFFile[]>([]);
+  const [loading, setLoading] = useState(true)
+
+
+  // When the page loads, fetch the PDF files from backend
+  useEffect(() => {
+    const fetchPDFs = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/get-pdfs");
+        if (!response.ok) {
+          throw new Error("Failed to fetch PDFs");
+        }
+
+        const data: PDFFile[] = await response.json();
+        setPdfs(data);
+        setSelectedPdf(data[0])
+        setLoading(false);
+      } catch (error) {
+        console.log("Error fetching PDFs from PDF", error);
+      }
+    };
+
+    fetchPDFs();
+  }, []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages)
@@ -39,7 +65,7 @@ export default function StudentTrainingMaterials() {
     cMapUrl: "/cmaps/",
     cMapPacked: true,
   }), []);
-
+  if(loading) return <Loading></Loading>;
   return (
     <div className="flex flex-col space-y-4">
       <h1 className="text-2xl font-bold">Training Materials</h1>
@@ -53,13 +79,13 @@ export default function StudentTrainingMaterials() {
               <div className="mb-4">
                 <Select
                   value={selectedPdf.id}
-                  onValueChange={(value) => setSelectedPdf(pdfFiles.find((pdf) => pdf.id === value) || pdfFiles[0])}
+                  onValueChange={(value) => setSelectedPdf(pdfs.find((pdf) => pdf.id === value) || pdfs[0])}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a PDF" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pdfFiles.map((pdf) => (
+                    {pdfs.map((pdf) => (
                       <SelectItem key={pdf.id} value={pdf.id}>
                         {pdf.name}
                       </SelectItem>
