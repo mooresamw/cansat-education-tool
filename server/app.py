@@ -1,5 +1,7 @@
+from datetime import timedelta
+
 import firebase_admin
-from firebase_admin import firestore, credentials, auth
+from firebase_admin import firestore, credentials, auth, storage
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 import tempfile
@@ -7,7 +9,12 @@ import subprocess
 
 # Set up firestore database
 cred = credentials.Certificate('key.json')
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    "storageBucket": "cansat-education-tool.firebasestorage.app"
+})
+
+# Get the Firebase Storage bucket
+bucket = storage.bucket()
 db = firestore.client()
 
 # Create the Flask app
@@ -147,6 +154,50 @@ def create_user():
 
         return jsonify({"message": "User created successfully"}), 200
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to get pdfs from the database
+@app.route("/get-pdfs", methods=["GET"])
+def get_pdfs():
+    try:
+        blobs = bucket.list_blobs(prefix="pdfs/")
+        pdf_files = [blob for blob in blobs if blob.name.endswith(".pdf")]
+
+        pdf_list = []
+        for idx, blob in enumerate(pdf_files):
+            url = blob.generate_signed_url(
+                expiration=timedelta(hours=1),  # URL valid for 1 hour
+                method="GET"
+            )
+            pdf_list.append({"id": str(idx + 1), "name": blob.name, "url": url})
+
+        return jsonify(pdf_list), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to upload pdfs to the database
+@app.route("/upload-pdf", methods=["POST"])
+def upload_pdf():
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+        if not file.filename.endswith(".pdf"):
+            return jsonify({"error": "Only PDF files are allowed"}), 400
+
+        # Keep the original filename
+        filename = file.filename
+
+        # Upload the file to Firebase Storage
+        blob = bucket.blob(f"pdfs/{filename}")
+        blob.upload_from_file(file, content_type="application/pdf")
+        blob.make_public()  # Make the file publicly accessible
+
+        return jsonify({"message": "File uploaded successfully", "name": filename, "url": blob.public_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
