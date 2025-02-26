@@ -1,19 +1,21 @@
 'use client'
-import { DashboardLayout} from "@/components/DashboardLayout";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {checkUserRole} from "@/lib/checkAuth";
-import {router, useRouter} from "next/navigation";
+import { checkUserRole } from "@/lib/checkAuth";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function StudentDashboard() {
   const userRole = checkUserRole(["admin", "instructor", "student"]);
-  if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
+  if (!userRole) return <p>Loading...</p>; // Show loading until redirect happens
 
   const router = useRouter();
+
   const openIDE = () => {
-    router.push("/dashboard/student/ide")
-  }
+    router.push("/dashboard/student/ide");
+  };
+
   return (
     <DashboardLayout userType="student">
       <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
@@ -49,7 +51,7 @@ export default function StudentDashboard() {
             <CardTitle>Direct Messaging</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>Message Instructor</Button>
+            <Button onClick={() => router.push("/dashboard/student/message")}>Message Instructor</Button>
           </CardContent>
         </Card>
       </div>

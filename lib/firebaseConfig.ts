@@ -1,7 +1,6 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBBp7LFwOfwS-7AbeWPBeADCBFCdAV69hs",
@@ -17,3 +16,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Function to fetch instructors from Firestore
+export async function getInstructors() {
+  try {
+    // Query users where role is 'instructor'
+    const usersCollection = collection(db, 'users');
+    const instructorsQuery = query(usersCollection, where("role", "==", "instructor"));
+    const instructorsSnapshot = await getDocs(instructorsQuery);
+    const instructorsList = instructorsSnapshot.docs.map(doc => doc.data());
+    return instructorsList;
+  } catch (error) {
+    console.error("Error fetching instructors: ", error);
+    return [];
+  }
+}

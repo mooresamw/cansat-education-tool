@@ -67,10 +67,11 @@ export default function InstructorDashboard() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Student Communication</CardTitle>
+          <CardTitle>Student Communication</CardTitle>
+          
           </CardHeader>
           <CardContent>
-            <Button>Open Chat</Button>
+          <Button onClick={() => router.push("/dashboard/instructor/message")}>Open Chat</Button>
           </CardContent>
         </Card>
       </div>
