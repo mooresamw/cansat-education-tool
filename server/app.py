@@ -8,24 +8,18 @@ import tempfile
 import subprocess
 
 # Set up firestore database
-<<<<<<< Updated upstream
-cred = credentials.Certificate(r"C:\Users\vedan\Desktop\Cansat\CanSat\cansat-education-tool\cansat-education-tool-firebase-adminsdk-fbsvc-02aeb933c6.json")
+cred = credentials.Certificate(r"C:\Users\vedan\Downloads\cansat-education-tool-firebase-adminsdk-fbsvc-02aeb933c6.json")
 firebase_admin.initialize_app(cred, {
     "storageBucket": "cansat-education-tool.firebasestorage.app"
 })
 
 # Get the Firebase Storage bucket
 bucket = storage.bucket()
-=======
-cred = credentials.Certificate(r'C:\Users\vedan\Downloads\cansat-education-tool-firebase-adminsdk-fbsvc-02aeb933c6.json')
-firebase_admin.initialize_app(cred)
->>>>>>> Stashed changes
 db = firestore.client()
 
 # Create the Flask app
 app = Flask(__name__)
 CORS(app)
-
 
 # api route to handle registering
 @app.route("/register", methods=["POST"])
