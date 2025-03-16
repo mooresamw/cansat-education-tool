@@ -8,7 +8,7 @@ import tempfile
 import subprocess
 
 # Set up firestore database
-cred = credentials.Certificate(r"C:\Users\vedan\Downloads\cansat-education-tool-firebase-adminsdk-fbsvc-02aeb933c6.json")
+cred = credentials.Certificate(r"key.json")
 firebase_admin.initialize_app(cred, {
     "storageBucket": "cansat-education-tool.firebasestorage.app"
 })
@@ -21,6 +21,7 @@ db = firestore.client()
 app = Flask(__name__)
 CORS(app)
 
+
 # api route to handle registering
 @app.route("/register", methods=["POST"])
 def register():
@@ -30,6 +31,8 @@ def register():
         email = data["email"]
         name = data["name"]
         role = data["role"]
+        school_name = data["school_name"]
+        school_id = data["school_id"]
 
         # Save user data in Firestore
         user_ref = db.collection("users").document(user_id)
@@ -38,6 +41,8 @@ def register():
             "email": email,
             "name": name,
             "role": role,
+            "school_name": school_name,
+            "school_id": school_id,
         })
 
         return jsonify({"message": "User registered successfully", "uid": user_id, "email": email, "name": name,
@@ -135,6 +140,8 @@ def create_user():
         password = data["password"]
         name = data["name"]
         role = data["role"]
+        school_name = data["school_name"]
+        school_id = data["school_id"]
 
         # Create user in Firebase Authentication
         user = auth.create_user(
@@ -149,6 +156,8 @@ def create_user():
             "email": email,
             "name": name,
             "role": role,
+            "school_name": school_name,
+            "school_id": school_id,
         })
 
         return jsonify({"message": "User created successfully"}), 200
