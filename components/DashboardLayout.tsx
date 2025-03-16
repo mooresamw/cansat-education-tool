@@ -32,7 +32,7 @@ const getUser = () => {
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const userData = getUser();
-
+  userType = userData.role;
   if(!userData) return <p>Loading...</p>;
 
   const handleSignOut = async () => {
