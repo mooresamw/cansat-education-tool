@@ -10,9 +10,6 @@ import {auth} from "@/lib/firebaseConfig";
 
 export default function InstructorDashboard() {
   const router = useRouter();
-  //User Redirection
-  // const userRole = checkUserRole(["admin", "instructor"])//Admin and Instructor have access
-  // if(!userRole) return <p>Loading...</p>//Show loading until redirect happens
 
   const [loading, setLoading] = useState(true);
   const [UserRole, setUserRole] = useState();
@@ -54,7 +51,7 @@ export default function InstructorDashboard() {
             <CardTitle>Access Materials</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>View Training Resources</Button>
+            <Button onClick={() => router.push("/dashboard/student/training-materials")}>View Training Resources</Button>
           </CardContent>
         </Card>
         <Card>
