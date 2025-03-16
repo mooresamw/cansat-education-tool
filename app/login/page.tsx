@@ -7,6 +7,7 @@ import { auth, db } from '@/lib/firebaseConfig'; // Import Firebase config
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
+import HighSchoolSearch from "@/components/HighSchoolSearch";
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,6 +20,10 @@ const LoginSignupPage = () => {
   const [user, setUser] = useState();
   const [rememberMe, setRememberMe] = useState();
   const [notification, setNotification] = useState(''); // New state for notification
+  const [selectedSchool, setSelectedSchool] = useState({
+    school_name: '',
+    school_id: '',
+  });
 
   const router = useRouter();
 
@@ -34,8 +39,18 @@ const LoginSignupPage = () => {
     setPassword('');
     setFirstName('');
     setLastName('');
+    setSelectedSchool({})
     setShowPassword(false);
     setNotification(''); // Clear notification when toggling forms
+  };
+
+
+  const handleSchoolSelect = (name: string,  placeId: any) => {
+    setSelectedSchool({
+      school_name: name,
+      school_id: placeId,
+    });
+    console.log("Selected School:", name, "Place ID:", placeId);
   };
 
   // Handle user sign up
@@ -54,6 +69,8 @@ const LoginSignupPage = () => {
           email,
           name: `${firstName} ${lastName}`,
           role,
+          school_name: selectedSchool.school_name,
+          school_id: selectedSchool.school_id,
         }),
       });
 
@@ -115,16 +132,9 @@ const LoginSignupPage = () => {
             <div className="mb-8">
               <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
             </div>
-            
+
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to EduPlatform</h2>
-            <div className="flex justify-center space-x-4 mb-6">
-              <button className="p-2 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-colors">
-                <FaGoogle className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            
-            <p className="text-center text-gray-500 mb-6">or use your email account</p>
-            
+
 
             {/* Notification for login */}
             {notification && !isSignUp && (
@@ -144,7 +154,7 @@ const LoginSignupPage = () => {
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
                 />
               </div>
-              
+
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -162,7 +172,7 @@ const LoginSignupPage = () => {
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
                   <input
@@ -175,7 +185,7 @@ const LoginSignupPage = () => {
                 </label>
                 <a href="#" className="text-sm text-gray-600 hover:text-blue-500">Forgot Password?</a>
               </div>
-              
+
               <button
                 type="submit"
                 className="w-full bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -190,17 +200,8 @@ const LoginSignupPage = () => {
             <div className="mb-8">
               <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
             </div>
-            
+
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Create Account</h2>
-            
-            <div className="flex justify-center space-x-4 mb-6">
-              <button className="p-2 rounded-full border-2 border-gray-200 hover:border-blue-500 transition-colors">
-                <FaGoogle className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            
-            <p className="text-center text-gray-500 mb-6">or use your email for registration</p>
-            
             {/* Notification for signup */}
             {notification && isSignUp && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
@@ -244,7 +245,7 @@ const LoginSignupPage = () => {
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
                 />
               </div>
-              
+
               {/* Password */}
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -263,7 +264,10 @@ const LoginSignupPage = () => {
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
+              {/*search for student school*/}
+              <HighSchoolSearch onSelect={handleSchoolSelect} Style={'SignUp'}></HighSchoolSearch>
+
               {/* Sign Up Button */}
               <button
                 type="submit"
@@ -286,7 +290,7 @@ const LoginSignupPage = () => {
         </div>
 
         {/* Sliding Overlay */}
-        <div 
+        <div
           className={`hidden md:flex absolute top-0 right-0 w-1/2 h-full transition-transform duration-500 ease-in-out ${
             isSignUp ? 'translate-x-full' : 'translate-x-0'
           } bg-blue-500`}
@@ -296,7 +300,7 @@ const LoginSignupPage = () => {
               <>
                 <h2 className="text-3xl font-bold mb-4">Welcome to EduPlatform</h2>
                 <p className="mb-8">Fill up personal information and start your journey with us.</p>
-                <button 
+                <button
                   onClick={toggleForm}
                   className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-blue-500 transition-colors"
                 >
@@ -307,7 +311,7 @@ const LoginSignupPage = () => {
               <>
                 <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
                 <p className="mb-8">To keep connected with us, please log in with your personal info.</p>
-                <button 
+                <button
                   onClick={toggleForm}
                   className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-blue-500 transition-colors"
                 >

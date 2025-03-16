@@ -15,6 +15,7 @@ import {useRouter} from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import {auth} from "@/lib/firebaseConfig"
 import type { File } from "lucide-react"
+import HighSchoolSearch from "@/components/HighSchoolSearch";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -25,7 +26,18 @@ export default function AdminDashboard() {
   const [isUploadPdfDialogOpen, setIsUploadPdfDialogOpen] = useState(false)
   const [pdfUpload, setPdfUpload] = useState<File | null>(null)
   const [uploadMessage, setUploadMessage] = useState("");
+  const [selectedSchool, setSelectedSchool] = useState({
+    school_name: '',
+    school_id: '',
+  });
 
+  const handleSchoolSelect = (name: string,  placeId: any) => {
+    setSelectedSchool({
+      school_name: name,
+      school_id: placeId,
+    });
+    console.log("Selected School:", name, "Place ID:", placeId);
+  };
   // Function to send a new user to the backend
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +54,8 @@ export default function AdminDashboard() {
                     password: newUser.password, // Ensure password is included in the form state
                     name: newUser.name,
                     role: newUser.role,
+                    school_name: selectedSchool.school_name,
+                    school_id: selectedSchool.school_id,
                 }),
             });
 
@@ -176,6 +190,12 @@ export default function AdminDashboard() {
                           onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                           className="col-span-3"
                       />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="password" className="text-right">
+                        School
+                      </Label>
+                      <HighSchoolSearch onSelect={handleSchoolSelect} Style={'Management'}></HighSchoolSearch>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="role" className="text-right">
