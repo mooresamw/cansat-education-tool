@@ -179,7 +179,18 @@ def get_pdfs():
                 expiration=timedelta(hours=1),  # URL valid for 1 hour
                 method="GET"
             )
-            pdf_list.append({"id": str(idx + 1), "name": blob.name, "url": url})
+            # Convert size from bytes to MB with 2 decimal places
+            size_mb = round(blob.size / (1024 * 1024), 2)
+            # Get last modified timestamp
+            last_modified = blob.updated
+
+            pdf_list.append({
+                "id": str(idx + 1),
+                "name": blob.name,
+                "url": url,
+                "size_mb": size_mb,
+                "last_modified": last_modified if last_modified else None
+            })
 
         return jsonify(pdf_list), 200
     except Exception as e:
@@ -206,6 +217,31 @@ def upload_pdf():
         blob.make_public()  # Make the file publicly accessible
 
         return jsonify({"message": "File uploaded successfully", "name": filename, "url": blob.public_url}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to delete a pdf from Firebase Storage
+@app.route("/delete-pdf", methods=["POST"])
+def delete_pdf():
+    try:
+        # Get the file name from the request
+        file_name = request.json.get("file_name")
+        if not file_name:
+            return jsonify({"error": "File name is required"}), 400
+
+        # Create a reference to the file in Firebase Storage
+        blob = bucket.blob(file_name)
+
+        # Check if file exists
+        if not blob.exists():
+            return jsonify({"error": "File not found"}), 404
+
+        # Delete the file
+        blob.delete()
+
+        return jsonify({"message": f"Successfully deleted {file_name}"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

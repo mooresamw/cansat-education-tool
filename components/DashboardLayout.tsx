@@ -99,16 +99,16 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between border-b px-6 py-4">
+        <header className="flex items-center justify-between border-b px-6 py-6">
           <div className="w-96">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input type="search" placeholder="Search..." className="pl-9" />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-8">
             <Button variant="ghost" size="icon">
-              <Bell className="h-4 w-4" />
+              <Bell className="h-6 w-6" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
