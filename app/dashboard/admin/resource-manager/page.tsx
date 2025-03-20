@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 import {type File, FileText, Plus, Trash2, Upload} from "lucide-react"
 
 export default function AdminPdfManager() {
@@ -74,7 +75,7 @@ export default function AdminPdfManager() {
     }
 
     const currentDate = new Date().toUTCString();
-    const fileSize = pdfUpload ? `${(pdfUpload.size / (1024 * 1024)).toFixed(2)} MB` : "0 MB"
+    const fileSize = pdfUpload ? `${(pdfUpload.size / (1024 * 1024)).toFixed(2)}` : "0 MB"
     const newPdfEntry = {
       id: (pdfs.length + 1).toString(),
       name: pdfUpload.name,
@@ -84,6 +85,7 @@ export default function AdminPdfManager() {
     setPdfs([...pdfs, newPdfEntry])
     setIsUploadDialogOpen(false)
     setPdfUpload(null)
+
   }
 
 
@@ -116,6 +118,9 @@ export default function AdminPdfManager() {
         setPdfs(pdfs.filter((pdf) => pdf.id !== pdfToDelete));
         setIsDeleteDialogOpen(false);
         setPdfToDelete(null);
+        toast.success("PDF Deleted", {
+          description: `${pdfToDelete} has been successfully deleted.`,
+        })
 
       } catch (error) {
         console.error('Error deleting PDF:', error);
