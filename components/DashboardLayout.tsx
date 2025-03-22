@@ -20,14 +20,11 @@ import Image from "next/image"
 import { auth, db } from '@/lib/firebaseConfig';
 import {signOut} from "firebase/auth";
 import {useRouter} from "next/navigation"; // Import Firebase config
+import {getUser} from "@/lib/getUser";
 
 interface DashboardLayoutProps {
   children: React.ReactNode
   userType: "admin" | "instructor" | "student"
-}
-
-const getUser = () => {
-  return JSON.parse(localStorage.getItem('user') || 'null')
 }
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {

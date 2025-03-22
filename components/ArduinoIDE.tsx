@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {sampleproblems} from "@/components/sampleproblems";
+import {getUser} from "@/lib/getUser";
 
 const problems = sampleproblems;
 
@@ -23,7 +24,36 @@ export default function ArduinoIDE() {
   const [hintsUsed, setHintsUsed] = useState(new Array(problems.length).fill({ viewed: false, closed: false }))
   const [hintAccordionOpen, setHintAccordionOpen] = useState(new Array(problems.length).fill(false))
   const [explanationsAvailable, setExplanationsAvailable] = useState(new Array(problems.length).fill(false))
+  const [userId, setUserId] = useState<string>("")
 
+  // Fetch progress on page load
+  useEffect(() => {
+    const userData = getUser();
+    setUserId(userData.user_id);
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userData.user_id}&type=coding-problem`);
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+          const progressMap = new Map(data.map(item => [item.material_id, item.completed]));
+          const updatedProgress = problems.map(problem => progressMap.get(problem.id) || false);
+          setProgress(updatedProgress);
+
+          // Automatically set `currentProblem` to the first incomplete problem
+          const nextProblemIndex = updatedProgress.findIndex(completed => !completed);
+          setCurrentProblem(nextProblemIndex !== -1 ? nextProblemIndex : 0);
+          setCode(problems[nextProblemIndex !== -1 ? nextProblemIndex : 0].initialCode);
+        }
+      } catch (error) {
+        console.error("Error fetching progress:", error);
+      }
+    };
+
+    fetchProgress();
+  }, []);
+
+  // Function to send code to backend to run
   const runCode = async () => {
     console.log(code)
     const response = await fetch("http://localhost:8080/run", {
@@ -58,15 +88,39 @@ export default function ArduinoIDE() {
     }
   }
 
-  const markAsCompleted = () => {
-    if (isCorrect) {
-      setProgress((prev) => {
-        const newProgress = [...prev]
-        newProgress[currentProblem] = true
-        return newProgress
-      })
+  // Student marks a problem as completed
+  const markAsCompleted = async () => {
+    if (isCorrect && !progress[currentProblem]) {
+      const updatedProgress = [...progress];
+      updatedProgress[currentProblem] = true;
+      setProgress(updatedProgress);
+
+      try {
+        const requestBody = {
+          user_id: userId,
+          material_id: problems[currentProblem].id,
+          type: "coding-problem",
+          title: problems[currentProblem].title,
+          completed: true,
+          completion_date: new Date().toISOString(),
+          accessed_at: new Date().toISOString(),
+        };
+
+        const response = await fetch("http://localhost:8080/mark-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to update progress:", await response.text());
+        }
+      } catch (error) {
+        console.error("Error updating progress:", error);
+      }
     }
-  }
+  };
+
 
   const useHint = (action: "view" | "close") => {
     setHintsUsed((prev) => {

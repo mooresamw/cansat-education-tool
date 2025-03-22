@@ -1,6 +1,6 @@
 const sampleproblems = [
   {
-    id: 1,
+    id: "arduino-1",
     title: "Hello World",
     description: "Write a program that prints 'Hello, World!' to the Serial Monitor.",
     difficulty: "Easy",
@@ -10,7 +10,7 @@ const sampleproblems = [
     expectedOutput: "Hello, World!"
   },
   {
-    id: 2,
+    id: "arduino-2",
     title: "Countdown Timer",
     description: "Write a program that prints a countdown from 10 to 1, followed by 'Liftoff!'.",
     difficulty: "Easy",
@@ -20,7 +20,7 @@ const sampleproblems = [
     expectedOutput: "10\n9\n8\n7\n6\n5\n4\n3\n2\n1\nLiftoff!"
   },
   {
-    id: 3,
+    id: "arduino-3",
     title: "Sum of Two Numbers",
     description: "Write a program that declares two integer variables, adds them together, and prints the result.",
     difficulty: "Easy",
@@ -30,7 +30,7 @@ const sampleproblems = [
     expectedOutput: "15"
   },
   {
-    id: 4,
+    id: "arduino-4",
     title: "Even or Odd",
     description: "Write a program that checks whether a given number is even or odd and prints the result.",
     difficulty: "Easy",
@@ -40,7 +40,7 @@ const sampleproblems = [
     expectedOutput: "Odd"
   },
   {
-    id: 5,
+    id: "arduino-5",
     title: "Greatest of Two Numbers",
     description: "Write a program that compares two numbers and prints the greater one.",
     difficulty: "Easy",
@@ -50,7 +50,7 @@ const sampleproblems = [
     expectedOutput: "12"
   },
   {
-    id: 6,
+    id: "arduino-6",
     title: "Simple Calculator",
     description: "Write a program that performs addition, subtraction, multiplication, and division on two numbers and prints the results.",
     difficulty: "Medium",
@@ -60,7 +60,7 @@ const sampleproblems = [
     expectedOutput: "Addition: 24\nSubtraction: 16\nMultiplication: 80\nDivision: 5"
   },
   {
-    id: 7,
+    id: "arduino-7",
     title: "Find the Square Root",
     description: "Write a program that calculates the square root of a given number.",
     difficulty: "Medium",
@@ -70,7 +70,7 @@ const sampleproblems = [
     expectedOutput: "4.0"
   },
   {
-    id: 8,
+    id: "arduino-8",
     title: "Number Comparison",
     description: "Write a program that checks if a number is positive, negative, or zero.",
     difficulty: "Medium",
@@ -80,7 +80,7 @@ const sampleproblems = [
     expectedOutput: "Negative"
   },
   {
-    id: 9,
+    id: "arduino-9",
     title: "Factorial Calculation",
     description: "Write a program that calculates the factorial of a number (e.g., 5! = 5*4*3*2*1).",
     difficulty: "Medium",
@@ -90,7 +90,7 @@ const sampleproblems = [
     expectedOutput: "120"
   },
   {
-    id: 10,
+    id: "arduino-10",
     title: "Print Multiplication Table",
     description: "Write a program that prints the multiplication table of a given number.",
     difficulty: "Medium",
