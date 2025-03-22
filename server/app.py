@@ -201,6 +201,7 @@ def upload_pdf():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 # API route to delete a pdf from Firebase Storage
 @app.route("/delete-pdf", methods=["POST"])
 def delete_pdf():
@@ -218,6 +219,88 @@ def delete_pdf():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# API route to send student progress to the database
+@app.route('/mark-progress', methods=['POST'])
+def mark_progress():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        material_id = data.get('material_id')
+        title = data.get('title')
+        type = data.get('type')
+        completed = data.get('completed')
+        completion_date = data.get('completion_date')
+        accessed_at = data.get('accessed_at')
+
+        if not all([user_id, material_id, title, accessed_at]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        progress_ref = db.collection('progress').document(user_id)
+        progress_doc = progress_ref.get()
+
+        if progress_doc.exists:
+            progress_data = progress_doc.to_dict()
+            items = progress_data.get('items', [])
+        else:
+            items = []
+
+        # Update or add the progress record
+        found = False
+        for item in items:
+            if item["material_id"] == material_id:
+                item["completed"] = completed
+                item["completion_date"] = completion_date
+                found = True
+                break
+
+        if not found:
+            items.append({
+                "material_id": material_id,
+                "type": type,
+                "title": title,
+                "accessed_at": accessed_at,
+                "completed": completed,
+                "completion_date": completion_date,
+            })
+
+        # Save back to Firestore
+        progress_ref.set({"user_id": user_id, "items": items})
+
+        return jsonify({"message": "Progress updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to get student progress from the database
+@app.route('/get-user-progress', methods=['GET'])
+def get_user_progress():
+    try:
+        user_id = request.args.get('user_id')
+        progress_type = request.args.get('type')
+        if not user_id or not progress_type:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        # Fetch the user document from Firestore
+        progress_ref = db.collection('progress').document(user_id)
+        progress_doc = progress_ref.get()
+
+        # Extract progress items if the document exists
+        if progress_doc.exists:
+            progress_data = progress_doc.to_dict()
+            items = progress_data.get('items', [])
+
+            # Filter the progress by type (e.g., "training_material")
+            filtered_items = [item for item in items if item.get('type') == progress_type]
+        else:
+            filtered_items = []
+
+        return jsonify(filtered_items), 200  # Returning the filtered list directly
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 # API route to send the code to from student ide to the server
 @app.route('/run', methods=['POST'])
