@@ -1,54 +1,53 @@
-"use client"
+'use client';
 
-import React, {useEffect} from "react"
-import { useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Pencil, Trash2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {onAuthStateChanged} from "firebase/auth";
-import {auth} from "@/lib/firebaseConfig";
-
-const initialUsers = [
-  { user_id: 1, name: "John Doe", email: "john@example.com", role: "Student" },
-  { user_id: 2, name: "Jane Smith", email: "jane@example.com", role: "Instructor" },
-  { user_id: 3, name: "Bob Johnson", email: "bob@example.com", role: "Student" },
-]
+import React, { useEffect } from "react";
+import { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { db } from "@/lib/firebaseConfig"; // Import Firestore
+import { collection, onSnapshot } from "firebase/firestore"; // Import Firestore methods
 
 export function UserList() {
-  const [users, setUsers] = useState(initialUsers)
-  const [editingUser, setEditingUser] = useState<(typeof users)[0] | null>(null)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<number | null>(null)
+  const [users, setUsers] = useState([]);
+  const [editingUser, setEditingUser] = useState<(typeof users)[0] | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false); // State for Save Changes animation
+  const [isDeleting, setIsDeleting] = useState(false); // State for Delete animation
 
-
-  // Fetch user data on page load
+  // Fetch and listen to user data in real-time, sorted alphabetically by name
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/users", {});
-        const data = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.log("Error fetching data:", error);
-      }
-    }
+    const usersRef = collection(db, "users");
+    const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+      const userData = snapshot.docs.map((doc) => ({
+        user_id: doc.id,
+        ...doc.data(),
+      })).sort((a, b) => a.name.localeCompare(b.name)); // Sort alphabetically by name
+      setUsers(userData);
+      console.log("Users updated in real-time (sorted alphabetically):", userData);
+    }, (error) => {
+      console.error("Error listening to users:", error);
+    });
 
-    fetchUsers();
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, []);
 
   const handleEdit = (user: (typeof users)[0]) => {
-    setEditingUser(user)
-    setIsEditDialogOpen(true)
-  }
+    setEditingUser(user);
+    setIsEditDialogOpen(true);
+  };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (editingUser) {
+      setIsSaving(true); // Start animation
       try {
         const response = await fetch("http://localhost:8080/edit-user", {
           method: "POST",
@@ -67,44 +66,46 @@ export function UserList() {
           throw new Error("Failed to update user");
         }
 
-        // Update state after successful edit
-        setUsers(users.map((user) => user.user_id === editingUser.user_id ? editingUser : user));
-
         setIsEditDialogOpen(false);
+        // No need to manually update state here; Firestore listener will handle it
       } catch (error) {
         console.error("Error updating user:", error);
+      } finally {
+        setTimeout(() => setIsSaving(false), 1000); // Reset animation after 1s
       }
     }
-  }
+  };
 
-  const handleDelete = (userId: number) => {
-    setUserToDelete(userId)
-    setIsDeleteDialogOpen(true)
-  }
+  const handleDelete = (userId: string) => {
+    setUserToDelete(userId);
+    setIsDeleteDialogOpen(true);
+  };
 
   const confirmDelete = async () => {
     if (userToDelete) {
-        try {
-            const response = await fetch("http://localhost:8080/delete-user", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ user_id: userToDelete }),
-            });
+      setIsDeleting(true); // Start animation
+      try {
+        const response = await fetch("http://localhost:8080/delete-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_id: userToDelete }),
+        });
 
-            if (!response.ok) {
-                throw new Error("Failed to delete user");
-            }
-
-            // Update state after successful deletion
-            setUsers(users.filter((user) => user.user_id !== userToDelete));
-            setIsDeleteDialogOpen(false);
-        } catch (error) {
-            console.error("Error deleting user:", error);
+        if (!response.ok) {
+          throw new Error("Failed to delete user");
         }
+
+        setIsDeleteDialogOpen(false);
+        // No need to manually update state here; Firestore listener will handle it
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      } finally {
+        setTimeout(() => setIsDeleting(false), 1000); // Reset animation after 1s
+      }
     }
-  }
+  };
 
   return (
     <>
@@ -189,7 +190,20 @@ export function UserList() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button 
+                type="submit" 
+                className="relative flex items-center justify-center"
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="mr-2">Saving</span>
+                    <span className="spinner" />
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -205,12 +219,42 @@ export function UserList() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button 
+              variant="destructive" 
+              className="relative flex items-center justify-center"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <span className="mr-2">Deleting</span>
+                  <span className="spinner" />
+                </>
+              ) : (
+                "Delete"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Custom CSS for animation */}
+      <style jsx>{`
+        .spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #ffffff;
+          border-top: 2px solid transparent;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-left: 8px;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
-  )
+  );
 }

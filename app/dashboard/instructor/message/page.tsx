@@ -52,11 +52,8 @@ export default function InstructorMessagePage() {
 
       // Query students with the same school_id
       const studentsQuery = query(
-        
         collection(db, "users"),
-       
-        where("role", "==", "student")
-      ,
+        where("role", "==", "student"),
         where('school_id', '==', user.school_id) // Filter by school_id
       );
       const snapshot = await getDocs(studentsQuery);
@@ -69,7 +66,6 @@ export default function InstructorMessagePage() {
     fetchStudents();
   }, [user]);
 
-  // Real-time listener for messages
   useEffect(() => {
     if (selectedStudent && user) {
       const unsubscribe = getMessages(
@@ -95,8 +91,8 @@ export default function InstructorMessagePage() {
     if (selectedStudent && message.trim()) {
       try {
         await addDoc(collection(db, "messages"), {
-          sender: user.uid, // Instructor as sender
-          recipient: selectedStudent.user_id, // Student as recipient
+          sender: user.uid,
+          recipient: selectedStudent.user_id,
           message,
           timestamp: serverTimestamp(),
           reactions: {},
@@ -112,10 +108,7 @@ export default function InstructorMessagePage() {
   };
 
   // Handle adding a reaction to a message
-  const handleReaction = async (
-    messageId: string,
-    emoji: string
-  ): Promise<void> => {
+  const handleReaction = async (messageId: string, emoji: string): Promise<void> => {
     if (!user) {
       alert("You must be logged in to react to a message.");
       return;
@@ -129,7 +122,6 @@ export default function InstructorMessagePage() {
         }
         let reactions = messageDoc.data().reactions || {};
 
-        // Toggle off if same emoji is clicked; otherwise, update to the new emoji.
         if (reactions[user.uid] === emoji) {
           delete reactions[user.uid];
         } else {
@@ -140,6 +132,16 @@ export default function InstructorMessagePage() {
     } catch (error) {
       console.error("Error updating reaction:", error);
       alert("Failed to update reaction.");
+    }
+  };
+
+  const handleEditMessage = async (messageId: string, newText: string): Promise<void> => {
+    try {
+      const messageRef = doc(db, "messages", messageId);
+      await updateDoc(messageRef, { message: newText, edited: true });
+    } catch (error) {
+      console.error("Error editing message:", error);
+      alert("Failed to edit message.");
     }
   };
 
@@ -157,16 +159,11 @@ export default function InstructorMessagePage() {
     }
   };
 
-  // Scroll to the bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-
-  ("use client");
-
-  // ... (keep all the existing imports and logic)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -210,6 +207,101 @@ export default function InstructorMessagePage() {
               </div>
             ))}
           </div>
+        </div>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {students.map((student) => (
+              <Card key={student.id} className="cursor-pointer" onClick={() => setSelectedStudent(student)}>
+                <CardHeader>
+                  <CardTitle>{student.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{student.role}</span>
+                  <FiMessageCircle className="text-blue-500 text-xl" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {selectedStudent && (
+            <div className="mt-8 p-6 bg-white shadow-lg rounded-lg">
+              <h2 className="text-xl font-semibold mb-4">Send Message to {selectedStudent.name}</h2>
+              <div className="h-64 overflow-y-auto mb-4">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`p-2 my-2 ${msg.sender === user.uid ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    {editingMessageId === msg.id ? (
+                      <div>
+                        <textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="w-full p-4 border border-gray-300 rounded-lg mb-2"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await handleEditMessage(msg.id, editingText);
+                              setEditingMessageId(null);
+                            }}
+                            className="bg-green-500 text-white py-1 px-3 rounded"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingMessageId(null)}
+                            className="bg-red-500 text-white py-1 px-3 rounded"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p>
+                          {msg.message} {msg.edited && <span className="italic text-sm">(edited)</span>}
+                        </p>
+                        {msg.sender === user.uid && (
+                          <button
+                            onClick={() => {
+                              setEditingMessageId(msg.id);
+                              setEditingText(msg.message);
+                            }}
+                            className="mt-2 text-blue-600 underline"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      {['❤️', '👎', '👍'].map((emoji) => {
+                        const count = Object.values(msg.reactions || {}).filter((r) => r === emoji).length;
+                        return (
+                          <button
+                            key={emoji}
+                            onClick={() => handleReaction(msg.id, emoji)}
+                            className="text-lg hover:scale-125 transition-transform"
+                          >
+                            {emoji} {count}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+              <textarea
+                value={message}
+                onChange={handleMessageChange}
+                placeholder="Type your message here..."
+                rows={4}
+                className="w-full p-4 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Button onClick={handleSendMessage} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg">
+                Send Message
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Chat Area */}
@@ -381,6 +473,11 @@ export default function InstructorMessagePage() {
             </div>
           )}
         </div>
+        {!selectedStudent && (
+          <div className="text-center text-gray-600 mt-8">
+            <p>Please select a student to send a message.</p>
+          </div>
+        )}
       </div>
     </div>
   );

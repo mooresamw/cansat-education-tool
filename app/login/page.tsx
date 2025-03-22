@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
-
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,16 +17,28 @@ const LoginSignupPage = () => {
   const [role, setRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [user, setUser] = useState();
-  const [rememberMe, setRememberMe] = useState();
-  const [notification, setNotification] = useState('');
+  const [rememberMe, setRememberMe] = useState(false); // Fixed: Removed duplicate
+  const [notification, setNotification] = useState(''); // Fixed: Removed duplicate
   const [selectedSchool, setSelectedSchool] = useState({
     school_name: '',
     school_id: '',
   });
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false); // Forgot password modal state
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState(''); // Email for password reset
 
   const router = useRouter();
 
   useEffect(() => {
+    // Retrieve saved email and password from localStorage if "Remember Me" was checked
+    const savedEmail = localStorage.getItem('rememberMeEmail');
+    const savedPassword = localStorage.getItem('rememberMePassword');
+    if (savedEmail && savedPassword) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      setRememberMe(true);
+    }
+
+    // Retrieve user data from localStorage
     const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
     if (storedUser) setUser(storedUser);
   }, []);
@@ -52,8 +62,29 @@ const LoginSignupPage = () => {
     console.log("Selected School:", name, "Place ID:", placeId);
   };
 
+  // Validate password against requirements
+  const validatePassword = (password: string) => {
+    const minLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*]/.test(password);
+
+    return { minLength, hasUppercase, hasLowercase, hasNumber, hasSpecialChar };
+  };
+
+  const passwordValidation = validatePassword(password);
+
+  // Handle user sign up
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate password
+    if (!Object.values(passwordValidation).every((val) => val)) {
+      setNotification("Password does not meet the requirements.");
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -112,6 +143,17 @@ const LoginSignupPage = () => {
       }
       
 
+      // Save email and password to localStorage if "Remember Me" is checked
+      if (rememberMe) {
+        localStorage.setItem('rememberMeEmail', email);
+        localStorage.setItem('rememberMePassword', password);
+      } else {
+        // Clear saved email and password if "Remember Me" is unchecked
+        localStorage.removeItem('rememberMeEmail');
+        localStorage.removeItem('rememberMePassword');
+      }
+
+      // Fetch user role from Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -129,15 +171,35 @@ const LoginSignupPage = () => {
     }
   };
 
+  // Handle forgot password
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      setNotification("Please enter your email address.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, forgotPasswordEmail);
+      setNotification("Password reset email sent. Please check your inbox.");
+      setIsForgotPasswordModalOpen(false); // Close the modal
+    } catch (error: any) {
+      console.error("Error sending password reset email:", error.message);
+      setNotification("Error sending password reset email. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg flex overflow-hidden relative">
         <div className={`w-full flex transition-transform duration-500 ease-in-out ${isSignUp ? '-translate-x-1/2' : 'translate-x-0'}`}>
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
+              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
             </div>
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to EduPlatform</h2>
+            
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to CanSat</h2>
+
+            {/* Notification for login */}
             {notification && !isSignUp && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
                 {notification}
@@ -181,7 +243,13 @@ const LoginSignupPage = () => {
                   />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
-                <a href="#" className="text-sm text-gray-600 hover:text-blue-500">Forgot Password?</a>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordModalOpen(true)}
+                  className="text-sm text-gray-600 hover:text-blue-500"
+                >
+                  Forgot Password?
+                </button>
               </div>
               <button
                 type="submit"
@@ -193,9 +261,11 @@ const LoginSignupPage = () => {
           </div>
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">EduPlatform</h1>
+              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
             </div>
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Create Account</h2>
+            
+            {/* Notification for signup */}
             {notification && isSignUp && (
               <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
                 {notification}
@@ -250,6 +320,25 @@ const LoginSignupPage = () => {
                 </button>
               </div>
               <HighSchoolSearch onSelect={handleSchoolSelect} Style={'SignUp'}></HighSchoolSearch>
+              <div className="text-sm text-gray-600 grid grid-cols-2 gap-2">
+                <p className={passwordValidation.minLength ? "text-blue-500" : "text-gray-500"}>
+                  • At least 8 characters
+                </p>
+                <p className={passwordValidation.hasUppercase ? "text-blue-500" : "text-gray-500"}>
+                  • At least one uppercase letter
+                </p>
+                <p className={passwordValidation.hasLowercase ? "text-blue-500" : "text-gray-500"}>
+                  • At least one lowercase letter
+                </p>
+                <p className={passwordValidation.hasNumber ? "text-blue-500" : "text-gray-500"}>
+                  • At least one number
+                </p>
+                <p className={passwordValidation.hasSpecialChar ? "text-blue-500" : "text-gray-500"}>
+                  • At least one special character
+                </p>
+              </div>
+              
+              {/* Sign Up Button */}
               <button
                 type="submit"
                 className="w-full bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -275,7 +364,7 @@ const LoginSignupPage = () => {
           <div className="h-full w-full flex flex-col justify-center items-center text-center p-12 text-white">
             {!isSignUp ? (
               <>
-                <h2 className="text-3xl font-bold mb-4">Welcome to EduPlatform</h2>
+                <h2 className="text-3xl font-bold mb-4">Welcome to CanSat</h2>
                 <p className="mb-8">Fill up personal information and start your journey with us.</p>
                 <button
                   onClick={toggleForm}
@@ -299,6 +388,37 @@ const LoginSignupPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {isForgotPasswordModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Forgot Password</h2>
+            <p className="text-gray-600 mb-4">Enter your email address to reset your password.</p>
+            <input
+              type="email"
+              placeholder="Email"
+              value={forgotPasswordEmail}
+              onChange={(e) => setForgotPasswordEmail(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+            />
+            <div className="mt-6 flex justify-end space-x-4">
+              <button
+                onClick={() => setIsForgotPasswordModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForgotPassword}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Reset Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
