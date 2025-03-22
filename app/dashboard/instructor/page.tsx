@@ -7,6 +7,7 @@ import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
 import {onAuthStateChanged} from "firebase/auth";
 import {auth} from "@/lib/firebaseConfig";
+import {StudentProgressTable} from "@/components/StudentProgressTable";
 
 export default function InstructorDashboard() {
   const router = useRouter();
@@ -72,6 +73,7 @@ export default function InstructorDashboard() {
           </CardContent>
         </Card>
       </div>
+      <StudentProgressTable></StudentProgressTable>
     </DashboardLayout>
   )
 }
