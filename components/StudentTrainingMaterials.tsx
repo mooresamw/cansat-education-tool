@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect, useMemo, useState} from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Document, Page } from "react-pdf"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -20,15 +20,13 @@ interface PDFFile {
   url: string;
 }
 
-
 export default function StudentTrainingMaterials() {
-  const [selectedPdf, setSelectedPdf] = useState<PDFFile>()
+  const [selectedPdf, setSelectedPdf] = useState<PDFFile | undefined>(undefined)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [notes, setNotes] = useState("")
   const [pdfs, setPdfs] = useState<PDFFile[]>([]);
   const [loading, setLoading] = useState(true)
-
 
   // When the page loads, fetch the PDF files from backend
   useEffect(() => {
@@ -41,7 +39,7 @@ export default function StudentTrainingMaterials() {
 
         const data: PDFFile[] = await response.json();
         setPdfs(data);
-        setSelectedPdf(data[0])
+        setSelectedPdf(data[0]) // Set the first PDF as selected by default
         setLoading(false);
       } catch (error) {
         console.log("Error fetching PDFs from PDF", error);
@@ -65,7 +63,10 @@ export default function StudentTrainingMaterials() {
     cMapUrl: "/cmaps/",
     cMapPacked: true,
   }), []);
-  if(loading) return <Loading></Loading>;
+
+  if (loading) return <Loading />;
+
+  // Make sure selectedPdf is defined before accessing its id
   return (
     <div className="flex flex-col space-y-4">
       <h1 className="text-2xl font-bold">Training Materials</h1>
@@ -78,7 +79,7 @@ export default function StudentTrainingMaterials() {
             <CardContent>
               <div className="mb-4">
                 <Select
-                  value={selectedPdf.id}
+                  value={selectedPdf?.id} // Use optional chaining to handle undefined
                   onValueChange={(value) => setSelectedPdf(pdfs.find((pdf) => pdf.id === value) || pdfs[0])}
                 >
                   <SelectTrigger>
@@ -94,13 +95,16 @@ export default function StudentTrainingMaterials() {
                 </Select>
               </div>
               <div className="border rounded-lg overflow-auto h-[600px]">
-                <Document
-                  file={selectedPdf.url}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  options={pdfOptions} // Memoized to prevent re-renders
-                >
-                  <Page pageNumber={pageNumber} width={800} />
-                </Document>
+                {/* Only render Document if selectedPdf is defined */}
+                {selectedPdf && (
+                  <Document
+                    file={selectedPdf.url}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    options={pdfOptions} // Memoized to prevent re-renders
+                  >
+                    <Page pageNumber={pageNumber} width={800} />
+                  </Document>
+                )}
               </div>
               <div className="flex justify-between items-center mt-4">
                 <Button onClick={() => changePage(-1)} disabled={pageNumber <= 1}>

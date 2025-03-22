@@ -8,17 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FiMessageCircle } from "react-icons/fi";
 import { sendMessage, getMessages, handleReaction, handleEditMessage } from "@/lib/firestoreUtil";
 
-export default function MessagePage() {
+export default function StudentChatPage() {
   const [user, setUser] = useState<any>(null);
-  const [instructors, setInstructors] = useState<any[]>([]);
-  const [selectedInstructor, setSelectedInstructor] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
 
-  // Fetch the currently authenticated user and their data
+  // Fetch the currently authenticated user (student) and their data
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
@@ -34,33 +34,35 @@ export default function MessagePage() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch instructors from the same school
+  // Fetch students from the same school, excluding the current user
   useEffect(() => {
-    async function fetchInstructors() {
+    async function fetchStudents() {
       if (!user || !user.school_id) return;
 
-      // Query instructors with the same school_id
-      const instructorsQuery = query(
+      // Query students with the same school_id and role 'student'
+      const studentsQuery = query(
         collection(db, 'users'),
-        where('role', '==', 'instructor'),
+        where('role', '==', 'student'),
         where('school_id', '==', user.school_id) // Filter by school_id
       );
-      const snapshot = await getDocs(instructorsQuery);
-      const instructorsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setInstructors(instructorsList);
+      const snapshot = await getDocs(studentsQuery);
+      const studentsList = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(student => student.id !== user.uid); // Exclude current user
+      setStudents(studentsList);
     }
-    fetchInstructors();
+    fetchStudents();
   }, [user]);
 
   // Real-time listener for messages
   useEffect(() => {
-    if (selectedInstructor && user) {
-      const unsubscribe = getMessages(user.uid, selectedInstructor.user_id, (newMessages: any[]) => {
+    if (selectedStudent && user) {
+      const unsubscribe = getMessages(user.uid, selectedStudent.id, (newMessages: any[]) => {
         setMessages(newMessages);
       });
       return () => unsubscribe();
     }
-  }, [selectedInstructor, user]);
+  }, [selectedStudent, user]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
@@ -71,21 +73,21 @@ export default function MessagePage() {
       alert("You must be logged in to send a message.");
       return;
     }
-    if (selectedInstructor && message.trim()) {
-      // Optional safety check (redundant since list is filtered)
-      if (selectedInstructor.school_id !== user.school_id) {
-        alert("You can only message instructors from your school.");
+    if (selectedStudent && message.trim()) {
+      // Additional safety check (optional, since student list is already filtered)
+      if (selectedStudent.school_id !== user.school_id) {
+        alert("You can only message students from your school.");
         return;
       }
       try {
-        await sendMessage(user.uid, selectedInstructor.user_id, message);
+        await sendMessage(user.uid, selectedStudent.id, message);
         setMessage('');
       } catch (error) {
         console.error("Error sending message:", error);
         alert("Failed to send message.");
       }
     } else {
-      alert("Please select an instructor and type a message.");
+      alert("Please select a student and type a message.");
     }
   };
 
@@ -96,7 +98,7 @@ export default function MessagePage() {
       return;
     }
     try {
-      await handleReaction(user.uid, selectedInstructor.user_id, messageId, emoji);
+      await handleReaction(user.uid, selectedStudent.id, messageId, emoji);
     } catch (error) {
       console.error("Error updating reaction:", error);
       alert("Failed to update reaction.");
@@ -106,7 +108,7 @@ export default function MessagePage() {
   // Edit message handler
   const handleEditMessageWrapper = async (messageId: string, newText: string) => {
     try {
-      await handleEditMessage(user.uid, selectedInstructor.user_id, messageId, newText);
+      await handleEditMessage(user.uid, selectedStudent.id, messageId, newText);
       setEditingMessageId(null);
     } catch (error) {
       console.error("Error editing message:", error);
@@ -123,35 +125,36 @@ export default function MessagePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <h1 className="text-2xl font-bold text-center mb-6">Message an Instructor</h1>
+      <h1 className="text-2xl font-bold text-center mb-6">Message a Student</h1>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Instructor List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {instructors.length > 0 ? (
-            instructors.map((instructor) => (
-              <Card key={instructor.id} className="cursor-pointer" onClick={() => setSelectedInstructor(instructor)}>
+          {students.length > 0 ? (
+            students.map((student) => (
+              <Card key={student.id} className="cursor-pointer" onClick={() => setSelectedStudent(student)}>
                 <CardHeader>
-                  <CardTitle>{instructor.name}</CardTitle>
+                  <CardTitle>{student.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{instructor.role}</span>
+                  <span className="text-sm text-gray-600">{student.role}</span>
                   <FiMessageCircle className="text-blue-500 text-xl" />
                 </CardContent>
               </Card>
             ))
           ) : (
-            <p className="text-center text-gray-600">No instructors from your school available to message.</p>
+            <p className="text-center text-gray-600">No students from your school available to message.</p>
           )}
         </div>
 
-        {/* Chat Window */}
-        {selectedInstructor && (
+        {selectedStudent && (
           <div className="mt-8 p-6 bg-white shadow-lg rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Send Message to {selectedInstructor.name}</h2>
+            <h2 className="text-xl font-semibold mb-4">Send Message to {selectedStudent.name}</h2>
             <div className="h-64 overflow-y-auto mb-4">
               {messages.map((msg) => (
-                <div key={msg.messageId} className={`p-2 my-2 ${msg.sender === user.uid ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <div
+                  key={msg.messageId}
+                  className={`p-2 my-2 ${msg.sender === user.uid ? 'bg-blue-100' : 'bg-gray-100'}`}
+                >
                   {editingMessageId === msg.messageId ? (
                     <div>
                       <textarea
@@ -223,10 +226,9 @@ export default function MessagePage() {
           </div>
         )}
 
-        {/* No Instructor Selected */}
-        {!selectedInstructor && (
+        {!selectedStudent && (
           <div className="text-center text-gray-600 mt-8">
-            <p>Please select an instructor to send a message.</p>
+            <p>Please select a student to send a message.</p>
           </div>
         )}
       </div>

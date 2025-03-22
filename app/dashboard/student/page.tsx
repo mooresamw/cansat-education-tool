@@ -43,7 +43,7 @@ export default function StudentDashboard() {
             <CardTitle>Collaboration Tools</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button>Join Team Chat</Button>
+            <Button onClick={()=> router.push ("/dashboard/student/messageStudent")}>Join Team Chat</Button>
           </CardContent>
         </Card>
         <Card>
