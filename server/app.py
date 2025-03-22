@@ -302,6 +302,72 @@ def get_user_progress():
         return jsonify({"error": str(e)}), 500
 
 
+# API route to get the instructor's student progress from the db
+@app.route('/student-progress', methods=['GET'])
+def get_student_progress():
+    try:
+        instructor_id = request.args.get("user_id")  # Instructor's user_id
+
+        if not instructor_id:
+            return jsonify({"error": "Missing user_id parameter"}), 400
+
+        # Fetch instructor's school_id
+        instructor_doc = db.collection("users").document(instructor_id).get()
+        if not instructor_doc.exists:
+            return jsonify({"error": "Instructor not found"}), 404
+
+        instructor_data = instructor_doc.to_dict()
+        instructor_school_id = instructor_data.get("school_id")
+
+        if not instructor_school_id:
+            return jsonify({"error": "Instructor does not have a school_id"}), 400
+
+        # Fetch all students in the same school
+        students_query = db.collection("users").where("school_id", "==", instructor_school_id).where("role", "==",
+                                                                                                     "student")
+        students_docs = students_query.stream()
+
+        student_ids = [doc.id for doc in students_docs]
+
+        if not student_ids:
+            return jsonify({"message": "No students found for this school"}), 200
+
+        # Fetch progress data for all students in this school
+        progress_query = db.collection("progress").where("user_id", "in", student_ids)
+        progress_docs = progress_query.stream()
+
+        progress_data = []
+        for doc in progress_docs:
+            progress_entry = doc.to_dict()
+            progress_entry["id"] = doc.id  # Include document ID
+            progress_data.append(progress_entry)
+
+        return jsonify(progress_data), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# API route to get the user data by id
+@app.route("/users/<user_id>", methods=["GET"])
+def get_user(user_id):
+    try:
+        users_collection = db.collection("users")
+        user_doc = users_collection.document(user_id).get()
+        if not user_doc.exists:
+            return jsonify({"error": "User not found"}), 404
+
+        user_data = user_doc.to_dict()
+        return jsonify({
+            "user_id": user_id,
+            "name": user_data.get("name", "Unknown"),
+            "email": user_data.get("email", "No email provided"),
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # API route to send the code to from student ide to the server
 @app.route('/run', methods=['POST'])
 def run_code():
