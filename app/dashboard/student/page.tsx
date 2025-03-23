@@ -1,15 +1,15 @@
-'use client';
-
+'use client'
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { checkUserRole } from "@/lib/checkAuth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebaseConfig";
 
 export default function StudentDashboard() {
+  const userRole = checkUserRole(["admin", "instructor", "student"]);
+  if (!userRole) return <p>Loading...</p>; // Show loading until redirect happens
+
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | undefined>(undefined);
@@ -69,8 +69,6 @@ export default function StudentDashboard() {
     router.push("/dashboard/student/ide");
   };
 
-  if (loading) return <p>Loading...</p>;
-
   return (
     <DashboardLayout userType="student">
       <h1 className="text-2xl font-bold mb-6">Student Dashboard</h1>
@@ -106,12 +104,10 @@ export default function StudentDashboard() {
             <CardTitle>Direct Messaging</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push("/dashboard/student/message")}>
-              Message Instructor
-            </Button>
+            <Button onClick={() => router.push("/dashboard/student/message")}>Message Instructor</Button>
           </CardContent>
         </Card>
       </div>
     </DashboardLayout>
-  );
+  )
 }

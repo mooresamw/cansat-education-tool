@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+<<<<<<< HEAD
+=======
+import Link from 'next/link';
+import { FaGoogle } from 'react-icons/fa';
+>>>>>>> 5f19ad3046cfd1d94afe20913b329a9f6293fe03
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signOut } from 'firebase/auth';
@@ -189,46 +194,50 @@ const LoginSignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg flex overflow-hidden relative">
-        <div className={`w-full flex transition-transform duration-500 ease-in-out ${isSignUp ? '-translate-x-1/2' : 'translate-x-0'}`}>
+    <div className="min-h-screen flex items-center justify-center bg-black p-4">
+      <div className="w-full max-w-4xl bg-black border border-gray-800 rounded-sm shadow-lg flex overflow-hidden relative">
+        <div
+          className={`w-full flex transition-transform duration-500 ease-in-out ${
+            isSignUp ? '-translate-x-1/2' : 'translate-x-0'
+          }`}
+        >
+          {/* Sign In Form */}
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
+              <Link href="/">
+                <h1 className="text-white text-xl font-medium">CanSat</h1>
+              </Link>
             </div>
-            
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Sign in to CanSat</h2>
-
-            {/* Notification for login */}
+            <h2 className="text-2xl font-semibold mb-6 text-white">Sign in</h2>
             {notification && !isSignUp && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
                 {notification}
               </div>
             )}
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
               </div>
               <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
                 >
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
@@ -239,147 +248,134 @@ const LoginSignupPage = () => {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    className="rounded-sm border-gray-700 bg-gray-900 text-white focus:ring-0"
                   />
-                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                  <span className="ml-2 text-sm text-gray-400">Remember me</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsForgotPasswordModalOpen(true)}
-                  className="text-sm text-gray-600 hover:text-blue-500"
-                >
+                <a href="#" className="text-sm text-gray-400 hover:text-white">
                   Forgot Password?
-                </button>
+                </a>
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
               >
                 Sign In
               </button>
+              <div className="md:hidden mt-4 text-center">
+                <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                  Don't have an account? <span className="font-semibold">Sign Up</span>
+                </span>
+              </div>
             </form>
           </div>
+  
+          {/* Sign Up Form */}
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
-              <h1 className="text-blue-500 text-xl font-medium">CanSat</h1>
+              <Link href="/">
+                <h1 className="text-white text-xl font-medium">CanSat</h1>
+              </Link>
             </div>
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Create Account</h2>
-            
-            {/* Notification for signup */}
+            <h2 className="text-2xl font-semibold mb-6 text-white">Create Account</h2>
             {notification && isSignUp && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
+              <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
                 {notification}
               </div>
             )}
             <form onSubmit={handleSignUp} className="space-y-6">
               <div className="relative">
-                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
                   placeholder="First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
               </div>
               <div className="relative">
-                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
               </div>
               <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="email"
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
               </div>
               <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+                  className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
                 >
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
               </div>
-              <HighSchoolSearch onSelect={handleSchoolSelect} Style={'SignUp'}></HighSchoolSearch>
-              <div className="text-sm text-gray-600 grid grid-cols-2 gap-2">
-                <p className={passwordValidation.minLength ? "text-blue-500" : "text-gray-500"}>
-                  • At least 8 characters
-                </p>
-                <p className={passwordValidation.hasUppercase ? "text-blue-500" : "text-gray-500"}>
-                  • At least one uppercase letter
-                </p>
-                <p className={passwordValidation.hasLowercase ? "text-blue-500" : "text-gray-500"}>
-                  • At least one lowercase letter
-                </p>
-                <p className={passwordValidation.hasNumber ? "text-blue-500" : "text-gray-500"}>
-                  • At least one number
-                </p>
-                <p className={passwordValidation.hasSpecialChar ? "text-blue-500" : "text-gray-500"}>
-                  • At least one special character
-                </p>
-              </div>
-              
-              {/* Sign Up Button */}
+              <HighSchoolSearch onSelect={handleSchoolSelect} Style={"SignUp"} />
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
               >
                 Sign Up
               </button>
+              <div className="md:hidden mt-4 text-center">
+                <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                  Already have an account? <span className="font-semibold">Sign In</span>
+                </span>
+              </div>
             </form>
-            <div className="mt-4 text-center">
-              <span
-                onClick={toggleForm}
-                className="text-sm text-gray-600 hover:text-black-500 cursor-pointer"
-              >
-                Already have an account? <span className="font-semibold">Sign In</span>
-              </span>
-            </div>
           </div>
         </div>
+  
+        {/* Side Panel */}
         <div
           className={`hidden md:flex absolute top-0 right-0 w-1/2 h-full transition-transform duration-500 ease-in-out ${
             isSignUp ? 'translate-x-full' : 'translate-x-0'
-          } bg-blue-500`}
+          } bg-gray-900 border-l border-gray-800`}
         >
           <div className="h-full w-full flex flex-col justify-center items-center text-center p-12 text-white">
             {!isSignUp ? (
               <>
-                <h2 className="text-3xl font-bold mb-4">Welcome to CanSat</h2>
-                <p className="mb-8">Fill up personal information and start your journey with us.</p>
+                <h2 className="text-3xl font-bold mb-4">New Here?</h2>
+                <p className="mb-8 text-gray-400">
+                  Sign up and discover the world of space engineering through our CanSat program.
+                </p>
                 <button
                   onClick={toggleForm}
-                  className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-blue-500 transition-colors"
+                  className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
                 >
                   Sign Up
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-3xl font-bold mb-4">Welcome Back!</h2>
-                <p className="mb-8">To keep connected with us, please log in with your personal info.</p>
+                <h2 className="text-3xl font-bold mb-4">Welcome Back</h2>
+                <p className="mb-8 text-gray-400">
+                  To continue your journey with us, please log in with your personal info.
+                </p>
                 <button
                   onClick={toggleForm}
-                  className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-blue-500 transition-colors"
+                  className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
                 >
                   Sign In
                 </button>
@@ -421,6 +417,7 @@ const LoginSignupPage = () => {
       )}
     </div>
   );
+  
 };
 
 export default LoginSignupPage;
