@@ -10,7 +10,6 @@ import { auth } from "@/lib/firebaseConfig";
 import { getUser } from "@/lib/getUser";
 import {
   ActivityIcon,
-  Bell,
   BookOpenIcon,
   ClockIcon,
   CodeIcon,
@@ -130,14 +129,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               className="pl-9 bg-gray-700 text-white border-gray-600 focus:ring-0 focus:border-gray-500"
             />
           </div>
-
-          {/* Icons / Avatar */}
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-              <Bell className="h-6 w-6" />
-            </Button>
-
-            {/* Profile / Sign Out Popover */}
+          <div className="flex items-center gap-8">
+            {/* Bell icon removed */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button

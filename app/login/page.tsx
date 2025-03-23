@@ -6,10 +6,9 @@ import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'; // Add updateDoc
 import { useRouter } from "next/navigation";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
-
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -58,11 +57,11 @@ const LoginSignupPage = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-  
+
       // Use the standalone sendEmailVerification function
-      await sendEmailVerification(user); // Pass the user object as an argument
+      await sendEmailVerification(user);
       console.log("Verification email sent to:", email);
-  
+
       const response = await fetch("http://localhost:8080/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,23 +74,23 @@ const LoginSignupPage = () => {
           school_id: selectedSchool.school_id,
         }),
       });
-  
+
       if (!response.ok) throw new Error("Failed to register user");
-  
+
       const data = await response.json();
       console.log("User registered successfully:", data);
-  
+
       localStorage.setItem("user", JSON.stringify(data));
       setUser(data);
-  
+
       setNotification("Account created successfully. Please check your email to verify your account.");
-  
+
       setEmail('');
       setPassword('');
       setFirstName('');
       setLastName('');
       setSelectedSchool({ school_name: '', school_id: '' });
-  
+
     } catch (error: any) {
       console.error("Error signing up:", error.message);
       setNotification(`Error: ${error.message}. Please try again.`);
@@ -104,18 +103,28 @@ const LoginSignupPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Optional: Enforce email verification (uncomment if desired)
-      
+      // Check if the user has verified their email
       if (!user.emailVerified) {
         setNotification("Please verify your email before logging in.");
         await signOut(auth);
         return;
       }
-      
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      // Fetch the user document from Firestore
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
         const userData = userDoc.data();
+
+        // Check if the verified field needs to be updated
+        if (userData.verified !== user.emailVerified) {
+          console.log("Updating verified field in Firestore to:", user.emailVerified);
+          await updateDoc(userRef, {
+            verified: user.emailVerified,
+          });
+          console.log("Verified field updated successfully");
+        }
+
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         console.log('User logged in successfully!');

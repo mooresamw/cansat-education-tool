@@ -1,31 +1,44 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from "react";
 import { auth, db } from "@/lib/firebaseConfig";
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FiMessageCircle } from "react-icons/fi";
-import { sendMessage, getMessages, handleReaction, handleEditMessage } from "@/lib/firestoreUtil";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
+import { FiMessageCircle, FiSend } from "react-icons/fi";
+import {
+  sendMessage,
+  handleReaction,
+  handleEditMessage,
+  getMessages,
+} from "@/lib/firestoreUtil";
 
 export default function InstructorMessagePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(null); // Logged-in instructor
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [message, setMessage] = useState('');
+
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState('');
 
-  // Fetch the currently authenticated user (instructor) and their data
+  // Editing states
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  // 1. Fetch current user (instructor)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        const userDoc = await getDocs(query(collection(db, 'users'), where('user_id', '==', currentUser.uid)));
+        const userDoc = await getDocs(
+          query(collection(db, "users"), where("user_id", "==", currentUser.uid))
+        );
         if (!userDoc.empty) {
           const userData = userDoc.docs[0].data();
-          setUser({ ...currentUser, ...userData }); // Merge auth user with Firestore data
+          setUser({ ...currentUser, ...userData });
         }
       } else {
         setUser(null);
@@ -34,52 +47,50 @@ export default function InstructorMessagePage() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch students from the same school
+  // 2. Fetch students
   useEffect(() => {
     async function fetchStudents() {
       if (!user || !user.school_id) return;
 
-      // Query students with the same school_id
       const studentsQuery = query(
-        collection(db, 'users'),
-        where('role', '==', 'student'),
-        where('school_id', '==', user.school_id) // Filter by school_id
+        collection(db, "users"),
+        where("role", "==", "student"),
+        where("school_id", "==", user.school_id)
       );
       const snapshot = await getDocs(studentsQuery);
-      const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const studentsList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
       setStudents(studentsList);
     }
     fetchStudents();
   }, [user]);
 
-  // Real-time listener for messages
+  // 3. Real-time listener for messages
   useEffect(() => {
     if (selectedStudent && user) {
-      const unsubscribe = getMessages(user.uid, selectedStudent.user_id, (newMessages: any[]) => {
-        setMessages(newMessages);
-      });
+      const unsubscribe = getMessages(
+        user.uid,
+        selectedStudent.user_id,
+        (newMessages: any[]) => {
+          setMessages(newMessages);
+        }
+      );
       return () => unsubscribe();
     }
   }, [selectedStudent, user]);
 
-  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
-  };
-
+  // 4. Send a message
   const handleSendMessage = async () => {
     if (!user) {
       alert("You must be logged in to send a message.");
       return;
     }
     if (selectedStudent && message.trim()) {
-      // Optional safety check (redundant since list is filtered)
-      if (selectedStudent.school_id !== user.school_id) {
-        alert("You can only message students from your school.");
-        return;
-      }
       try {
         await sendMessage(user.uid, selectedStudent.user_id, message);
-        setMessage('');
+        setMessage("");
       } catch (error) {
         console.error("Error sending message:", error);
         alert("Failed to send message.");
@@ -89,12 +100,9 @@ export default function InstructorMessagePage() {
     }
   };
 
-  // Handle adding a reaction to a message
-  const handleReactionWrapper = async (messageId: string, emoji: string) => {
-    if (!user) {
-      alert("You must be logged in to react to a message.");
-      return;
-    }
+  // 5. Handle reaction
+  const handleReactionClick = async (messageId: string, emoji: string) => {
+    if (!user || !selectedStudent) return;
     try {
       await handleReaction(user.uid, selectedStudent.user_id, messageId, emoji);
     } catch (error) {
@@ -103,18 +111,18 @@ export default function InstructorMessagePage() {
     }
   };
 
-  // Handle editing a message
-  const handleEditMessageWrapper = async (messageId: string, newText: string) => {
+  // 6. Handle edit
+  const handleEditMessageClick = async (messageId: string, newText: string) => {
+    if (!user || !selectedStudent) return;
     try {
       await handleEditMessage(user.uid, selectedStudent.user_id, messageId, newText);
-      setEditingMessageId(null);
     } catch (error) {
       console.error("Error editing message:", error);
       alert("Failed to edit message.");
     }
   };
 
-  // Scroll to the bottom when messages change
+  // Scroll to bottom on messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -122,116 +130,238 @@ export default function InstructorMessagePage() {
   }, [messages]);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <h1 className="text-2xl font-bold text-center mb-6">Message a Student</h1>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md py-4 px-6">
+        <h1 className="text-2xl font-bold">Message a Student</h1>
+      </header>
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Student List for Instructor */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {students.length > 0 ? (
-            students.map((student) => (
-              <Card key={student.id} className="cursor-pointer" onClick={() => setSelectedStudent(student)}>
-                <CardHeader>
-                  <CardTitle>{student.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{student.role}</span>
-                  <FiMessageCircle className="text-blue-500 text-xl" />
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <p className="text-center text-gray-600">No students from your school available to message.</p>
-          )}
-        </div>
-
-        {/* Chat Window with Selected Student */}
-        {selectedStudent && (
-          <div className="mt-8 p-6 bg-white shadow-lg rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Send Message to {selectedStudent.name}</h2>
-            <div className="h-64 overflow-y-auto mb-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.messageId}
-                  className={`p-2 my-2 ${msg.sender === user.uid ? 'bg-blue-100' : 'bg-gray-100'}`}
-                >
-                  {editingMessageId === msg.messageId ? (
-                    <div>
-                      <textarea
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className="w-full p-4 border border-gray-300 rounded-lg mb-2"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditMessageWrapper(msg.messageId, editingText)}
-                          className="bg-green-500 text-white py-1 px-3 rounded"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingMessageId(null)}
-                          className="bg-red-500 text-white py-1 px-3 rounded"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <p>
-                        {msg.message} {msg.edited && <span className="italic text-sm">(edited)</span>}
-                      </p>
-                      {msg.sender === user.uid && (
-                        <button
-                          onClick={() => {
-                            setEditingMessageId(msg.messageId);
-                            setEditingText(msg.message);
-                          }}
-                          className="mt-2 text-blue-600 underline"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    {['❤️', '👎', '👍'].map((emoji) => {
-                      const count = Object.values(msg.reactions || {}).filter((r) => r === emoji).length;
-                      return (
-                        <button
-                          key={emoji}
-                          onClick={() => handleReactionWrapper(msg.messageId, emoji)}
-                          className="text-lg hover:scale-125 transition-transform"
-                        >
-                          {emoji} {count}
-                        </button>
-                      );
-                    })}
+      <div className="flex flex-1 overflow-hidden bg-gray-50">
+        {/* Sidebar: Students List */}
+        <div className="w-80 border-r border-gray-200 flex flex-col">
+          <div className="p-4 bg-white shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Students
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-white">
+            {students.map((student) => (
+              <div
+                key={student.id}
+                onClick={() => setSelectedStudent(student)}
+                className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
+                  selectedStudent?.id === student.id
+                    ? "bg-blue-50 border-l-4 border-blue-500"
+                    : "hover:bg-gray-100 border-l-4 border-transparent"
+                }`}
+              >
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                    {student.name?.[0]?.toUpperCase() || "S"}
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-            <textarea
-              value={message}
-              onChange={handleMessageChange}
-              placeholder="Type your message here..."
-              rows={4}
-              className="w-full p-4 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Button onClick={handleSendMessage} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg">
-              Send Message
-            </Button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {student.name}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {student.email || "Student"}
+                  </p>
+                </div>
+                <FiMessageCircle className="h-5 w-5 text-gray-400" />
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
-        {/* No Student Selected */}
-        {!selectedStudent && (
-          <div className="text-center text-gray-600 mt-8">
-            <p>Please select a student to send a message.</p>
-          </div>
-        )}
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {selectedStudent ? (
+            <>
+              {/* Chat Header */}
+              <div className="bg-white p-4 shadow-sm flex items-center space-x-3">
+                <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xl">
+                  {selectedStudent.name?.[0]?.toUpperCase() || "S"}
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {selectedStudent.name}
+                  </h2>
+                  <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                    Active now
+                  </span>
+                </div>
+              </div>
+
+              {/* Messages List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-gray-100">
+                {messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
+                    <FiMessageCircle className="h-12 w-12" />
+                    <p className="text-lg">No messages yet</p>
+                    <p className="text-sm">
+                      Start a conversation with {selectedStudent.name}
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isSender = msg.sender === user.uid;
+                    return (
+                      <div
+                        key={msg.messageId}
+                        className={`flex items-end ${
+                          isSender ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {/* Avatar on the left if NOT sender */}
+                        {!isSender && (
+                          <div className="mr-2 flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
+                              {selectedStudent.name?.[0]?.toUpperCase() || "S"}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div
+                          className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
+                            isSender
+                              ? "bg-blue-500 text-white rounded-br-sm"
+                              : "bg-white text-gray-900 rounded-bl-sm"
+                          }`}
+                        >
+                          {editingMessageId === msg.messageId ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-900"
+                                style={{ minHeight: "60px" }}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={async () => {
+                                    await handleEditMessageClick(msg.messageId, editingText);
+                                    setEditingMessageId(null);
+                                  }}
+                                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingMessageId(null)}
+                                  className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="break-words">
+                                {msg.message}
+                                {msg.edited && (
+                                  <span className="ml-2 text-xs text-gray-300 italic">
+                                    (edited)
+                                  </span>
+                                )}
+                              </p>
+                              {isSender && (
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(msg.messageId);
+                                    setEditingText(msg.message);
+                                  }}
+                                  className="mt-1 text-xs text-blue-200 hover:text-blue-100 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* Reaction UI */}
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              onClick={() => handleReactionClick(msg.messageId, "👍")}
+                              className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                            >
+                              👍
+                            </button>
+                            <button
+                              onClick={() => handleReactionClick(msg.messageId, "❤️")}
+                              className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                            >
+                              ❤️
+                            </button>
+                            <button
+                              onClick={() => handleReactionClick(msg.messageId, "😆")}
+                              className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                            >
+                              😆
+                            </button>
+                            {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
+                              <span
+                                key={uid}
+                                className={`text-sm px-1 rounded-full ${
+                                  isSender ? "bg-blue-600/20" : "bg-gray-200"
+                                }`}
+                              >
+                                {emoji as string}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Avatar on the right if sender */}
+                        {isSender && (
+                          <div className="ml-2 flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
+                              {user.displayName?.[0] || "I"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <div className="bg-white border-t border-gray-200 p-4">
+                <div className="relative">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message here..."
+                    rows={2}
+                    className="w-full p-3 pr-16 resize-none border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    className="absolute bottom-3 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                  >
+                    <FiSend className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            // If no student is selected
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="max-w-md text-center space-y-4">
+                <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Select a student
+                </h3>
+                <p className="text-gray-500">
+                  Choose a student from the list to view messages and start a conversation
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
