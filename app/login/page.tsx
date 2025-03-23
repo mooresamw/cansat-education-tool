@@ -6,7 +6,7 @@ import { FaGoogle } from 'react-icons/fa';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore'; // Add updateDoc
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from "next/navigation";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
 
@@ -25,6 +25,7 @@ const LoginSignupPage = () => {
     school_name: '',
     school_id: '',
   });
+  const [errors, setErrors] = useState({}); // Added for validation errors
 
   const router = useRouter();
 
@@ -42,6 +43,7 @@ const LoginSignupPage = () => {
     setSelectedSchool({ school_name: '', school_id: '' });
     setShowPassword(false);
     setNotification('');
+    setErrors({});
   };
 
   const handleSchoolSelect = (name: string, placeId: any) => {
@@ -49,16 +51,35 @@ const LoginSignupPage = () => {
       school_name: name,
       school_id: placeId,
     });
+    setErrors(prev => ({ ...prev, school: '' })); // Clear school error when selected
     console.log("Selected School:", name, "Place ID:", placeId);
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!lastName.trim()) newErrors.lastName = 'Last name is required';
+    if (!email.trim()) newErrors.email = 'Email is required';
+    if (!password.trim()) newErrors.password = 'Password is required';
+    if (!selectedSchool.school_name) newErrors.school = 'Please select a high school';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      setNotification('Please fill out all required fields');
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Use the standalone sendEmailVerification function
       await sendEmailVerification(user);
       console.log("Verification email sent to:", email);
 
@@ -90,6 +111,7 @@ const LoginSignupPage = () => {
       setFirstName('');
       setLastName('');
       setSelectedSchool({ school_name: '', school_id: '' });
+      setErrors({});
 
     } catch (error: any) {
       console.error("Error signing up:", error.message);
@@ -103,20 +125,17 @@ const LoginSignupPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Check if the user has verified their email
       if (!user.emailVerified) {
         setNotification("Please verify your email before logging in.");
         await signOut(auth);
         return;
       }
 
-      // Fetch the user document from Firestore
       const userRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
         const userData = userDoc.data();
 
-        // Check if the verified field needs to be updated
         if (userData.verified !== user.emailVerified) {
           console.log("Updating verified field in Firestore to:", user.emailVerified);
           await updateDoc(userRef, {
@@ -215,8 +234,8 @@ const LoginSignupPage = () => {
               </div>
             </form>
           </div>
-  
-          {/* Sign Up Form */}
+
+          {/* Modified Sign Up Form */}
           <div className="w-full md:w-1/2 p-8 flex-shrink-0">
             <div className="mb-8">
               <Link href="/">
@@ -234,39 +253,46 @@ const LoginSignupPage = () => {
                 <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="First Name"
+                  placeholder="First Name *"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
+                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
               </div>
               <div className="relative">
                 <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Last Name"
+                  placeholder="Last Name *"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
+                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
               </div>
               <div className="relative">
                 <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type="email"
-                  placeholder="Email"
+                  placeholder="Email *"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
               <div className="relative">
                 <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
+                  placeholder="Password *"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                 />
                 <button
@@ -276,8 +302,17 @@ const LoginSignupPage = () => {
                 >
                   {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
                 </button>
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
               </div>
-              <HighSchoolSearch onSelect={handleSchoolSelect} Style={"SignUp"} />
+              <div>
+                <HighSchoolSearch onSelect={handleSchoolSelect} Style={"SignUp"} />
+                {selectedSchool.school_name ? (
+                  <p className="text-gray-400 text-sm mt-1">Selected: {selectedSchool.school_name}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm mt-1">High School * (required)</p>
+                )}
+                {errors.school && <p className="text-red-500 text-xs mt-1">{errors.school}</p>}
+              </div>
               <button
                 type="submit"
                 className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
@@ -292,7 +327,7 @@ const LoginSignupPage = () => {
             </form>
           </div>
         </div>
-  
+
         {/* Side Panel */}
         <div
           className={`hidden md:flex absolute top-0 right-0 w-1/2 h-full transition-transform duration-500 ease-in-out ${
@@ -332,7 +367,6 @@ const LoginSignupPage = () => {
       </div>
     </div>
   );
-  
 };
 
 export default LoginSignupPage;
