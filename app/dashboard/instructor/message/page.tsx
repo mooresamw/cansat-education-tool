@@ -1,33 +1,22 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from 'react';
 import { auth, db } from "@/lib/firebaseConfig";
-import {
-  collection,
-  runTransaction,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-  doc,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FiArrowUp, FiMessageCircle, FiSend } from "react-icons/fi";
+import { FiMessageCircle } from "react-icons/fi";
 import { sendMessage, getMessages, handleReaction, handleEditMessage } from "@/lib/firestoreUtil";
 
 export default function InstructorMessagePage() {
-  const [user, setUser] = useState<any>(null); // Store logged-in instructor
-  const [students, setStudents] = useState<any[]>([]); // Store list of students
-  const [selectedStudent, setSelectedStudent] = useState<any>(null); // The student being messaged
-  const [message, setMessage] = useState(""); // Current message input
-  const [messages, setMessages] = useState<any[]>([]); // Store conversation history
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Auto-scroll reference
+  const [user, setUser] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState("");
+  const [editingText, setEditingText] = useState('');
 
   // Fetch the currently authenticated user (instructor) and their data
   useEffect(() => {
@@ -52,15 +41,15 @@ export default function InstructorMessagePage() {
 
       // Query students with the same school_id
       const studentsQuery = query(
+        
         collection(db, "users"),
-        where("role", "==", "student"),
+       
+        where("role", "==", "student")
+      ,
         where('school_id', '==', user.school_id) // Filter by school_id
       );
       const snapshot = await getDocs(studentsQuery);
-      const studentsList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const studentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStudents(studentsList);
     }
     fetchStudents();
@@ -68,13 +57,9 @@ export default function InstructorMessagePage() {
 
   useEffect(() => {
     if (selectedStudent && user) {
-      const unsubscribe = getMessages(
-        user.uid,
-        selectedStudent.user_id,
-        (newMessages: any[]) => {
-          setMessages(newMessages);
-        }
-      );
+      const unsubscribe = getMessages(user.uid, selectedStudent.user_id, (newMessages: any[]) => {
+        setMessages(newMessages);
+      });
       return () => unsubscribe();
     }
   }, [selectedStudent, user]);
@@ -91,8 +76,8 @@ export default function InstructorMessagePage() {
     if (selectedStudent && message.trim()) {
       try {
         await addDoc(collection(db, "messages"), {
-          sender: user.uid,
-          recipient: selectedStudent.user_id,
+          sender: user.uid, // Instructor as sender
+          recipient: selectedStudent.user_id, // Student as recipient
           message,
           timestamp: serverTimestamp(),
           reactions: {},
@@ -108,12 +93,14 @@ export default function InstructorMessagePage() {
   };
 
   // Handle adding a reaction to a message
-  const handleReaction = async (messageId: string, emoji: string): Promise<void> => {
+  const handleReaction = async (
+    messageId: string,
+    emoji: string
+  ): Promise<void> => {
     if (!user) {
       alert("You must be logged in to react to a message.");
       return;
     }
-    const messageRef = doc(db, "messages", messageId);
     try {
       await runTransaction(db, async (transaction) => {
         const messageDoc = await transaction.get(messageRef);
@@ -122,6 +109,7 @@ export default function InstructorMessagePage() {
         }
         let reactions = messageDoc.data().reactions || {};
 
+        // Toggle off if same emoji is clicked; otherwise, update to the new emoji.
         if (reactions[user.uid] === emoji) {
           delete reactions[user.uid];
         } else {
@@ -146,13 +134,10 @@ export default function InstructorMessagePage() {
   };
 
   // Handle editing a message
-  const handleEditMessageWrapper = async (
-    messageId: string,
-    newText: string
-  ) => {
+  const handleEditMessageWrapper = async (messageId: string, newText: string) => {
     try {
-      const messageRef = doc(db, "messages", messageId);
-      await updateDoc(messageRef, { message: newText, edited: true });
+      await handleEditMessage(user.uid, selectedStudent.user_id, messageId, newText);
+      setEditingMessageId(null);
     } catch (error) {
       console.error("Error editing message:", error);
       alert("Failed to edit message.");
@@ -166,47 +151,27 @@ export default function InstructorMessagePage() {
   }, [messages]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">Message a Student</h1>
-      </header>
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
+      <h1 className="text-2xl font-bold text-center mb-6">Message a Student</h1>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Student List Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              Students
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {students.map((student) => (
-              <div
-                key={student.id}
-                onClick={() => setSelectedStudent(student)}
-                className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors ${
-                  selectedStudent?.id === student.id
-                    ? "bg-blue-50 border-l-4 border-blue-500"
-                    : "hover:bg-gray-50 border-l-4 border-transparent"
-                }`}
-              >
-                <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                    {student.name[0]}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {student.name}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {student.email || "Student"}
-                  </p>
-                </div>
-                <FiMessageCircle className="h-5 w-5 text-gray-400" />
-              </div>
-            ))}
-          </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Student List for Instructor */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {students.length > 0 ? (
+            students.map((student) => (
+              <Card key={student.id} className="cursor-pointer" onClick={() => setSelectedStudent(student)}>
+                <CardHeader>
+                  <CardTitle>{student.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{student.role}</span>
+                  <FiMessageCircle className="text-blue-500 text-xl" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <p className="text-center text-gray-600">No students from your school available to message.</p>
+          )}
         </div>
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -473,11 +438,6 @@ export default function InstructorMessagePage() {
             </div>
           )}
         </div>
-        {!selectedStudent && (
-          <div className="text-center text-gray-600 mt-8">
-            <p>Please select a student to send a message.</p>
-          </div>
-        )}
       </div>
     </div>
   );

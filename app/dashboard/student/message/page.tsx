@@ -1,9 +1,9 @@
-"use client";
-
+"use client";;
 import { useEffect, useState, useRef } from "react";
 import { auth, db } from "@/lib/firebaseConfig";
 import {
   collection,
+  runTransaction,
   getDocs,
   query,
   where,
@@ -11,24 +11,24 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
-  runTransaction,
+  increment,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FiMessageCircle, FiSend } from "react-icons/fi";
-import { getMessages } from "@/lib/firestoreUtil";
+import { sendMessage, getMessages, handleReaction, handleEditMessage } from "@/lib/firestoreUtil";
 
-export default function StudentMessagePage() {
+export default function MessagePage() {
   const [user, setUser] = useState<any>(null);
   const [instructors, setInstructors] = useState<any[]>([]);
   const [selectedInstructor, setSelectedInstructor] = useState<any>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
-
-  // Fetch authenticated user and their data
+  
+  // Fetch the currently authenticated user and their data (student)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
@@ -46,21 +46,21 @@ export default function StudentMessagePage() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch instructors from same school
+  // Fetch instructors
   useEffect(() => {
     async function fetchInstructors() {
       if (!user || !user.school_id) return;
 
       const instructorsQuery = query(
+        
         collection(db, "users"),
-        where("role", "==", "instructor"),
-        where("school_id", "==", user.school_id)
+       
+        where("role", "==", "instructor")
+      ,
+        where('school_id', '==', user.school_id) // Filter by school_id
       );
       const snapshot = await getDocs(instructorsQuery);
-      const instructorsList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const instructorsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setInstructors(instructorsList);
     }
     fetchInstructors();
@@ -76,7 +76,7 @@ export default function StudentMessagePage() {
           setMessages(newMessages);
         }
       );
-      return () => unsubscribe();
+      return () => unsubscribe(); // Cleanup on unmount
     }
   }, [selectedInstructor, user]);
 
@@ -97,7 +97,7 @@ export default function StudentMessagePage() {
       return;
     }
     if (selectedInstructor && message.trim()) {
-      if (selectedInstructor.school_id !== user.school_id) {
+      if (selectedInstructor.school_id != user.school_id){
         alert("You can only send messages to instructors in your school.");
         return;
       }
@@ -109,7 +109,7 @@ export default function StudentMessagePage() {
           timestamp: serverTimestamp(),
           reactions: {},
         });
-        setMessage("");
+        setMessage(''); // Clear message input after sending
       } catch (error) {
         console.error("Error sending message:", error);
         alert("Failed to send message.");
@@ -119,12 +119,15 @@ export default function StudentMessagePage() {
     }
   };
 
-  const handleReaction = async (messageId: string, emoji: string): Promise<void> => {
+  // Handle adding a reaction to a message
+  const handleReaction = async (
+    messageId: string,
+    emoji: string
+  ): Promise<void> => {
     if (!user) {
       alert("You must be logged in to react to a message.");
       return;
     }
-    const messageRef = doc(db, "messages", messageId);
     try {
       await runTransaction(db, async (transaction) => {
         const messageDoc = await transaction.get(messageRef);
@@ -132,6 +135,8 @@ export default function StudentMessagePage() {
           throw "Message does not exist!";
         }
         let reactions = messageDoc.data().reactions || {};
+
+        // Toggle off if same emoji is clicked; otherwise, update to the new emoji.
         if (reactions[user.uid] === emoji) {
           delete reactions[user.uid];
         } else {
@@ -145,10 +150,13 @@ export default function StudentMessagePage() {
     }
   };
 
-  const handleEditMessage = async (messageId: string, newText: string): Promise<void> => {
+  const handleEditMessage = async (
+    messageId: string,
+    newText: string
+  ): Promise<void> => {
     try {
-      const messageRef = doc(db, "messages", messageId);
-      await updateDoc(messageRef, { message: newText, edited: true });
+      await handleEditMessage(user.uid, selectedInstructor.user_id, messageId, newText);
+      setEditingMessageId(null);
     } catch (error) {
       console.error("Error editing message:", error);
       alert("Failed to edit message.");
@@ -156,47 +164,27 @@ export default function StudentMessagePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm py-4 px-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">Message an Instructor</h1>
-      </header>
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
+      <h1 className="text-2xl font-bold text-center mb-6">Message an Instructor</h1>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Instructor List Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              Instructors
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {instructors.map((instructor) => (
-              <div
-                key={instructor.id}
-                onClick={() => setSelectedInstructor(instructor)}
-                className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors ${
-                  selectedInstructor?.id === instructor.id
-                    ? "bg-blue-50 border-l-4 border-blue-500"
-                    : "hover:bg-gray-50 border-l-4 border-transparent"
-                }`}
-              >
-                <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                    {instructor.name[0]}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {instructor.name}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {instructor.email || "Instructor"}
-                  </p>
-                </div>
-                <FiMessageCircle className="h-5 w-5 text-gray-400" />
-              </div>
-            ))}
-          </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Instructor List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {instructors.length > 0 ? (
+            instructors.map((instructor) => (
+              <Card key={instructor.id} className="cursor-pointer" onClick={() => setSelectedInstructor(instructor)}>
+                <CardHeader>
+                  <CardTitle>{instructor.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{instructor.role}</span>
+                  <FiMessageCircle className="text-blue-500 text-xl" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <p className="text-center text-gray-600">No instructors from your school available to message.</p>
+          )}
         </div>
 
         {/* Chat Area */}
@@ -231,12 +219,12 @@ export default function StudentMessagePage() {
                     <div
                       key={msg.id}
                       className={`flex ${
-                        msg.sender === user?.uid
+                        msg.sender === user.uid
                           ? "justify-end"
                           : "justify-start"
                       } space-x-2`}
                     >
-                      {msg.sender !== user?.uid && (
+                      {msg.sender !== user.uid && (
                         <div className="flex-shrink-0">
                           <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
                             {selectedInstructor.name[0]}
@@ -246,11 +234,12 @@ export default function StudentMessagePage() {
 
                       <div
                         className={`max-w-xl p-4 rounded-2xl ${
-                          msg.sender === user?.uid
+                          msg.sender === user.uid
                             ? "bg-blue-500 text-white"
                             : "bg-white text-gray-900 shadow-sm"
                         }`}
                       >
+                        {/* Message editing UI */}
                         {editingMessageId === msg.id ? (
                           <div className="space-y-2">
                             <textarea
@@ -287,7 +276,7 @@ export default function StudentMessagePage() {
                                 </span>
                               )}
                             </p>
-                            {msg.sender === user?.uid && (
+                            {msg.sender === user.uid && (
                               <button
                                 onClick={() => {
                                   setEditingMessageId(msg.id);
@@ -301,13 +290,14 @@ export default function StudentMessagePage() {
                           </div>
                         )}
 
+                        {/* Reactions */}
                         <div className="mt-2 flex items-center space-x-2">
                           {Object.entries(msg.reactions || {}).map(
                             ([uid, emoji]: any) => (
                               <span
                                 key={uid}
                                 className={`text-sm p-1 rounded-full ${
-                                  msg.sender === user?.uid
+                                  msg.sender === user.uid
                                     ? "bg-blue-600/20"
                                     : "bg-gray-100"
                                 }`}
@@ -319,7 +309,7 @@ export default function StudentMessagePage() {
                         </div>
                       </div>
 
-                      {msg.sender === user?.uid && (
+                      {msg.sender === user.uid && (
                         <div className="flex-shrink-0">
                           <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-sm">
                             {user.displayName?.[0] || "Y"}
@@ -332,6 +322,7 @@ export default function StudentMessagePage() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Message Input */}
               <div className="bg-white border-t border-gray-200 p-4">
                 <div className="relative">
                   <textarea
