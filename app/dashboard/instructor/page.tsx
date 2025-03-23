@@ -1,13 +1,13 @@
-'use client'
-import { DashboardLayout} from "@/components/DashboardLayout";
+"use client";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {checkUserRole} from "@/lib/checkAuth";
-import {useRouter} from "next/navigation";
-import {useEffect, useState} from "react";
-import {onAuthStateChanged} from "firebase/auth";
-import {auth} from "@/lib/firebaseConfig";
-import {StudentProgressTable} from "@/components/StudentProgressTable";
+import { checkUserRole } from "@/lib/checkAuth";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebaseConfig";
+import { StudentProgressTable } from "@/components/StudentProgressTable";
 
 export default function InstructorDashboard() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function InstructorDashboard() {
       if (user) {
         // User is signed in, get the token
         const token = await user.getIdToken();
-        //console.log("Firebase Token:", token);
+        // console.log("Firebase Token:", token);
 
         const response = await fetch("http://127.0.0.1:8080/check-role", {
           method: "POST",
@@ -29,7 +29,7 @@ export default function InstructorDashboard() {
         });
         const data = await response.json();
         if (data.role == "student") {
-          router.push('/dashboard/student/');
+          router.push("/dashboard/student/");
         } else {
           setUserRole(data.role);
         }
@@ -52,9 +52,12 @@ export default function InstructorDashboard() {
             <CardTitle>Access Materials</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push("/dashboard/student/training-materials")}>View Training Resources</Button>
+            <Button onClick={() => router.push("/dashboard/student/training-materials")}>
+              View Training Resources
+            </Button>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Time Tracking</CardTitle>
@@ -63,17 +66,19 @@ export default function InstructorDashboard() {
             <Button>Clock In/Out</Button>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-          <CardTitle>Student Communication</CardTitle>
-          
+            <CardTitle>Student Communication</CardTitle>
           </CardHeader>
           <CardContent>
-          <Button onClick={() => router.push("/dashboard/instructor/message")}>Open Chat</Button>
+            <Button onClick={() => router.push("/dashboard/instructor/message")}>
+              Open Chat
+            </Button>
           </CardContent>
         </Card>
       </div>
-      <StudentProgressTable></StudentProgressTable>
+      <StudentProgressTable />
     </DashboardLayout>
-  )
+  );
 }
