@@ -186,7 +186,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="bg-black min-h-screen text-white">
+    <div className="bg-black min-h-screen text-primary">
       <DashboardLayout userType="student">
         <main className="max-w-6xl mx-auto w-full px-4 py-12 relative">
           {/* Header */}
@@ -194,11 +194,12 @@ export default function StudentDashboard() {
 
           {/* Card Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
             {/* Card 1: Access Resources */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiBookOpen className="text-3xl text-blue-500 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Access Resources</CardTitle>
+                <CardTitle className="text-primary text-xl">Access Resources</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -211,10 +212,10 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Card 2: Virtual Arduino IDE */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiChip className="text-3xl text-green-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Virtual Arduino IDE</CardTitle>
+                <CardTitle className="text-primary text-xl">Virtual Arduino IDE</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -227,10 +228,10 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Card 3: Collaboration Tools */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiChatAlt className="text-3xl text-purple-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Collaboration Tools</CardTitle>
+                <CardTitle className="text-primary text-xl">Collaboration Tools</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -243,10 +244,10 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Card 4: Direct Messaging */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiMail className="text-3xl text-yellow-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Direct Messaging</CardTitle>
+                <CardTitle className="text-primary text-xl">Direct Messaging</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -262,7 +263,7 @@ export default function StudentDashboard() {
           {/* Bell Icon */}
           <div
             onClick={handleBellClick}
-            className="fixed top-4 right-16 bg-blue-500 text-white rounded-full cursor-pointer shadow-lg flex items-center justify-center w-10 h-10"
+            className="fixed top-5 right-16 bg-blue-500 text-white rounded-full cursor-pointer shadow-lg flex items-center justify-center w-10 h-10"
           >
             <IoIosNotifications size={20} />
             {(instructorUnreadCount + teamUnreadCount) > 0 && (
@@ -274,13 +275,13 @@ export default function StudentDashboard() {
 
           {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="fixed top-14 right-16 bg-gray-900 border border-gray-800 shadow-lg rounded-md p-4 w-72 z-10">
-              <h3 className="font-bold text-lg text-white">Unread Messages</h3>
+            <div className="fixed top-14 right-16 bg-background border border-border shadow-lg rounded-md p-4 w-72 z-10">
+              <h3 className="font-bold text-lg text-primary">Unread Messages</h3>
               {notifications.length > 0 ? (
                 <ul className="mt-2 space-y-2">
                   {notifications.map((notification, index) => (
-                    <li key={index} className="p-2 bg-gray-800 rounded">
-                      <p className="text-sm text-white">{notification.message}</p>
+                    <li key={index} className="p-2 bg-card rounded">
+                      <p className="text-sm text-primary">{notification.message}</p>
                       <p className="text-xs text-gray-400">
                         From: {notification.sender} (
                         {notification.involvesInstructor ? "Instructor" : "Team"})

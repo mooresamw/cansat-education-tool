@@ -180,10 +180,10 @@ export default function InstructorDashboard() {
           {/* Card Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Card 1: Access Materials */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiBookOpen className="text-3xl text-blue-500 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Access Materials</CardTitle>
+                <CardTitle className="text-primary text-xl">Access Materials</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -199,10 +199,10 @@ export default function InstructorDashboard() {
             </Card>
 
             {/* Card 2: Time Tracking */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiClock className="text-3xl text-green-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Time Tracking</CardTitle>
+                <CardTitle className="text-primary text-xl">Time Tracking</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">
@@ -213,10 +213,10 @@ export default function InstructorDashboard() {
             </Card>
 
             {/* Card 3: Student Communication */}
-            <Card className="bg-gray-900 border border-gray-800 rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiChatAlt className="text-3xl text-purple-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-white text-xl">Student Communication</CardTitle>
+                <CardTitle className="text-primary text-xl">Student Communication</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-400 text-sm mb-4">

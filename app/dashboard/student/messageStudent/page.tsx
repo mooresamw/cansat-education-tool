@@ -10,6 +10,9 @@ import {
   handleReaction,
   handleEditMessage,
 } from "@/lib/firestoreUtil";
+import {DashboardLayout} from "@/components/DashboardLayout";
+import {set} from "@firebase/database";
+import Loading from "@/components/Loading";
 
 export default function StudentChatPage() {
   const [user, setUser] = useState<any>(null);
@@ -20,7 +23,7 @@ export default function StudentChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
-
+  const [loading, setLoading] = useState(true);
   // Fetch the currently authenticated user (student) and their data
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -31,6 +34,7 @@ export default function StudentChatPage() {
         if (!userDoc.empty) {
           const userData = userDoc.docs[0].data();
           setUser({ ...currentUser, ...userData });
+          setLoading(false);
         }
       } else {
         setUser(null);
@@ -125,30 +129,32 @@ export default function StudentChatPage() {
     }
   }, [messages]);
 
+  if (loading) return <Loading />;
   return (
-    <div className="min-h-screen flex flex-col">
+      <DashboardLayout userType={user.role}>
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md py-4 px-6">
-        <h1 className="text-2xl font-bold">Message a Student</h1>
+      <header className="bg-card text-primary shadow-md py-4 px-6">
+        <h1 className="text-2xl font-bold">Message a Student From {user.school_name.split(",")[0]}</h1>
       </header>
 
       <div className="flex flex-1 overflow-hidden bg-gray-50">
         {/* Sidebar: Students List */}
-        <div className="w-80 border-r border-gray-200 flex flex-col">
-          <div className="p-4 bg-white shadow-sm">
+        <div className="w-80 border-r border-border flex flex-col">
+          <div className="p-4 bg-card shadow-sm">
             <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
               Students
             </h2>
           </div>
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="flex-1 overflow-y-auto bg-card">
             {students.map((student) => (
               <div
                 key={student.id}
                 onClick={() => setSelectedStudent(student)}
-                className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
+                className={`flex bg-card items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
                   selectedStudent?.id === student.id
-                    ? "bg-blue-50 border-l-4 border-blue-500"
-                    : "hover:bg-gray-100 border-l-4 border-transparent"
+                    ? "bg-accent border-l-4 border-blue-500"
+                    : "hover:bg-accent border-l-4 border-transparent"
                 }`}
               >
                 <div className="flex-shrink-0">
@@ -157,7 +163,7 @@ export default function StudentChatPage() {
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-primary truncate">
                     {student.name}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
@@ -175,12 +181,12 @@ export default function StudentChatPage() {
           {selectedStudent ? (
             <>
               {/* Chat Header */}
-              <div className="bg-white p-4 shadow-sm flex items-center space-x-3">
+              <div className="bg-card p-4 shadow-sm flex items-center space-x-3">
                 <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xl">
                   {selectedStudent.name?.[0]?.toUpperCase() || "S"}
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-primary">
                     {selectedStudent.name}
                   </h2>
                   <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
@@ -190,7 +196,7 @@ export default function StudentChatPage() {
               </div>
 
               {/* Messages List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-gray-100">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-card">
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
                     <FiMessageCircle className="h-12 w-12" />
@@ -229,7 +235,7 @@ export default function StudentChatPage() {
                               <textarea
                                 value={editingText}
                                 onChange={(e) => setEditingText(e.target.value)}
-                                className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-gray-900"
+                                className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-black bg-gray-50"
                                 style={{ minHeight: "60px" }}
                               />
                               <div className="flex gap-2 justify-end">
@@ -308,7 +314,7 @@ export default function StudentChatPage() {
                         {isSender && (
                           <div className="ml-2 flex-shrink-0">
                             <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
-                              {user?.displayName?.[0] || "Y"}
+                              {user?.name?.[0] || "Y"}
                             </div>
                           </div>
                         )}
@@ -320,18 +326,18 @@ export default function StudentChatPage() {
               </div>
 
               {/* Message Input */}
-              <div className="bg-white border-t border-gray-200 p-4">
+              <div className="bg-card border-t border-border p-4">
                 <div className="relative">
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Type your message here..."
                     rows={2}
-                    className="w-full p-3 pr-16 resize-none border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                    className="w-full p-3 pr-16 resize-none bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
                   />
                   <button
                     onClick={handleSendMessage}
-                    className="absolute bottom-3 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                    className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
                   >
                     <FiSend className="h-5 w-5" />
                   </button>
@@ -354,5 +360,6 @@ export default function StudentChatPage() {
         </div>
       </div>
     </div>
+      </DashboardLayout>
   );
 }

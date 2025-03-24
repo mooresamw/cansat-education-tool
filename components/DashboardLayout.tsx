@@ -1,13 +1,13 @@
-"use client";
+"use client"
 
-import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
+import React from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { signOut } from "firebase/auth"
 
-import { auth } from "@/lib/firebaseConfig";
-import { getUser } from "@/lib/getUser";
+import { auth } from "@/lib/firebaseConfig"
+import { getUser } from "@/lib/getUser"
 import {
   ActivityIcon,
   BookOpenIcon,
@@ -20,49 +20,54 @@ import {
   Search,
   User,
   UsersIcon,
-} from "lucide-react";
+} from "lucide-react"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface DashboardLayoutProps {
-  children: React.ReactNode;
-  userType: "admin" | "instructor" | "student";
+  children: React.ReactNode
+  userType: "admin" | "instructor" | "student"
 }
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
-  const userData = getUser();
-  const router = useRouter();
+  const userData = getUser()
+  const router = useRouter()
+  const [mounted, setMounted] = React.useState(false)
+
+  // useEffect only runs on the client, so now we can safely show the UI
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   if (!userData) {
-    return <p className="text-center mt-10 text-white">Loading...</p>;
+    return <p className="text-center mt-10">Loading...</p>
   }
 
   // Overwrite userType with actual user role
-  userType = userData.role as "admin" | "instructor" | "student";
+  userType = userData.role as "admin" | "instructor" | "student"
 
   // Handle sign out
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
-      localStorage.removeItem("user");
-      router.push("/");
+      await signOut(auth)
+      localStorage.removeItem("user")
+      router.push("/")
     } catch (error: any) {
-      console.error("Error signing out:", error.message);
+      console.error("Error signing out:", error.message)
     }
-  };
+  }
 
+  // Use simpler conditional classes to avoid hydration mismatches
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex h-screen bg-background text-foreground">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-gradient-to-b from-gray-800 to-gray-900 border-r border-gray-700 shadow-lg flex flex-col">
+      <aside className="w-64 bg-gradient-to-b from-sidebar-from to-sidebar-to border-r border-border shadow-lg flex flex-col">
         {/* Removed the logo; only the title remains. */}
-        <div className="p-4 border-b border-gray-700">
-          <Link
-            href={`/dashboard/${userData.role}`}
-            className="text-lg font-bold hover:text-gray-200 transition-colors"
-          >
+        <div className="p-4 border-b border-border">
+          <Link href={`/dashboard/${userData.role}`} className="text-lg font-bold hover:text-primary transition-colors">
             CanSat Educational
           </Link>
         </div>
@@ -96,10 +101,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
           {userType === "student" && (
             <>
-              <NavItem
-                href="/dashboard/student/training-materials"
-                icon={<BookOpenIcon className="h-4 w-4" />}
-              >
+              <NavItem href="/dashboard/student/training-materials" icon={<BookOpenIcon className="h-4 w-4" />}>
                 Access Resources
               </NavItem>
               <NavItem href="/dashboard/student/ide" icon={<CodeIcon className="h-4 w-4" />}>
@@ -119,18 +121,22 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col">
         {/* HEADER */}
-        <header className="flex items-center justify-between border-b border-gray-700 px-6 py-6 bg-gray-800">
+        <header className="flex items-center justify-between border-b border-border px-6 py-6 bg-header">
           {/* Search Bar (Remove if not needed) */}
           <div className="relative w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search..."
-              className="pl-9 bg-gray-700 text-white border-gray-600 focus:ring-0 focus:border-gray-500"
+              className="pl-9 bg-input text-input-foreground border-input focus:ring-0 focus:border-ring"
             />
           </div>
-          <div className="flex items-center gap-8">
-            {/* Bell icon removed */}
+          <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
+            <div className="relative w-24">
+              <ThemeToggle></ThemeToggle>
+            </div>
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -148,7 +154,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 </Button>
               </PopoverTrigger>
 
-              <PopoverContent className="w-64 bg-gray-800 border border-gray-700 text-white">
+              <PopoverContent className="w-64 bg-popover border border-border text-popover-foreground">
                 <div className="flex flex-col space-y-4 p-2">
                   <div className="flex items-center space-x-4">
                     <div className="h-12 w-12 rounded-full overflow-hidden">
@@ -162,17 +168,17 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                     </div>
                     <div>
                       <h2 className="text-base font-semibold">{userData.name}</h2>
-                      <p className="text-sm text-gray-400">{userData.role}</p>
+                      <p className="text-sm text-muted-foreground">{userData.role}</p>
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm text-gray-300">
+                  <div className="space-y-2 text-sm text-muted-foreground">
                     <p>
-                      <strong className="text-white">Email:</strong> {userData.email}
+                      <strong className="text-foreground">Email:</strong> {userData.email}
                     </p>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full border-gray-600 text-gray-200 hover:bg-gray-700"
+                    className="w-full border-border text-foreground hover:bg-accent"
                     onClick={handleSignOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -185,10 +191,10 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         </header>
 
         {/* MAIN SCROLLABLE AREA */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-900">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 bg-background">{children}</main>
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -199,19 +205,19 @@ function NavItem({
   icon,
   children,
 }: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
+  href: string
+  icon: React.ReactNode
+  children: React.ReactNode
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300
-                 rounded-md hover:bg-gray-700 hover:text-white
+      className="flex items-center gap-2 px-3 py-2 text-sm text-nav-item
+                 rounded-md hover:bg-nav-item-hover hover:text-nav-item-hover-foreground
                  transition-all duration-300 hover:pl-6"
     >
       {icon}
       <span>{children}</span>
     </Link>
-  );
+  )
 }
