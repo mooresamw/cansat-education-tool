@@ -9,7 +9,7 @@ const firebaseConfig = {
   storageBucket: "cansat-education-tool.firebasestorage.app",
   messagingSenderId: "293736072539",
   appId: "1:293736072539:web:d85cb7130cc4f0fd02867e",
-  measurementId: "G-FPX0J8647Q"
+  measurementId: "G-FPX0J8647Q",
 };
 
 // Initialize Firebase
@@ -21,13 +21,28 @@ export const auth = getAuth(app);
 export async function getInstructors() {
   try {
     // Query users where role is 'instructor'
-    const usersCollection = collection(db, 'users');
+    const usersCollection = collection(db, "users");
     const instructorsQuery = query(usersCollection, where("role", "==", "instructor"));
     const instructorsSnapshot = await getDocs(instructorsQuery);
     const instructorsList = instructorsSnapshot.docs.map(doc => doc.data());
     return instructorsList;
   } catch (error) {
     console.error("Error fetching instructors: ", error);
+    return [];
+  }
+}
+
+// Function to fetch students from Firestore
+export async function getStudents() {
+  try {
+    // Query users where role is 'student'
+    const usersCollection = collection(db, "users");
+    const studentsQuery = query(usersCollection, where("role", "==", "student"));
+    const studentsSnapshot = await getDocs(studentsQuery);
+    const studentsList = studentsSnapshot.docs.map(doc => doc.data());
+    return studentsList;
+  } catch (error) {
+    console.error("Error fetching students: ", error);
     return [];
   }
 }
