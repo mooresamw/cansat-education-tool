@@ -47,10 +47,12 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
-  const [avatarSeed, setAvatarSeed] = React.useState("");
+  // Initialize avatar seed and style from localStorage if available
+  const [avatarSeed, setAvatarSeed] = React.useState(() => userData?.avatarSeed || "");
+  const [avatarStyle, setAvatarStyle] = React.useState(() => userData?.avatarStyle || "bottts");
 
   React.useEffect(() => {
-    const fetchAvatarSeed = async () => {
+    const syncAvatarWithBackend = async () => {
       setMounted(true);
       try {
         const user = auth.currentUser;
@@ -65,25 +67,36 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           });
           if (response.ok) {
             const data = await response.json();
-            setAvatarSeed(data.avatarSeed || Math.random().toString(36).substring(2));
+            const backendSeed = data.avatarSeed || Math.random().toString(36).substring(2);
+            const backendStyle = data.avatarStyle || "bottts";
+            // Only update state if backend data differs from local
+            if (backendSeed !== avatarSeed || backendStyle !== avatarStyle) {
+              setAvatarSeed(backendSeed);
+              setAvatarStyle(backendStyle);
+              // Update localStorage with backend data
+              const updatedUser = { ...userData, avatarSeed: backendSeed, avatarStyle: backendStyle };
+              localStorage.setItem("user", JSON.stringify(updatedUser));
+            }
           } else {
-            // Fallback if backend fails or no seed exists
             const newSeed = Math.random().toString(36).substring(2);
             setAvatarSeed(newSeed);
-            await saveAvatarSeedToBackend(newSeed, token);
+            await saveAvatarSeedToBackend(newSeed, "bottts", token);
           }
-        } else {
-          // No user logged in, use a random seed as fallback
-          setAvatarSeed(Math.random().toString(36).substring(2));
+        } else if (!avatarSeed) {
+          // No user and no local avatar, set a random seed
+          const newSeed = Math.random().toString(36).substring(2);
+          setAvatarSeed(newSeed);
         }
       } catch (error) {
-        console.error("Error fetching avatar seed:", error);
-        setAvatarSeed(Math.random().toString(36).substring(2)); // Fallback on error
+        console.error("Error syncing avatar with backend:", error);
+        if (!avatarSeed) {
+          setAvatarSeed(Math.random().toString(36).substring(2));
+        }
       }
     };
 
-    fetchAvatarSeed();
-  }, []);
+    syncAvatarWithBackend();
+  }, [avatarSeed, avatarStyle, userData]);
 
   if (!userData) {
     return <p className="text-center mt-10">Loading...</p>;
@@ -118,7 +131,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     return `https://api.dicebear.com/7.x/${style}/png?seed=${seed}`;
   };
 
-  const saveAvatarSeedToBackend = async (newSeed: string, token: string) => {
+  const saveAvatarSeedToBackend = async (newSeed: string, style: string, token: string) => {
     try {
       const response = await fetch("http://127.0.0.1:8080/user/avatar", {
         method: "POST",
@@ -126,7 +139,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ avatarSeed: newSeed, avatarStyle: "bottts" }),
+        body: JSON.stringify({ avatarSeed: newSeed, avatarStyle: style }),
       });
       if (!response.ok) {
         console.error("Failed to save avatar seed:", await response.text());
@@ -142,14 +155,13 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     const user = auth.currentUser;
     if (user) {
       const token = await user.getIdToken();
-      await saveAvatarSeedToBackend(newSeed, token);
+      await saveAvatarSeedToBackend(newSeed, "bottts", token);
     }
     const updatedUser = { ...userData, avatarSeed: newSeed, avatarStyle: "bottts" };
     localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
-  const currentStyle = userData.avatarStyle || "bottts";
-  const avatarUrl = getAvatarUrl(currentStyle, avatarSeed);
+  const avatarUrl = getAvatarUrl(avatarStyle, avatarSeed);
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -274,7 +286,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                   </button>
 
                   {showAvatarPicker && (
-                    <div className="border-t border-border pt-4">
+                    <div class="border-t border-border pt-4">
                       <h3 className="text-sm font-medium mb-2">Choose Avatar Style</h3>
                       <div className="grid grid-cols-3 gap-2">
                         {BOTTT_AVATARS.map((avatar) => (
@@ -282,7 +294,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                             key={avatar.seed}
                             onClick={() => handleAvatarChange(avatar.seed)}
                             className={`p-1 rounded-md ${
-                              avatarSeed === avatar.seed && currentStyle === avatar.style
+                              avatarSeed === avatar.seed && avatarStyle === avatar.style
                                 ? "ring-2 ring-primary"
                                 : "hover:ring-1 hover:ring-border"
                             }`}
@@ -328,7 +340,15 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   );
 }
 
-function NavItem({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+function NavItem({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
