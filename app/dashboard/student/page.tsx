@@ -1,3 +1,4 @@
+// app/dashboard/student/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,12 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { checkUserRole } from "@/lib/checkAuth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { db, auth, getInstructors } from "@/lib/firebaseConfig"; // Adjust path as needed
+import { db, auth, getInstructors } from "@/lib/firebaseConfig";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { IoIosNotifications } from "react-icons/io";
-import { HiBookOpen, HiChip, HiChatAlt, HiMail } from "react-icons/hi"; // Icons from friend's code
-import { markMessageAsRead } from "@/lib/firestoreUtil"; // Adjust path as needed
+import { HiBookOpen, HiChip, HiChatAlt, HiMail } from "react-icons/hi";
+import { markMessageAsRead } from "@/lib/firestoreUtil";
+// Remove useChat since we no longer need it
+// import { useChat } from "@/lib/ChatContext";
 
 export default function StudentDashboard() {
   const userRole = checkUserRole(["admin", "instructor", "student"]);
@@ -26,6 +29,8 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [instructorIds, setInstructorIds] = useState<string[]>([]);
   const router = useRouter();
+  // Remove useChat hook
+  // const { activeChatParticipantId } = useChat();
 
   // Fetch instructor IDs
   useEffect(() => {
@@ -105,12 +110,14 @@ export default function StudentDashboard() {
           const messages = data.messages || [];
           const otherParticipants = data.participants.filter((id: string) => id !== userId);
           const involvesInstructor = otherParticipants.some((id: string) => instructorIds.includes(id));
+          const otherParticipantId = otherParticipants[0]; // Assuming 1:1 chat
 
           messages.forEach((msg: any) => {
             const readStatus = msg.read || {};
             const isUnread = msg.sender !== userId && readStatus[userId] !== true;
 
             if (isUnread) {
+              // No need to filter using activeChatParticipantId
               const messageData = {
                 message: msg.message,
                 sender: msg.sender,
@@ -134,6 +141,10 @@ export default function StudentDashboard() {
           });
         });
 
+        console.log("Instructor unread count:", instructorUnread);
+        console.log("Team unread count:", teamUnread);
+        console.log("All messages after filtering:", allMessages);
+
         setInstructorUnreadCount(instructorUnread);
         setTeamUnreadCount(teamUnread);
         setInstructorNotifications(instructorMessages);
@@ -146,7 +157,7 @@ export default function StudentDashboard() {
     );
 
     return () => unsubscribeQuery();
-  }, [userRole, userId, instructorIds]);
+  }, [userRole, userId, instructorIds]); // Remove activeChatParticipantId dependency
 
   // Navigation handlers
   const openIDE = () => router.push("/dashboard/student/ide");
@@ -194,7 +205,6 @@ export default function StudentDashboard() {
 
           {/* Card Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
             {/* Card 1: Access Resources */}
             <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
