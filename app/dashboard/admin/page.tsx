@@ -63,6 +63,22 @@ export default function AdminDashboard() {
         setUserId(uid);
         const token = await user.getIdToken();
 
+        // Notify backend of login
+        try {
+          const loginResponse = await fetch("http://127.0.0.1:8080/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken: token }),
+          });
+          if (!loginResponse.ok) {
+            console.error("Login logging failed:", await loginResponse.text());
+          } else {
+            console.log("Login logged successfully");
+          }
+        } catch (error) {
+          console.error("Error notifying backend of login:", error);
+        }
+
         const response = await fetch("http://127.0.0.1:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -333,7 +349,9 @@ export default function AdminDashboard() {
               <CardTitle>Activity Monitoring</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button>View Activity Logs</Button>
+              <Button onClick={() => router.push("/dashboard/admin/logs")}>
+                View Activity Logs
+              </Button>
             </CardContent>
           </Card>
           <Card>

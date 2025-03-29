@@ -1,49 +1,95 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { FaGoogle } from 'react-icons/fa';
-import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from 'react-icons/hi';
-import { auth, db } from '@/lib/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { FaGoogle } from "react-icons/fa";
+import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiUser } from "react-icons/hi";
+import { auth, db } from "@/lib/firebaseConfig";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
+import { FaCheckCircle, FaCircle } from "react-icons/fa";
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState('student');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
-  const [user, setUser] = useState();
-  const [rememberMe, setRememberMe] = useState();
-  const [notification, setNotification] = useState('');
+  const [user, setUser] = useState(null);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [notification, setNotification] = useState("");
   const [selectedSchool, setSelectedSchool] = useState({
-    school_name: '',
-    school_id: '',
+    school_name: "",
+    school_id: "",
   });
-  const [errors, setErrors] = useState({}); // Added for validation errors
+  const [errors, setErrors] = useState({});
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const [passwordCriteria, setPasswordCriteria] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    special: false,
+    number: false,
+  });
 
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+    const storedUser = JSON.parse(localStorage.getItem("user") || "null");
     if (storedUser) setUser(storedUser);
+
+    const savedEmail = localStorage.getItem("savedEmail");
+    const savedPassword = localStorage.getItem("savedPassword");
+    const savedRememberMe = localStorage.getItem("rememberMe") === "true";
+
+    if (savedEmail && savedPassword && savedRememberMe) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      setShowPasswordRequirements(true);
+      setRememberMe(true);
+    }
   }, []);
+
+  useEffect(() => {
+    const length = password.length >= 8;
+    const uppercase = /[A-Z]/.test(password);
+    const lowercase = /[a-z]/.test(password);
+    const special = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const number = /[0-9]/.test(password);
+
+    setPasswordCriteria({
+      length,
+      uppercase,
+      lowercase,
+      special,
+      number,
+    });
+
+    if (password) {
+      setErrors((prev) => ({ ...prev, password: "" }));
+    }
+  }, [password]);
 
   const toggleForm = () => {
     setIsSignUp(!isSignUp);
-    setEmail('');
-    setPassword('');
-    setFirstName('');
-    setLastName('');
-    setSelectedSchool({ school_name: '', school_id: '' });
+    setEmail("");
+    setPassword("");
+    setFirstName("");
+    setLastName("");
+    setSelectedSchool({ school_name: "", school_id: "" });
     setShowPassword(false);
-    setNotification('');
+    setNotification("");
     setErrors({});
+    setShowPasswordRequirements(false);
   };
 
   const handleSchoolSelect = (name: string, placeId: any) => {
@@ -51,18 +97,18 @@ const LoginSignupPage = () => {
       school_name: name,
       school_id: placeId,
     });
-    setErrors(prev => ({ ...prev, school: '' })); // Clear school error when selected
+    setErrors((prev) => ({ ...prev, school: "" }));
     console.log("Selected School:", name, "Place ID:", placeId);
   };
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!email.trim()) newErrors.email = 'Email is required';
-    if (!password.trim()) newErrors.password = 'Password is required';
-    if (!selectedSchool.school_name) newErrors.school = 'Please select a high school';
+
+    if (!firstName.trim()) newErrors.firstName = "First name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (!password.trim()) newErrors.password = "Password is required";
+    if (!selectedSchool.school_name) newErrors.school = "Please select a high school";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -70,9 +116,9 @@ const LoginSignupPage = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
-      setNotification('Please fill out all required fields');
+      setNotification("Please fill out all required fields");
       return;
     }
 
@@ -104,15 +150,25 @@ const LoginSignupPage = () => {
       localStorage.setItem("user", JSON.stringify(data));
       setUser(data);
 
+      if (rememberMe) {
+        localStorage.setItem("savedEmail", email);
+        localStorage.setItem("savedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("savedEmail");
+        localStorage.removeItem("savedPassword");
+        localStorage.setItem("rememberMe", "false");
+      }
+
       setNotification("Account created successfully. Please check your email to verify your account.");
 
-      setEmail('');
-      setPassword('');
-      setFirstName('');
-      setLastName('');
-      setSelectedSchool({ school_name: '', school_id: '' });
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setSelectedSchool({ school_name: "", school_id: "" });
       setErrors({});
-
+      setShowPasswordRequirements(false);
     } catch (error: any) {
       console.error("Error signing up:", error.message);
       setNotification(`Error: ${error.message}. Please try again.`);
@@ -131,7 +187,7 @@ const LoginSignupPage = () => {
         return;
       }
 
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -144,228 +200,326 @@ const LoginSignupPage = () => {
           console.log("Verified field updated successfully");
         }
 
-        localStorage.setItem('user', JSON.stringify(userData));
+        if (rememberMe) {
+          localStorage.setItem("savedEmail", email);
+          localStorage.setItem("savedPassword", password);
+          localStorage.setItem("rememberMe", "true");
+        } else {
+          localStorage.removeItem("savedEmail");
+          localStorage.removeItem("savedPassword");
+          localStorage.setItem("rememberMe", "false");
+        }
+
+        localStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
-        console.log('User logged in successfully!');
+        console.log("User logged in successfully!");
         router.push(`/dashboard/${userData.role}`);
       } else {
-        console.error('User not found in Firestore');
+        console.error("User not found in Firestore");
         setNotification("User data not found. Please contact support.");
       }
     } catch (error: any) {
-      console.error('Error logging in:', error.message);
+      console.error("Error logging in:", error.message);
       setNotification("Error logging in. Please check your credentials.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4">
-      <div className="w-full max-w-4xl bg-black border border-gray-800 rounded-sm shadow-lg flex overflow-hidden relative">
-        <div
-          className={`w-full flex transition-transform duration-500 ease-in-out ${
-            isSignUp ? '-translate-x-1/2' : 'translate-x-0'
-          }`}
-        >
-          {/* Sign In Form */}
-          <div className="w-full md:w-1/2 p-8 flex-shrink-0">
-            <div className="mb-8">
-              <Link href="/">
-                <h1 className="text-white text-xl font-medium">CanSat</h1>
-              </Link>
-            </div>
-            <h2 className="text-2xl font-semibold mb-6 text-white">Sign in</h2>
-            {notification && !isSignUp && (
-              <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
-                {notification}
+    <>
+      <div className="min-h-screen flex items-center justify-center bg-black p-4">
+        <div className="w-full max-w-4xl bg-black border border-gray-800 rounded-sm shadow-lg flex overflow-hidden relative">
+          <div
+            className={`w-full flex transition-transform duration-500 ease-in-out ${
+              isSignUp ? "-translate-x-1/2" : "translate-x-0"
+            }`}
+          >
+            {/* Sign In Form */}
+            <div className="w-full md:w-1/2 p-8 flex-shrink-0">
+              <div className="mb-8">
+                <Link href="/">
+                  <h1 className="text-white text-xl font-medium">CanSat</h1>
+                </Link>
               </div>
-            )}
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
-              </div>
-              <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                >
-                  {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
-                </button>
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
+              <h2 className="text-2xl font-semibold mb-6 text-white">Sign in</h2>
+              {notification && !isSignUp && (
+                <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
+                  {notification}
+                </div>
+              )}
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="relative">
+                  <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded-sm border-gray-700 bg-gray-900 text-white focus:ring-0"
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
                   />
-                  <span className="ml-2 text-sm text-gray-400">Remember me</span>
-                </label>
-                <a href="#" className="text-sm text-gray-400 hover:text-white">
-                  Forgot Password?
-                </a>
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
-              >
-                Sign In
-              </button>
-              <div className="md:hidden mt-4 text-center">
-                <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
-                  Don't have an account? <span className="font-semibold">Sign Up</span>
-                </span>
-              </div>
-            </form>
-          </div>
-
-          {/* Modified Sign Up Form */}
-          <div className="w-full md:w-1/2 p-8 flex-shrink-0">
-            <div className="mb-8">
-              <Link href="/">
-                <h1 className="text-white text-xl font-medium">CanSat</h1>
-              </Link>
-            </div>
-            <h2 className="text-2xl font-semibold mb-6 text-white">Create Account</h2>
-            {notification && isSignUp && (
-              <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
-                {notification}
-              </div>
-            )}
-            <form onSubmit={handleSignUp} className="space-y-6">
-              <div className="relative">
-                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="First Name *"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
-                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-              </div>
-              <div className="relative">
-                <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Last Name *"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
-                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-              </div>
-              <div className="relative">
-                <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="email"
-                  placeholder="Email *"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-              </div>
-              <div className="relative">
-                <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password *"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                />
+                </div>
+                <div className="relative">
+                  <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  >
+                    {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded-sm border-gray-700 bg-gray-900 text-white focus:ring-0"
+                    />
+                    <span className="ml-2 text-sm text-gray-400">Remember me</span>
+                  </label>
+                  <a href="#" className="text-sm text-gray-400 hover:text-white">
+                    Forgot Password?
+                  </a>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                >
-                  {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
-                </button>
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-              </div>
-              <div>
-                <HighSchoolSearch onSelect={handleSchoolSelect} Style={"SignUp"} />
-                {selectedSchool.school_name ? (
-                  <p className="text-gray-400 text-sm mt-1">Selected: {selectedSchool.school_name}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm mt-1">High School * (required)</p>
-                )}
-                {errors.school && <p className="text-red-500 text-xs mt-1">{errors.school}</p>}
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
-              >
-                Sign Up
-              </button>
-              <div className="md:hidden mt-4 text-center">
-                <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
-                  Already have an account? <span className="font-semibold">Sign In</span>
-                </span>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        {/* Side Panel */}
-        <div
-          className={`hidden md:flex absolute top-0 right-0 w-1/2 h-full transition-transform duration-500 ease-in-out ${
-            isSignUp ? 'translate-x-full' : 'translate-x-0'
-          } bg-gray-900 border-l border-gray-800`}
-        >
-          <div className="h-full w-full flex flex-col justify-center items-center text-center p-12 text-white">
-            {!isSignUp ? (
-              <>
-                <h2 className="text-3xl font-bold mb-4">New Here?</h2>
-                <p className="mb-8 text-gray-400">
-                  Sign up and discover the world of space engineering through our CanSat program.
-                </p>
-                <button
-                  onClick={toggleForm}
-                  className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
-                >
-                  Sign Up
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 className="text-3xl font-bold mb-4">Welcome Back</h2>
-                <p className="mb-8 text-gray-400">
-                  To continue your journey with us, please log in with your personal info.
-                </p>
-                <button
-                  onClick={toggleForm}
-                  className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
+                  type="submit"
+                  className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
                 >
                   Sign In
                 </button>
-              </>
-            )}
+                <div className="md:hidden mt-4 text-center">
+                  <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                    Don't have an account? <span className="font-semibold">Sign Up</span>
+                  </span>
+                </div>
+              </form>
+            </div>
+
+            {/* Sign Up Form */}
+            <div className="w-full md:w-1/2 p-8 flex-shrink-0">
+              <div className="mb-8">
+                <Link href="/">
+                  <h1 className="text-white text-xl font-medium">CanSat</h1>
+                </Link>
+              </div>
+              <h2 className="text-2xl font-semibold mb-6 text-white">Create Account</h2>
+              {notification && isSignUp && (
+                <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
+                  {notification}
+                </div>
+              )}
+              <form onSubmit={handleSignUp} className="space-y-6">
+                <div className="relative">
+                  <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="First Name *"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                  />
+                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                </div>
+                <div className="relative">
+                  <HiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Last Name *"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                  />
+                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                </div>
+                <div className="relative">
+                  <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="email"
+                    placeholder="Email *"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                  />
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                </div>
+                <div className="relative">
+                  <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password *"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setShowPasswordRequirements(true)}
+                    onBlur={() => setShowPasswordRequirements(false)}
+                    required
+                    className={`w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 text-white placeholder-gray-500 border border-gray-800 ${
+                      errors.password ? "focus:ring-red-500 border-red-500" : "focus:ring-white"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  >
+                    {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
+                  </button>
+                  {showPasswordRequirements && (
+                    <div className="absolute z-10 mt-2 p-4 bg-gray-900 border border-gray-700 rounded-lg shadow-xl text-sm text-gray-200 w-[280px] animate-fadeIn">
+                      <p className="font-semibold text-white mb-3">Create a Strong Password</p>
+                      <ul className="space-y-2">
+                        <li className="flex items-start">
+                          {passwordCriteria.length ? (
+                            <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <FaCircle className="mt-0.5 mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className={passwordCriteria.length ? "text-green-400" : "text-gray-400"}>
+                            At least 8 characters
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          {passwordCriteria.uppercase ? (
+                            <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <FaCircle className="mt-0.5 mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className={passwordCriteria.uppercase ? "text-green-400" : "text-gray-400"}>
+                            One uppercase letter
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          {passwordCriteria.lowercase ? (
+                            <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <FaCircle className="mt-0.5 mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className={passwordCriteria.lowercase ? "text-green-400" : "text-gray-400"}>
+                            One lowercase letter
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          {passwordCriteria.special ? (
+                            <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <FaCircle className="mt-0.5 mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className={passwordCriteria.special ? "text-green-400" : "text-gray-400"}>
+                            One special character (!@#$)
+                          </span>
+                        </li>
+                        <li className="flex items-start">
+                          {passwordCriteria.number ? (
+                            <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <FaCircle className="mt-0.5 mr-2 h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className={passwordCriteria.number ? "text-green-400" : "text-gray-400"}>
+                            One number (0-9)
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                </div>
+                <div>
+                  <HighSchoolSearch onSelect={handleSchoolSelect} Style={"SignUp"} />
+                  {selectedSchool.school_name ? (
+                    <p className="text-gray-400 text-sm mt-1">Selected: {selectedSchool.school_name}</p>
+                  ) : (
+                    <p className="text-gray-400 text-sm mt-1">High School * (required)</p>
+                  )}
+                  {errors.school && <p className="text-red-500 text-xs mt-1">{errors.school}</p>}
+                </div>
+                
+                <button
+                  type="submit"
+                  className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
+                >
+                  Sign Up
+                </button>
+                <div className="md:hidden mt-4 text-center">
+                  <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                    Already have an account? <span className="font-semibold">Sign In</span>
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                    Already have an account?{" "}
+                    <span className="font-semibold">Go back to login</span>
+                  </span>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Side Panel */}
+          <div
+            className={`hidden md:flex absolute top-0 right-0 w-1/2 h-full transition-transform duration-500 ease-in-out ${
+              isSignUp ? "translate-x-full" : "translate-x-0"
+            } bg-gray-900 border-l border-gray-800`}
+          >
+            <div className="h-full w-full flex flex-col justify-center items-center text-center p-12 text-white">
+              {!isSignUp ? (
+                <>
+                  <h2 className="text-3xl font-bold mb-4">New Here?</h2>
+                  <p className="mb-8 text-gray-400">
+                    Sign up and discover the world of space engineering through our CanSat program.
+                  </p>
+                  <button
+                    onClick={toggleForm}
+                    className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-3xl font-bold mb-4">Welcome Back</h2>
+                  <p className="mb-8 text-gray-400">
+                    To continue your journey with us, please log in with your personal info.
+                  </p>
+                  <button
+                    onClick={toggleForm}
+                    className="border border-gray-700 text-white py-2 px-8 rounded-sm hover:bg-gray-800 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Scoped CSS for the animation */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-in-out;
+        }
+      `}</style>
+    </>
   );
 };
 

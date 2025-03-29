@@ -10,7 +10,7 @@ import { db, auth, getStudents } from "@/lib/firebaseConfig";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { IoIosNotifications } from "react-icons/io";
-import { HiBookOpen, HiClock, HiChatAlt } from "react-icons/hi"; // Icons for styling
+import { HiBookOpen, HiClock, HiChatAlt } from "react-icons/hi";
 import { markMessageAsRead } from "@/lib/firestoreUtil";
 import { StudentProgressTable } from "@/components/StudentProgressTable";
 
@@ -23,6 +23,7 @@ export default function InstructorDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [isClockedIn, setIsClockedIn] = useState(false); // New state for clock status
 
   // Fetch authenticated user and role
   useEffect(() => {
@@ -32,6 +33,20 @@ export default function InstructorDashboard() {
         setUserId(uid);
         const token = await user.getIdToken();
         console.log("Firebase Token:", token);
+
+        // Notify backend of login (optional, based on your previous requirement)
+        try {
+          const loginResponse = await fetch("http://127.0.0.1:8080/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken: token }),
+          });
+          if (!loginResponse.ok) {
+            console.error("Login logging failed:", await loginResponse.text());
+          }
+        } catch (error) {
+          console.error("Error notifying backend of login:", error);
+        }
 
         const response = await fetch("http://127.0.0.1:8080/check-role", {
           method: "POST",
@@ -143,6 +158,37 @@ export default function InstructorDashboard() {
     return () => unsubscribeQuery();
   }, [userRole, userId, studentIds]);
 
+  // Handle Clock In/Out
+  const handleClockAction = async () => {
+    if (!userId) {
+      console.error("No userId available for clock action");
+      return;
+    }
+
+    const action = isClockedIn ? "out" : "in";
+    const token = await auth.currentUser?.getIdToken();
+
+    try {
+      const response = await fetch("http://127.0.0.1:8080/clock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: token, action }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to clock ${action}: ${await response.text()}`);
+      }
+
+      const data = await response.json();
+      console.log(`Clock ${action} successful:`, data);
+
+      // Toggle the clock state
+      setIsClockedIn(!isClockedIn);
+    } catch (error) {
+      console.error(`Error during clock ${action}:`, error);
+    }
+  };
+
   // Notification handlers
   const handleBellClick = () => setShowNotifications((prev) => !prev);
 
@@ -208,7 +254,12 @@ export default function InstructorDashboard() {
                 <p className="text-gray-400 text-sm mb-4">
                   Track your time spent on instruction and support.
                 </p>
-                <Button className="bg-white text-black hover:bg-gray-200">Clock In/Out</Button>
+                <Button
+                  onClick={handleClockAction}
+                  className={`bg-white text-black hover:bg-gray-200 ${isClockedIn ? "bg-white text-black hover:bg-gray-200" : ""}`}
+                >
+                  {isClockedIn ? "Clock Out" : "Clock In"}
+                </Button>
               </CardContent>
             </Card>
 
