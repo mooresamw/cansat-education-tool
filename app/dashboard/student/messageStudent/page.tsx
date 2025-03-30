@@ -1,4 +1,3 @@
-// app/dashboard/student/messageStudent/page.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -10,12 +9,10 @@ import {
   getMessages,
   handleReaction,
   handleEditMessage,
-  markMessageAsRead, // Import this function
+  markMessageAsRead,
 } from "@/lib/firestoreUtil";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import Loading from "@/components/Loading";
-// Remove useChat since we no longer need it
-// import { useChat } from "@/lib/ChatContext";
 
 export default function StudentChatPage() {
   const [user, setUser] = useState<any>(null);
@@ -27,8 +24,6 @@ export default function StudentChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [loading, setLoading] = useState(true);
-  // Remove useChat hook
-  // const { setActiveChatParticipantId } = useChat();
 
   // Fetch the currently authenticated user (student) and their data
   useEffect(() => {
@@ -65,7 +60,7 @@ export default function StudentChatPage() {
           const data = doc.data();
           return {
             id: doc.id,
-            uid: data.user_id, // Include UID for message operations
+            uid: data.user_id,
             ...data,
           };
         })
@@ -80,27 +75,21 @@ export default function StudentChatPage() {
     if (selectedStudent && user) {
       const unsubscribe = getMessages(
         user.uid,
-        selectedStudent.uid, // Use UID
+        selectedStudent.uid,
         (newMessages: any[]) => {
           setMessages(newMessages);
-          // Mark all messages from the selected student as read
           newMessages.forEach((msg) => {
             if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
-              // Message is from the other user and not yet read by the current user
               markMessageAsRead(
                 user.uid,
-                [user.uid, selectedStudent.uid].sort().join("_"), // Conversation ID
+                [user.uid, selectedStudent.uid].sort().join("_"),
                 msg.messageId
               );
             }
           });
         }
       );
-      return () => {
-        unsubscribe();
-        // Remove clearing of activeChatParticipantId
-        // setActiveChatParticipantId(null);
-      };
+      return () => unsubscribe();
     }
   }, [selectedStudent, user]);
 
@@ -116,7 +105,7 @@ export default function StudentChatPage() {
         return;
       }
       try {
-        await sendMessage(user.uid, selectedStudent.uid, message); // Use UID
+        await sendMessage(user.uid, selectedStudent.uid, message);
         setMessage("");
       } catch (error) {
         console.error("Error sending message:", error);
@@ -131,7 +120,7 @@ export default function StudentChatPage() {
   const handleReactionClick = async (messageId: string, emoji: string) => {
     if (!user || !selectedStudent) return;
     try {
-      await handleReaction(user.uid, selectedStudent.uid, messageId, emoji); // Use UID
+      await handleReaction(user.uid, selectedStudent.uid, messageId, emoji);
     } catch (error) {
       console.error("Error updating reaction:", error);
       alert("Failed to update reaction.");
@@ -142,7 +131,7 @@ export default function StudentChatPage() {
   const handleEditMessageClick = async (messageId: string, newText: string) => {
     if (!user || !selectedStudent) return;
     try {
-      await handleEditMessage(user.uid, selectedStudent.uid, messageId, newText); // Use UID
+      await handleEditMessage(user.uid, selectedStudent.uid, messageId, newText);
       setEditingMessageId(null);
     } catch (error) {
       console.error("Error editing message:", error);
@@ -156,6 +145,26 @@ export default function StudentChatPage() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // Helper function to format date for separators
+  const formatDateSeparator = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+    return date.toLocaleDateString([], {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   if (loading) return <Loading />;
   return (
@@ -236,118 +245,148 @@ export default function StudentChatPage() {
                       </p>
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, index) => {
                       const isSender = msg.sender === user?.uid;
+                      const timestamp = msg.timestamp
+                        ? new Date(msg.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Just now";
+
+                      // Check if we need a date separator
+                      const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : "";
+                      const prevDate =
+                        index > 0 && messages[index - 1].timestamp
+                          ? new Date(messages[index - 1].timestamp).toDateString()
+                          : null;
+                      const showDateSeparator = index === 0 || currentDate !== prevDate;
+
                       return (
-                        <div
-                          key={msg.messageId}
-                          className={`flex items-end ${
-                            isSender ? "justify-end" : "justify-start"
-                          }`}
-                        >
-                          {!isSender && (
-                            <div className="mr-2 flex-shrink-0">
-                              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
-                                {selectedStudent.name?.[0]?.toUpperCase() || "S"}
-                              </div>
+                        <div key={msg.messageId} className="space-y-2">
+                          {showDateSeparator && (
+                            <div className="text-center my-2">
+                              <span className="inline-block bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">
+                                {formatDateSeparator(msg.timestamp)}
+                              </span>
                             </div>
                           )}
-
                           <div
-                            className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
-                              isSender
-                                ? "bg-blue-500 text-white rounded-br-sm"
-                                : "bg-white text-gray-900 rounded-bl-sm"
+                            className={`flex items-end ${
+                              isSender ? "justify-end" : "justify-start"
                             }`}
                           >
-                            {editingMessageId === msg.messageId ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editingText}
-                                  onChange={(e) => setEditingText(e.target.value)}
-                                  className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-black bg-gray-50"
-                                  style={{ minHeight: "60px" }}
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={() =>
-                                      handleEditMessageClick(msg.messageId, editingText)
-                                    }
-                                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingMessageId(null)}
-                                    className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
+                            {!isSender && (
+                              <div className="mr-2 flex-shrink-0">
+                                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
+                                  {selectedStudent.name?.[0]?.toUpperCase() || "S"}
                                 </div>
                               </div>
-                            ) : (
-                              <>
-                                <p className="break-words">
-                                  {msg.message}
-                                  {msg.edited && (
-                                    <span className="ml-2 text-xs text-gray-300 italic">
-                                      (edited)
-                                    </span>
-                                  )}
-                                </p>
-                                {isSender && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingMessageId(msg.messageId);
-                                      setEditingText(msg.message);
-                                    }}
-                                    className="mt-1 text-xs text-blue-200 hover:text-blue-100 transition-colors"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
-                              </>
                             )}
 
-                            <div className="mt-2 flex items-center gap-2">
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "👍")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                👍
-                              </button>
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "❤️")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                ❤️
-                              </button>
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "😆")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                😆
-                              </button>
-                              {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
-                                <span
-                                  key={uid}
-                                  className={`text-sm px-1 rounded-full ${
-                                    isSender ? "bg-blue-600/20" : "bg-gray-200"
-                                  }`}
-                                >
-                                  {emoji as string}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                            <div
+                              className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
+                                isSender
+                                  ? "bg-blue-500 text-white rounded-br-sm"
+                                  : "bg-white text-gray-900 rounded-bl-sm"
+                              }`}
+                            >
+                              {editingMessageId === msg.messageId ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={editingText}
+                                    onChange={(e) => setEditingText(e.target.value)}
+                                    className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-black bg-gray-50"
+                                    style={{ minHeight: "60px" }}
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      onClick={() =>
+                                        handleEditMessageClick(msg.messageId, editingText)
+                                      }
+                                      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingMessageId(null)}
+                                      className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="break-words">
+                                    {msg.message}
+                                    {msg.edited && (
+                                      <span className="ml-2 text-xs text-gray-300 italic">
+                                        (edited)
+                                      </span>
+                                    )}
+                                  </p>
+                                  <div
+                                    className={`text-xs mt-1 ${
+                                      isSender ? "text-blue-200" : "text-gray-500"
+                                    }`}
+                                  >
+                                    {timestamp}
+                                  </div>
+                                  {isSender && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingMessageId(msg.messageId);
+                                        setEditingText(msg.message);
+                                      }}
+                                      className="mt-1 text-xs text-blue-200 hover:text-blue-100 transition-colors"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                </>
+                              )}
 
-                          {isSender && (
-                            <div className="ml-2 flex-shrink-0">
-                              <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
-                                {user?.name?.[0] || "Y"}
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  onClick={() => handleReactionClick(msg.messageId, "👍")}
+                                  className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                >
+                                  👍
+                                </button>
+                                <button
+                                  onClick={() => handleReactionClick(msg.messageId, "❤️")}
+                                  className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                >
+                                  ❤️
+                                </button>
+                                <button
+                                  onClick={() => handleReactionClick(msg.messageId, "😆")}
+                                  className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                >
+                                  😆
+                                </button>
+                                {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
+                                  <span
+                                    key={uid}
+                                    className={`text-sm px-1 rounded-full ${
+                                      isSender ? "bg-blue-600/20" : "bg-gray-200"
+                                    }`}
+                                  >
+                                    {emoji as string}
+                                  </span>
+                                ))}
                               </div>
                             </div>
-                          )}
+
+                            {isSender && (
+                              <div className="ml-2 flex-shrink-0">
+                                <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
+                                  {user?.name?.[0] || "Y"}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })
