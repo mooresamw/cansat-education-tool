@@ -181,43 +181,49 @@ const LoginSignupPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        setNotification("Please verify your email before logging in.");
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        console.error("User not found in Firestore");
+        setNotification("User data not found. Please contact support.");
         await signOut(auth);
         return;
       }
 
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+      const userData = userDoc.data();
+      const isVerifiedInFirestore = userData.verified === true;
 
-        if (userData.verified !== user.emailVerified) {
-          console.log("Updating verified field in Firestore to:", user.emailVerified);
-          await updateDoc(userRef, {
-            verified: user.emailVerified,
-          });
-          console.log("Verified field updated successfully");
-        }
-
-        if (rememberMe) {
-          localStorage.setItem("savedEmail", email);
-          localStorage.setItem("savedPassword", password);
-          localStorage.setItem("rememberMe", "true");
-        } else {
-          localStorage.removeItem("savedEmail");
-          localStorage.removeItem("savedPassword");
-          localStorage.setItem("rememberMe", "false");
-        }
-
-        localStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
-        console.log("User logged in successfully!");
-        router.push(`/dashboard/${userData.role}`);
-      } else {
-        console.error("User not found in Firestore");
-        setNotification("User data not found. Please contact support.");
+      // Allow login if either email is verified OR Firestore 'verified' field is true
+      if (!user.emailVerified && !isVerifiedInFirestore) {
+        setNotification("Please verify your email before logging in, or ensure your account is manually verified.");
+        await signOut(auth);
+        return;
       }
+
+      // Update Firestore 'verified' field if it doesn’t match emailVerified
+      if (userData.verified !== user.emailVerified) {
+        console.log("Updating verified field in Firestore to:", user.emailVerified);
+        await updateDoc(userRef, {
+          verified: user.emailVerified,
+        });
+        console.log("Verified field updated successfully");
+      }
+
+      if (rememberMe) {
+        localStorage.setItem("savedEmail", email);
+        localStorage.setItem("savedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("savedEmail");
+        localStorage.removeItem("savedPassword");
+        localStorage.setItem("rememberMe", "false");
+      }
+
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      console.log("User logged in successfully!");
+      router.push(`/dashboard/${userData.role}`);
     } catch (error: any) {
       console.error("Error logging in:", error.message);
       setNotification("Error logging in. Please check your credentials.");
@@ -450,7 +456,7 @@ const LoginSignupPage = () => {
                 </button>
                 <div className="md:hidden mt-4 text-center">
                   <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
-                    Already have an account? <span className="font-semibold">Sign In</span>
+                    Already have an account? <span className="font-semibold">Sign Up</span>
                   </span>
                 </div>
                 <div className="text-center">

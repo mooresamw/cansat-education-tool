@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 
 # Set up Firestore database
-cred = credentials.Certificate(r"B:\key.json")
+cred = credentials.Certificate("key.json")
 firebase_admin.initialize_app(cred, {
     "storageBucket": "cansat-education-tool.firebasestorage.app"
 })
