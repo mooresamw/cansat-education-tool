@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { checkUserRole } from "@/lib/checkAuth";
 import { useRouter } from "next/navigation";
 import { db, auth, getStudents } from "@/lib/firebaseConfig";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
@@ -23,9 +22,8 @@ export default function InstructorDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [studentIds, setStudentIds] = useState<string[]>([]);
-  const [isClockedIn, setIsClockedIn] = useState(false); // New state for clock status
+  const [isClockedIn, setIsClockedIn] = useState(false);
 
-  // Fetch authenticated user and role
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -34,7 +32,6 @@ export default function InstructorDashboard() {
         const token = await user.getIdToken();
         console.log("Firebase Token:", token);
 
-        // Notify backend of login (optional, based on your previous requirement)
         try {
           const loginResponse = await fetch("http://127.0.0.1:8080/login", {
             method: "POST",
@@ -68,7 +65,6 @@ export default function InstructorDashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  // Fetch students (to identify student messages)
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -84,7 +80,6 @@ export default function InstructorDashboard() {
     fetchStudents();
   }, []);
 
-  // Fetch notifications
   useEffect(() => {
     if (!userRole || userRole !== "instructor") {
       console.log("User role is not instructor or not authenticated:", userRole);
@@ -108,7 +103,6 @@ export default function InstructorDashboard() {
       q,
       (snapshot) => {
         let studentUnread = 0;
-        const studentMessages: any[] = [];
         const allMessages: any[] = [];
 
         snapshot.forEach((doc) => {
@@ -137,14 +131,12 @@ export default function InstructorDashboard() {
 
               if (involvesStudent) {
                 studentUnread++;
-                studentMessages.push(messageData);
               }
             }
           });
         });
 
         console.log("Student Unread Count:", studentUnread);
-        console.log("Student Unread Messages:", studentMessages);
         console.log("All Unread Messages:", allMessages);
 
         setStudentUnreadCount(studentUnread);
@@ -158,7 +150,6 @@ export default function InstructorDashboard() {
     return () => unsubscribeQuery();
   }, [userRole, userId, studentIds]);
 
-  // Handle Clock In/Out
   const handleClockAction = async () => {
     if (!userId) {
       console.error("No userId available for clock action");
@@ -182,14 +173,12 @@ export default function InstructorDashboard() {
       const data = await response.json();
       console.log(`Clock ${action} successful:`, data);
 
-      // Toggle the clock state
       setIsClockedIn(!isClockedIn);
     } catch (error) {
       console.error(`Error during clock ${action}:`, error);
     }
   };
 
-  // Notification handlers
   const handleBellClick = () => setShowNotifications((prev) => !prev);
 
   const handleMarkAsRead = async (notification: any) => {
@@ -212,6 +201,15 @@ export default function InstructorDashboard() {
     }
   };
 
+  const MESSAGE_PREVIEW_LIMIT = 25; 
+
+  const truncateMessage = (message: string) => {
+    if (message.length > MESSAGE_PREVIEW_LIMIT) {
+      return message.slice(0, MESSAGE_PREVIEW_LIMIT) + "...";
+    }
+    return message;
+  };
+
   if (loading) {
     return <div className="bg-black min-h-screen text-white flex items-center justify-center">Loading...</div>;
   }
@@ -220,12 +218,9 @@ export default function InstructorDashboard() {
     <div className="bg-black min-h-screen text-white">
       <DashboardLayout userType="instructor">
         <main className="max-w-6xl mx-auto w-full px-4 py-12 relative">
-          {/* Header */}
           <h1 className="text-3xl md:text-4xl font-bold mb-6">Instructor Dashboard</h1>
 
-          {/* Card Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Card 1: Access Materials */}
             <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiBookOpen className="text-3xl text-blue-500 transition-transform duration-300 hover:scale-110" />
@@ -244,7 +239,6 @@ export default function InstructorDashboard() {
               </CardContent>
             </Card>
 
-            {/* Card 2: Time Tracking */}
             <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiClock className="text-3xl text-green-400 transition-transform duration-300 hover:scale-110" />
@@ -256,14 +250,13 @@ export default function InstructorDashboard() {
                 </p>
                 <Button
                   onClick={handleClockAction}
-                  className={`bg-white text-black hover:bg-gray-200 ${isClockedIn ? "bg-white text-black hover:bg-gray-200" : ""}`}
+                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {isClockedIn ? "Clock Out" : "Clock In"}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Card 3: Student Communication */}
             <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <CardHeader className="flex items-center space-x-3">
                 <HiChatAlt className="text-3xl text-purple-400 transition-transform duration-300 hover:scale-110" />
@@ -283,12 +276,10 @@ export default function InstructorDashboard() {
             </Card>
           </div>
 
-          {/* Student Progress Table */}
           <div className="mt-6">
             <StudentProgressTable />
           </div>
 
-          {/* Bell Icon */}
           <div
             onClick={handleBellClick}
             className="fixed top-4 right-16 bg-blue-500 text-white rounded-full cursor-pointer shadow-lg flex items-center justify-center w-10 h-10"
@@ -301,7 +292,6 @@ export default function InstructorDashboard() {
             )}
           </div>
 
-          {/* Notification Dropdown */}
           {showNotifications && (
             <div className="fixed top-14 right-16 bg-gray-900 border border-gray-800 shadow-lg rounded-md p-4 w-72 z-10">
               <h3 className="font-bold text-lg text-white">Unread Messages</h3>
@@ -309,7 +299,7 @@ export default function InstructorDashboard() {
                 <ul className="mt-2 space-y-2">
                   {notifications.map((notification, index) => (
                     <li key={index} className="p-2 bg-gray-800 rounded">
-                      <p className="text-sm text-white">{notification.message}</p>
+                      <p className="text-sm text-white">{truncateMessage(notification.message)}</p>
                       <p className="text-xs text-gray-400">
                         From: {notification.sender} (Student)
                       </p>
