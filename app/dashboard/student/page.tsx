@@ -14,8 +14,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { IoIosNotifications } from "react-icons/io";
 import { HiBookOpen, HiChip, HiChatAlt, HiMail } from "react-icons/hi";
 import { markMessageAsRead } from "@/lib/firestoreUtil";
-// Remove useChat since we no longer need it
-// import { useChat } from "@/lib/ChatContext";
 
 export default function StudentDashboard() {
   const userRole = checkUserRole(["admin", "instructor", "student"]);
@@ -29,8 +27,6 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [instructorIds, setInstructorIds] = useState<string[]>([]);
   const router = useRouter();
-  // Remove useChat hook
-  // const { activeChatParticipantId } = useChat();
 
   // Fetch instructor IDs
   useEffect(() => {
@@ -117,7 +113,6 @@ export default function StudentDashboard() {
             const isUnread = msg.sender !== userId && readStatus[userId] !== true;
 
             if (isUnread) {
-              // No need to filter using activeChatParticipantId
               const messageData = {
                 message: msg.message,
                 sender: msg.sender,
@@ -157,7 +152,7 @@ export default function StudentDashboard() {
     );
 
     return () => unsubscribeQuery();
-  }, [userRole, userId, instructorIds]); // Remove activeChatParticipantId dependency
+  }, [userRole, userId, instructorIds]);
 
   // Navigation handlers
   const openIDE = () => router.push("/dashboard/student/ide");
@@ -186,6 +181,17 @@ export default function StudentDashboard() {
     } catch (error) {
       console.error("Error marking message as read:", error);
     }
+  };
+
+  // Character limit for notification preview
+  const MESSAGE_PREVIEW_LIMIT = 25;
+
+  // Function to truncate message if it exceeds the limit
+  const truncateMessage = (message: string) => {
+    if (message.length > MESSAGE_PREVIEW_LIMIT) {
+      return message.slice(0, MESSAGE_PREVIEW_LIMIT) + "...";
+    }
+    return message;
   };
 
   if (loading) {
@@ -291,7 +297,7 @@ export default function StudentDashboard() {
                 <ul className="mt-2 space-y-2">
                   {notifications.map((notification, index) => (
                     <li key={index} className="p-2 bg-card rounded">
-                      <p className="text-sm text-primary">{notification.message}</p>
+                      <p className="text-sm text-primary">{truncateMessage(notification.message)}</p>
                       <p className="text-xs text-gray-400">
                         From: {notification.sender} (
                         {notification.involvesInstructor ? "Instructor" : "Team"})
