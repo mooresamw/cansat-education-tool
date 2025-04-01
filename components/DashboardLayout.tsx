@@ -12,6 +12,7 @@ import {
   ClockIcon,
   CodeIcon,
   FolderIcon,
+  FolderOpenIcon,
   LogOut,
   MessageCircleIcon,
   MessageSquareIcon,
@@ -29,13 +30,13 @@ interface DashboardLayoutProps {
   userType: "admin" | "instructor" | "student";
 }
 
-const BOTTT_AVATARS = [
-  { style: "bottts", seed: "bot1" },
-  { style: "bottts", seed: "bot2" },
-  { style: "bottts", seed: "bot3" },
-  { style: "bottts", seed: "bot4" },
-  { style: "bottts", seed: "bot5" },
-  { style: "bottts", seed: "bot6" },
+const LOCAL_AVATARS = [
+  { id: "avatar1", path: "/avatars/avatar1.png" },
+  { id: "avatar2", path: "/avatars/avatar2.png" },
+  { id: "avatar3", path: "/avatars/avatar3.png" },
+  { id: "avatar4", path: "/avatars/avatar4.png" },
+  { id: "avatar5", path: "/avatars/avatar5.png" },
+  { id: "avatar6", path: "/avatars/avatar6.png" },
 ];
 
 const getUser = () => {
@@ -47,9 +48,9 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
-  // Initialize avatar seed and style from localStorage if available
-  const [avatarSeed, setAvatarSeed] = React.useState(() => userData?.avatarSeed || "");
-  const [avatarStyle, setAvatarStyle] = React.useState(() => userData?.avatarStyle || "bottts");
+  const [avatarSeed, setAvatarSeed] = React.useState(() => userData?.avatarSeed || 1);
+
+  const avatarPath = LOCAL_AVATARS[avatarSeed - 1]?.path || LOCAL_AVATARS[0].path;
 
   React.useEffect(() => {
     const syncAvatarWithBackend = async () => {
@@ -67,36 +68,30 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           });
           if (response.ok) {
             const data = await response.json();
-            const backendSeed = data.avatarSeed || Math.random().toString(36).substring(2);
-            const backendStyle = data.avatarStyle || "bottts";
-            // Only update state if backend data differs from local
-            if (backendSeed !== avatarSeed || backendStyle !== avatarStyle) {
+            const backendSeed = data.avatarSeed || 1;
+            if (backendSeed !== avatarSeed) {
               setAvatarSeed(backendSeed);
-              setAvatarStyle(backendStyle);
-              // Update localStorage with backend data
-              const updatedUser = { ...userData, avatarSeed: backendSeed, avatarStyle: backendStyle };
+              const updatedUser = { ...userData, avatarSeed: backendSeed };
               localStorage.setItem("user", JSON.stringify(updatedUser));
             }
           } else {
-            const newSeed = Math.random().toString(36).substring(2);
+            const newSeed = 1;
             setAvatarSeed(newSeed);
-            await saveAvatarSeedToBackend(newSeed, "bottts", token);
+            await saveAvatarSeedToBackend(newSeed, token);
           }
         } else if (!avatarSeed) {
-          // No user and no local avatar, set a random seed
-          const newSeed = Math.random().toString(36).substring(2);
-          setAvatarSeed(newSeed);
+          setAvatarSeed(1);
         }
       } catch (error) {
         console.error("Error syncing avatar with backend:", error);
         if (!avatarSeed) {
-          setAvatarSeed(Math.random().toString(36).substring(2));
+          setAvatarSeed(1);
         }
       }
     };
 
     syncAvatarWithBackend();
-  }, [avatarSeed, avatarStyle, userData]);
+  }, [avatarSeed, userData]);
 
   if (!userData) {
     return <p className="text-center mt-10">Loading...</p>;
@@ -127,11 +122,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     }
   };
 
-  const getAvatarUrl = (style: string, seed: string) => {
-    return `https://api.dicebear.com/7.x/${style}/png?seed=${seed}`;
-  };
-
-  const saveAvatarSeedToBackend = async (newSeed: string, style: string, token: string) => {
+  const saveAvatarSeedToBackend = async (newSeed: number, token: string) => {
     try {
       const response = await fetch("http://127.0.0.1:8080/user/avatar", {
         method: "POST",
@@ -139,29 +130,36 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ avatarSeed: newSeed, avatarStyle: style }),
+        body: JSON.stringify({ avatarSeed: newSeed }),
       });
       if (!response.ok) {
-        console.error("Failed to save avatar seed:", await response.text());
+        const errorText = await response.text();
+        console.error("Failed to save avatar seed:", errorText);
+        throw new Error(errorText);
       }
     } catch (error) {
       console.error("Error saving avatar seed:", error);
+      throw error;
     }
   };
 
-  const handleAvatarChange = async (newSeed: string) => {
-    setAvatarSeed(newSeed);
-    setShowAvatarPicker(false);
-    const user = auth.currentUser;
-    if (user) {
-      const token = await user.getIdToken();
-      await saveAvatarSeedToBackend(newSeed, "bottts", token);
+  const handleAvatarChange = async (index: number) => {
+    try {
+      const newSeed = index + 1;
+      setAvatarSeed(newSeed);
+      setShowAvatarPicker(false);
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdToken();
+        await saveAvatarSeedToBackend(newSeed, token);
+      }
+      const updatedUser = { ...userData, avatarSeed: newSeed };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error("Failed to update avatar:", error);
+      setAvatarSeed(userData.avatarSeed || 1);
     }
-    const updatedUser = { ...userData, avatarSeed: newSeed, avatarStyle: "bottts" };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
   };
-
-  const avatarUrl = getAvatarUrl(avatarStyle, avatarSeed);
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -180,8 +178,11 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               <NavItem href="/admin/accounts" icon={<User className="h-4 w-4" />}>
                 Account Management
               </NavItem>
-              <NavItem href="/admin/activity" icon={<ActivityIcon className="h-4 w-4" />}>
+              <NavItem href="/dashboard/admin/logs" icon={<ActivityIcon className="h-4 w-4" />}>
                 Activity Monitoring
+              </NavItem>
+              <NavItem href="/dashboard/admin/resource-manager" icon={<FolderOpenIcon className="h-4 w-4" />}>
+                Resource Management
               </NavItem>
             </>
           )}
@@ -209,13 +210,13 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               >
                 Access Resources
               </NavItem>
-              <NavItem href="/ide" icon={<CodeIcon className="h-4 w-4" />}>
+              <NavItem href="/dashboard/student/ide" icon={<CodeIcon className="h-4 w-4" />}>
                 Virtual Arduino IDE
               </NavItem>
-              <NavItem href="/student/collaboration" icon={<UsersIcon className="h-4 w-4" />}>
+              <NavItem href="/dashboard/student/messageStudent" icon={<UsersIcon className="h-4 w-4" />}>
                 Collaboration Tools
               </NavItem>
-              <NavItem href="/student/messages" icon={<MessageCircleIcon className="h-4 w-4" />}>
+              <NavItem href="/dashboard/student/message" icon={<MessageCircleIcon className="h-4 w-4" />}>
                 Direct Messaging
               </NavItem>
             </>
@@ -241,89 +242,93 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full p-0 hover:scale-105 transition-transform"
+                  className="h-10 w-10 rounded-full p-0 hover:scale-105 transition-transform focus:ring-2 focus:ring-primary"
                 >
                   <Image
-                    src={avatarUrl}
+                    src={avatarPath}
                     alt="User Avatar"
-                    width={32}
-                    height={32}
+                    width={40}
+                    height={40}
                     className="h-full w-full rounded-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "/default-avatar.png";
+                      target.src = "/avatars/default-avatar.png";
                     }}
                   />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 bg-popover border border-border text-popover-foreground">
-                <div className="flex flex-col space-y-4 p-2">
+              <PopoverContent className="w-72 bg-popover border border-border text-popover-foreground shadow-xl rounded-lg p-0">
+                <div className="flex flex-col space-y-4 p-4">
                   <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-full overflow-hidden">
+                    <div className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-primary/20">
                       <Image
-                        src={avatarUrl}
+                        src={avatarPath}
                         alt="User Avatar"
-                        width={48}
-                        height={48}
+                        width={56}
+                        height={56}
                         className="h-full w-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = "/default-avatar.png";
+                          target.src = "/avatars/default-avatar.png";
                         }}
                       />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold">{userData.name}</h2>
-                      <p className="text-sm text-muted-foreground">{userData.role}</p>
+                      <h2 className="text-lg font-semibold">{userData.name}</h2>
+                      <p className="text-sm text-muted-foreground capitalize">{userData.role}</p>
                     </div>
                   </div>
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                    className="w-full bg-primary text-white text-sm py-1 px-2 rounded-md hover:bg-primary-dark"
+                    className="w-full border-primary/20 hover:bg-primary/5 text-primary transition-colors"
                   >
-                    Edit Avatar
-                  </button>
+                    {showAvatarPicker ? "Close Avatar Picker" : "Change Avatar"}
+                  </Button>
 
                   {showAvatarPicker && (
-                    <div class="border-t border-border pt-4">
-                      <h3 className="text-sm font-medium mb-2">Choose Avatar Style</h3>
-                      <div className="grid grid-cols-3 gap-2">
-                        {BOTTT_AVATARS.map((avatar) => (
+                    <div className="border-t border-border pt-4 -mx-4 px-4 bg-muted/10">
+                      <h3 className="text-sm font-medium mb-3 text-foreground">Select Your Avatar</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        {LOCAL_AVATARS.map((avatar, index) => (
                           <button
-                            key={avatar.seed}
-                            onClick={() => handleAvatarChange(avatar.seed)}
-                            className={`p-1 rounded-md ${
-                              avatarSeed === avatar.seed && avatarStyle === avatar.style
-                                ? "ring-2 ring-primary"
-                                : "hover:ring-1 hover:ring-border"
+                            key={avatar.id}
+                            onClick={() => handleAvatarChange(index)}
+                            className={`relative group rounded-full overflow-hidden transition-all duration-200 ${
+                              avatarSeed === index + 1
+                                ? "ring-2 ring-primary scale-105"
+                                : "hover:ring-2 hover:ring-primary/50 hover:scale-105"
                             }`}
                           >
                             <Image
-                              src={getAvatarUrl(avatar.style, avatar.seed)}
-                              alt={`${avatar.seed} avatar`}
-                              width={40}
-                              height={40}
-                              className="rounded-full"
+                              src={avatar.path}
+                              alt={`${avatar.id} avatar`}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = "/default-avatar.png";
+                                target.src = "/avatars/default-avatar.png";
                               }}
                             />
+                            <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
+                              avatarSeed === index + 1 ? 'bg-black/20' : ''
+                            }`}></div>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="space-y-2 text-sm text-muted-foreground pt-2">
                     <p>
                       <strong className="text-foreground">Email:</strong> {userData.email}
                     </p>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full border-border text-foreground hover:bg-accent"
+                    className="w-full border-border text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                     onClick={handleSignOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />

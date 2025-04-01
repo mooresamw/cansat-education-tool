@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 
 # Set up Firestore database
-cred = credentials.Certificate(r"B:\key.json")
+cred = credentials.Certificate("key.json")
 firebase_admin.initialize_app(cred, {
     "storageBucket": "cansat-education-tool.firebasestorage.app"
 })
@@ -20,7 +20,7 @@ CORS(app, resources={
     r"/*": {
         "origins": "http://localhost:3000",
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Authorization","Content-Type"]
+        "allow_headers": ["Authorization", "Content-Type"]
     }
 })
 
@@ -93,7 +93,7 @@ def get_avatar():
         uid = decoded_token["uid"]
 
         user_data = get_user_data(uid)
-        avatar_seed = user_data.get("avatarSeed", "")
+        avatar_seed = user_data.get("avatarSeed", 1)  # Default to 1
         return jsonify({"avatarSeed": avatar_seed}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 401
@@ -111,19 +111,26 @@ def set_avatar():
         uid = decoded_token["uid"]
 
         data = request.json
+        print("Received data:", data)  # Debug log
         avatar_seed = data.get("avatarSeed")
-        avatar_style = data.get("avatarStyle", "bottts")
 
-        if not avatar_seed:
+        if avatar_seed is None:
             return jsonify({"error": "avatarSeed is required"}), 400
+
+        # Validate avatar seed (must be an integer between 1 and 6)
+        try:
+            avatar_seed = int(avatar_seed)
+            if avatar_seed not in range(1, 7):
+                return jsonify({"error": "avatarSeed must be between 1 and 6"}), 400
+        except ValueError:
+            return jsonify({"error": "avatarSeed must be an integer"}), 400
 
         user_ref = db.collection("users").document(uid)
         user_ref.update({
-            "avatarSeed": avatar_seed,
-            "avatarStyle": avatar_style
+            "avatarSeed": avatar_seed
         })
 
-        return jsonify({"message": "Avatar updated successfully"}), 200
+        return jsonify({"message": "Avatar updated successfully", "avatarSeed": avatar_seed}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -150,7 +157,8 @@ def register():
             "role": role,
             "school_name": school_name,
             "school_id": school_id,
-            "verified": verified
+            "verified": verified,
+            "avatarSeed": 1  # Default to avatar 1
         })
 
         log_ref = db.collection("logs").document()
@@ -173,6 +181,7 @@ def register():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # API route to handle user role checking
 @app.route("/check-role", methods=["POST", "OPTIONS"])

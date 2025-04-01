@@ -24,14 +24,14 @@ const LoginSignupPage = () => {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null); // Explicitly type as any or define an interface
   const [rememberMe, setRememberMe] = useState(false);
   const [notification, setNotification] = useState("");
   const [selectedSchool, setSelectedSchool] = useState({
     school_name: "",
     school_id: "",
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<any>({}); // Explicitly type as any or define an interface
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [passwordCriteria, setPasswordCriteria] = useState({
     length: false,
@@ -102,7 +102,7 @@ const LoginSignupPage = () => {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: any = {};
 
     if (!firstName.trim()) newErrors.firstName = "First name is required";
     if (!lastName.trim()) newErrors.lastName = "Last name is required";
@@ -185,6 +185,25 @@ const LoginSignupPage = () => {
         setNotification("Please verify your email before logging in.");
         await signOut(auth);
         return;
+      }
+
+      // Get the Firebase ID token
+      const idToken = await user.getIdToken();
+
+      // Send login event to backend
+      const loginResponse = await fetch("http://localhost:8080/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        console.error("Backend login failed:", errorText);
+        setNotification("Login succeeded, but backend notification failed. Contact support.");
+      } else {
+        const loginData = await loginResponse.json();
+        console.log("Backend login successful:", loginData);
       }
 
       const userRef = doc(db, "users", user.uid);

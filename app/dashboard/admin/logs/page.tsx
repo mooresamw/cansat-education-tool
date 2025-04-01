@@ -21,7 +21,7 @@ export default function LogsPage() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [clockLogs, setClockLogs] = useState<any[]>([]);
   const [filteredClockLogs, setFilteredClockLogs] = useState<any[]>([]);
-  const [clockLogFilter, setClockLogFilter] = useState({ name: "", startDate: "", endDate: "" });
+  const [clockLogFilter, setClockLogFilter] = useState({ name: "", startDate: "" });
   const [clockLogsLoading, setClockLogsLoading] = useState(false);
   const [clockLogsError, setClockLogsError] = useState<string | null>(null);
   const [messageLogs, setMessageLogs] = useState<any[]>([]);
@@ -105,7 +105,7 @@ export default function LogsPage() {
       setClockLogs(clockLogList);
       setFilteredClockLogs(clockLogList);
       if (typeof window !== "undefined") {
-        localStorage.setItem("clockLogs", JSON.stringify(clockLogList));
+        filter: localStorage.setItem("clockLogs", JSON.stringify(clockLogList));
       }
     } catch (error) {
       console.error("Error fetching clock logs from Firestore:", error);
@@ -162,8 +162,15 @@ export default function LogsPage() {
     }
 
     if (logFilter.startDate || (key === "startDate" && value)) {
-      const startDate = new Date(key === "startDate" ? value : logFilter.startDate);
-      filtered = filtered.filter((log) => new Date(log.timestamp) >= startDate);
+      const selectedDateStr = key === "startDate" ? value : logFilter.startDate;
+      const selectedDate = new Date(selectedDateStr);
+      const startOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 0, 0, 0, 0));
+      const endOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 23, 59, 59, 999));
+      
+      filtered = filtered.filter((log) => {
+        const logDate = new Date(log.timestamp);
+        return logDate >= startOfDay && logDate <= endOfDay;
+      });
     }
 
     if (logFilter.role || (key === "role" && value)) {
@@ -185,19 +192,25 @@ export default function LogsPage() {
   const handleClockLogFilter = (key: string, value: string) => {
     setClockLogFilter((prev) => ({ ...prev, [key]: value }));
     let filtered = clockLogs;
-    if (clockLogFilter.name || value) {
+
+    if (clockLogFilter.name || (key === "name" && value)) {
       filtered = filtered.filter((log) =>
         log.name?.toLowerCase().includes((key === "name" ? value : clockLogFilter.name).toLowerCase())
       );
     }
+
     if (clockLogFilter.startDate || (key === "startDate" && value)) {
-      const startDate = new Date(key === "startDate" ? value : clockLogFilter.startDate);
-      filtered = filtered.filter((log) => new Date(log.timestamp) >= startDate);
+      const selectedDateStr = key === "startDate" ? value : clockLogFilter.startDate;
+      const selectedDate = new Date(selectedDateStr);
+      const startOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 0, 0, 0, 0));
+      const endOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 23, 59, 59, 999));
+      
+      filtered = filtered.filter((log) => {
+        const logDate = new Date(log.timestamp);
+        return logDate >= startOfDay && logDate <= endOfDay;
+      });
     }
-    if (clockLogFilter.endDate || (key === "endDate" && value)) {
-      const endDate = new Date(key === "endDate" ? value : clockLogFilter.endDate);
-      filtered = filtered.filter((log) => new Date(log.timestamp) <= endDate);
-    }
+
     setFilteredClockLogs(filtered);
     setCurrentPage((prev) => ({ ...prev, clock: 1 }));
   };
@@ -213,8 +226,10 @@ export default function LogsPage() {
         const matchesContent = message.message?.toLowerCase().includes(
           (key === "content" ? value : messageLogFilter.content).toLowerCase()
         );
-        return (messageLogFilter.sender || value ? matchesSender : true) &&
-               (messageLogFilter.content || (key === "content" && value) ? matchesContent : true);
+        return (
+          (messageLogFilter.sender || value ? matchesSender : true) &&
+          (messageLogFilter.content || (key === "content" && value) ? matchesContent : true)
+        );
       }),
     })).filter((msg) => msg.messages.length > 0);
     setFilteredMessageLogs(filtered);
@@ -226,7 +241,7 @@ export default function LogsPage() {
       setLogFilter({ email: "", startDate: "", role: "", action: "" });
       setFilteredLogs(logs);
     } else if (type === "clock") {
-      setClockLogFilter({ name: "", startDate: "", endDate: "" });
+      setClockLogFilter({ name: "", startDate: "" });
       setFilteredClockLogs(clockLogs);
     } else if (type === "chat") {
       setMessageLogFilter({ sender: "", content: "" });
@@ -347,7 +362,7 @@ export default function LogsPage() {
                     <div className="flex-1 min-w-[200px]">
                       <Input
                         type="date"
-                        placeholder="Start Date"
+                        placeholder="Filter by Date"
                         value={logFilter.startDate}
                         onChange={(e) => handleLogFilter("startDate", e.target.value)}
                         className="border-gray-300 focus:border-blue-500"
@@ -397,7 +412,9 @@ export default function LogsPage() {
                       <tbody>
                         {paginate(filteredLogs, currentPage.activity).map((log) => (
                           <tr key={log.id} className="border-t hover:bg-gray-50 transition-colors">
-                            <td className="p-4">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}</td>
+                            <td className="p-4">
+                              {log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
+                            </td>
                             <td className="p-4">{log.email || "N/A"}</td>
                             <td className="p-4">{log.user_id || "N/A"}</td>
                             <td className="p-4">{log.role || "N/A"}</td>
@@ -507,12 +524,24 @@ export default function LogsPage() {
                           <div className="mt-4 space-y-3">
                             {msg.messages.map((message: any) => (
                               <div key={message.messageId} className="p-3 bg-white rounded-lg shadow-sm">
-                                <p><strong>Message:</strong> {message.message}</p>
-                                <p><strong>Edited:</strong> {message.edited ? "Yes" : "No"}</p>
-                                <p><strong>Message ID:</strong> {message.messageId}</p>
-                                <p><strong>Sender:</strong> {message.sender}</p>
-                                <p><strong>Timestamp:</strong> {message.timestamp}</p>
-                                <p><strong>Reactions:</strong></p>
+                                <p>
+                                  <strong>Message:</strong> {message.message}
+                                </p>
+                                <p>
+                                  <strong>Edited:</strong> {message.edited ? "Yes" : "No"}
+                                </p>
+                                <p>
+                                  <strong>Message ID:</strong> {message.messageId}
+                                </p>
+                                <p>
+                                  <strong>Sender:</strong> {message.sender}
+                                </p>
+                                <p>
+                                  <strong>Timestamp:</strong> {message.timestamp}
+                                </p>
+                                <p>
+                                  <strong>Reactions:</strong>
+                                </p>
                                 <div className="flex gap-2">
                                   {Object.entries(message.reactions || {}).map(([userId, emoji]) => (
                                     <span key={userId} className="text-lg">
@@ -548,18 +577,24 @@ export default function LogsPage() {
                     </div>
                     <Button
                       variant="outline"
-                      onClick={() => exportToCSV(
-                        filteredMessageLogs.flatMap((msg) => msg.messages.map((m: any) => ({
-                          lastUpdated: msg.lastUpdated,
-                          message: m.message,
-                          edited: m.edited ? "Yes" : "No",
-                          messageId: m.messageId,
-                          sender: m.sender,
-                          timestamp: m.timestamp,
-                          reactions: Object.entries(m.reactions || {}).map(([_, emoji]) => emoji).join(", "),
-                        }))),
-                        "chat_logs.csv"
-                      )}
+                      onClick={() =>
+                        exportToCSV(
+                          filteredMessageLogs.flatMap((msg) =>
+                            msg.messages.map((m: any) => ({
+                              lastUpdated: msg.lastUpdated,
+                              message: m.message,
+                              edited: m.edited ? "Yes" : "No",
+                              messageId: m.messageId,
+                              sender: m.sender,
+                              timestamp: m.timestamp,
+                              reactions: Object.entries(m.reactions || {})
+                                .map(([_, emoji]) => emoji)
+                                .join(", "),
+                            }))
+                          ),
+                          "chat_logs.csv"
+                        )
+                      }
                       className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
                     >
                       <Download className="h-4 w-4" /> Export to CSV
@@ -606,25 +641,16 @@ export default function LogsPage() {
                     <div className="flex-1 min-w-[200px]">
                       <Input
                         type="date"
-                        placeholder="Start Date"
+                        placeholder="Filter by Date"
                         value={clockLogFilter.startDate}
                         onChange={(e) => handleClockLogFilter("startDate", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                      <Input
-                        type="date"
-                        placeholder="End Date"
-                        value={clockLogFilter.endDate}
-                        onChange={(e) => handleClockLogFilter("endDate", e.target.value)}
                         className="border-gray-300 focus:border-blue-500"
                       />
                     </div>
                     <Button
                       variant="outline"
                       onClick={() => clearFilters("clock")}
-                      disabled={!clockLogFilter.name && !clockLogFilter.startDate && !clockLogFilter.endDate}
+                      disabled={!clockLogFilter.name && !clockLogFilter.startDate}
                       className="border-gray-300 hover:bg-gray-100"
                     >
                       Clear Filters
@@ -643,7 +669,9 @@ export default function LogsPage() {
                       <tbody>
                         {paginate(filteredClockLogs, currentPage.clock).map((log) => (
                           <tr key={log.id} className="border-t hover:bg-gray-50 transition-colors">
-                            <td className="p-4">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}</td>
+                            <td className="p-4">
+                              {log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
+                            </td>
                             <td className="p-4">{log.name || "N/A"}</td>
                             <td className="p-4">{log.user_id || "N/A"}</td>
                             <td className="p-4">{log.action || "N/A"}</td>
