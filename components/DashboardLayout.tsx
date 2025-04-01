@@ -175,9 +175,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         <nav className="space-y-1 px-2">
           {userType === "admin" && (
             <>
-              <NavItem href="/admin/accounts" icon={<User className="h-4 w-4" />}>
-                Account Management
-              </NavItem>
               <NavItem href="/dashboard/admin/logs" icon={<ActivityIcon className="h-4 w-4" />}>
                 Activity Monitoring
               </NavItem>
@@ -190,9 +187,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             <>
               <NavItem href="/dashboard/student/training-materials" icon={<FolderIcon className="h-4 w-4" />}>
                 Access Materials
-              </NavItem>
-              <NavItem href="/instructor/time-tracking" icon={<ClockIcon className="h-4 w-4" />}>
-                Time Tracking
               </NavItem>
               <NavItem
                 href="/dashboard/instructor/message"
