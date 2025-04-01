@@ -188,14 +188,14 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           )}
           {userType === "instructor" && (
             <>
-              <NavItem href="/instructor/materials" icon={<FolderIcon className="h-4 w-4" />}>
+              <NavItem href="/dashboard/student/training-materials" icon={<FolderIcon className="h-4 w-4" />}>
                 Access Materials
               </NavItem>
               <NavItem href="/instructor/time-tracking" icon={<ClockIcon className="h-4 w-4" />}>
                 Time Tracking
               </NavItem>
               <NavItem
-                href="/instructor/communication"
+                href="/dashboard/instructor/message"
                 icon={<MessageSquareIcon className="h-4 w-4" />}
               >
                 Student Communication
