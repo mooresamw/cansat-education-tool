@@ -20,7 +20,7 @@ CORS(app, resources={
     r"/*": {
         "origins": "http://localhost:3000",
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Authorization", "Content-Type"]
+        "allow_headers": ["Authorization","Content-Type"]
     }
 })
 
@@ -537,6 +537,7 @@ def get_user(user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 # API route for clock in/out
 @app.route("/clock", methods=["POST"])
 def clock_in_out():
@@ -562,6 +563,11 @@ def clock_in_out():
             
         user_data = user_doc.to_dict()
         
+        # Update clock status in users collection
+        is_clocked_in = action == "in"
+        user_ref.update({"isClockedIn": is_clocked_in})
+        
+        # Log the action
         clock_ref = db.collection("clock_logs").document()
         clock_ref.set({
             "user_id": uid,
@@ -576,12 +582,12 @@ def clock_in_out():
             "message": f"Successfully clocked {action}",
             "user_id": uid,
             "name": user_data.get("name"),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "isClockedIn": is_clocked_in
         }), 200
         
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 # API route to send the code to from student ide to the server
 @app.route('/run', methods=['POST'])
 def run_code():

@@ -72,15 +72,6 @@ export default function StudentMessagePage() {
         selectedInstructor.user_id,
         (newMessages: any[]) => {
           setMessages(newMessages);
-          newMessages.forEach((msg) => {
-            if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
-              markMessageAsRead(
-                user.uid,
-                [user.uid, selectedInstructor.user_id].sort().join("_"),
-                msg.messageId
-              );
-            }
-          });
         }
       );
       return () => unsubscribe();
@@ -386,41 +377,42 @@ export default function StudentMessagePage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
-                <div className="bg-card border-t border-border p-4">
-                  <div className="relative">
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your message here..."
-                      rows={2}
-                      className="w-full p-3 pr-16 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
-                    >
-                      <FiSend className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="max-w-md text-center space-y-4">
-                  <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    Select an instructor
-                  </h3>
-                  <p className="text-gray-500">
-                    Choose an instructor from the list to view messages and start a conversation
-                  </p>
+              {/* Message Input */}
+              <div className="bg-card border-t border-border p-4">
+                <div className="relative">
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message here..."
+                    rows={2}
+                    className="w-full p-3 pr-16 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                  >
+                    <FiSend className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            // If no instructor is selected
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="max-w-md text-center space-y-4">
+                <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Select an instructor
+                </h3>
+                <p className="text-gray-500">
+                  Choose an instructor from the list to view messages and start a conversation
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
+      </DashboardLayout>
   );
 }

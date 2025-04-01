@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { checkUserRole } from "@/lib/checkAuth";
 import { useRouter } from "next/navigation";
 import { db, auth, getStudents } from "@/lib/firebaseConfig";
 import { collection, query, where, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
@@ -32,13 +33,11 @@ export default function InstructorDashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [studentIds, setStudentIds] = useState<string[]>([]);
   const [isClockedIn, setIsClockedIn] = useState(false);
-<<<<<<< HEAD
   const [clockHistory, setClockHistory] = useState<ClockHistoryEntry[]>([]);
   const [showClockHistory, setShowClockHistory] = useState(false);
   const [currentSessionDuration, setCurrentSessionDuration] = useState(0);
-=======
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
 
+  // Fetch authenticated user and role
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -46,23 +45,6 @@ export default function InstructorDashboard() {
         setUserId(uid);
         const token = await user.getIdToken();
         console.log("Firebase Token:", token);
-<<<<<<< HEAD
-=======
-
-        try {
-          const loginResponse = await fetch("http://127.0.0.1:8080/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken: token }),
-          });
-          if (!loginResponse.ok) {
-            console.error("Login logging failed:", await loginResponse.text());
-          }
-        } catch (error) {
-          console.error("Error notifying backend of login:", error);
-        }
-
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
         const response = await fetch("http://127.0.0.1:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -83,6 +65,7 @@ export default function InstructorDashboard() {
     return () => unsubscribe();
   }, [router]);
 
+  // Fetch students (to identify student messages)
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -98,6 +81,7 @@ export default function InstructorDashboard() {
     fetchStudents();
   }, []);
 
+  // Fetch notifications
   useEffect(() => {
     if (!userRole || userRole !== "instructor") {
       console.log("User role is not instructor or not authenticated:", userRole);
@@ -121,6 +105,7 @@ export default function InstructorDashboard() {
       q,
       (snapshot) => {
         let studentUnread = 0;
+        const studentMessages: any[] = [];
         const allMessages: any[] = [];
 
         snapshot.forEach((doc) => {
@@ -149,12 +134,14 @@ export default function InstructorDashboard() {
 
               if (involvesStudent) {
                 studentUnread++;
+                studentMessages.push(messageData);
               }
             }
           });
         });
 
         console.log("Student Unread Count:", studentUnread);
+        console.log("Student Unread Messages:", studentMessages);
         console.log("All Unread Messages:", allMessages);
 
         setStudentUnreadCount(studentUnread);
@@ -168,7 +155,6 @@ export default function InstructorDashboard() {
     return () => unsubscribeQuery();
   }, [userRole, userId, studentIds]);
 
-<<<<<<< HEAD
   // Fetch clock-in/out history
   useEffect(() => {
     if (!userId) return;
@@ -210,8 +196,6 @@ export default function InstructorDashboard() {
   }, [isClockedIn]);
 
   // Handle Clock In/Out
-=======
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
   const handleClockAction = async () => {
     if (!userId) {
       console.error("No userId available for clock action");
@@ -235,7 +219,6 @@ export default function InstructorDashboard() {
       const data = await response.json();
       console.log(`Clock ${action} successful:`, data);
 
-<<<<<<< HEAD
       const clockData = {
         userId,
         action,
@@ -254,15 +237,12 @@ export default function InstructorDashboard() {
       }
 
       await addDoc(collection(db, "clockHistory"), clockData);
-=======
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
       setIsClockedIn(!isClockedIn);
     } catch (error) {
       console.error(`Error during clock ${action}:`, error);
     }
   };
 
-<<<<<<< HEAD
   // Format duration in hours, minutes, seconds
   const formatDuration = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
@@ -272,8 +252,6 @@ export default function InstructorDashboard() {
   };
 
   // Notification handlers
-=======
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
   const handleBellClick = () => setShowNotifications((prev) => !prev);
 
   const handleMarkAsRead = async (notification: any) => {
@@ -296,7 +274,6 @@ export default function InstructorDashboard() {
     }
   };
 
-<<<<<<< HEAD
   // Handle opening clock history in a new tab
   const handleViewHistoryInNewTab = () => {
     const newWindow = window.open("", "_blank");
@@ -350,15 +327,6 @@ export default function InstructorDashboard() {
       `);
       newWindow.document.close();
     }
-=======
-  const MESSAGE_PREVIEW_LIMIT = 25; 
-
-  const truncateMessage = (message: string) => {
-    if (message.length > MESSAGE_PREVIEW_LIMIT) {
-      return message.slice(0, MESSAGE_PREVIEW_LIMIT) + "...";
-    }
-    return message;
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
   };
 
   if (loading) {
@@ -399,7 +367,6 @@ export default function InstructorDashboard() {
                 <p className="text-gray-400 text-sm mb-4">
                   Track your time spent on instruction and support.
                 </p>
-<<<<<<< HEAD
                 <div className="flex space-x-2">
                   <Button
                     onClick={handleClockAction}
@@ -419,14 +386,6 @@ export default function InstructorDashboard() {
                     Current Session: {formatDuration(currentSessionDuration)}
                   </p>
                 )}
-=======
-                <Button
-                  onClick={handleClockAction}
-                  className="bg-white text-black hover:bg-gray-200"
-                >
-                  {isClockedIn ? "Clock Out" : "Clock In"}
-                </Button>
->>>>>>> fc434befeb16d149de489d34fa362d8baf2b3e3c
               </CardContent>
             </Card>
 
@@ -472,7 +431,7 @@ export default function InstructorDashboard() {
                 <ul className="mt-2 space-y-2">
                   {notifications.map((notification, index) => (
                     <li key={index} className="p-2 bg-gray-800 rounded">
-                      <p className="text-sm text-white">{truncateMessage(notification.message)}</p>
+                      <p className="text-sm text-white">{notification.message}</p>
                       <p className="text-xs text-gray-400">
                         From: {notification.sender} (Student)
                       </p>
