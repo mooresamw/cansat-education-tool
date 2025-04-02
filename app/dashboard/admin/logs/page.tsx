@@ -105,7 +105,7 @@ export default function LogsPage() {
       setClockLogs(clockLogList);
       setFilteredClockLogs(clockLogList);
       if (typeof window !== "undefined") {
-        filter: localStorage.setItem("clockLogs", JSON.stringify(clockLogList));
+        localStorage.setItem("clockLogs", JSON.stringify(clockLogList));
       }
     } catch (error) {
       console.error("Error fetching clock logs from Firestore:", error);
@@ -312,7 +312,7 @@ export default function LogsPage() {
   };
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <div className="text-foreground">Loading...</div>;
   }
 
   return (
@@ -323,30 +323,45 @@ export default function LogsPage() {
           className="relative flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 group"
         >
           <ArrowLeftCircle className="h-8 w-8" />
-          <span className="absolute right-20 w-40 bg-gray-800 text-white text-sm font-medium py-2 px-4 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="absolute right-20 w-40 bg-gray-800 dark:bg-gray-700 text-white dark:text-gray-200 text-sm font-medium py-2 px-4 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Back to Dashboard
           </span>
-          <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 rounded-full bg-white dark:bg-gray-900 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
         </button>
       </div>
 
-      <h1 className="text-3xl font-bold mb-8 text-gray-800">Logs Management</h1>
+      <h1 className="text-3xl font-bold mb-8 text-foreground">Logs Management</h1>
       <Tabs defaultValue="activity" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="activity">Activity Logs</TabsTrigger>
-          <TabsTrigger value="chat">Chat Logs</TabsTrigger>
-          <TabsTrigger value="clock">Clock In/Out Logs</TabsTrigger>
+        <TabsList className="mb-6 bg-background border-b border-muted">
+          <TabsTrigger 
+            value="activity" 
+            className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
+          >
+            Activity Logs
+          </TabsTrigger>
+          <TabsTrigger 
+            value="chat" 
+            className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
+          >
+            Chat Logs
+          </TabsTrigger>
+          <TabsTrigger 
+            value="clock" 
+            className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
+          >
+            Clock In/Out Logs
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity">
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-xl text-gray-700">Activity Logs</CardTitle>
+          <Card className="shadow-lg bg-card text-card-foreground">
+            <CardHeader className="bg-muted">
+              <CardTitle className="text-xl text-foreground">Activity Logs</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {logsLoading ? (
                 <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                 </div>
               ) : logs.length > 0 ? (
                 <>
@@ -356,7 +371,7 @@ export default function LogsPage() {
                         placeholder="Filter by email..."
                         value={logFilter.email}
                         onChange={(e) => handleLogFilter("email", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -365,7 +380,7 @@ export default function LogsPage() {
                         placeholder="Filter by Date"
                         value={logFilter.startDate}
                         onChange={(e) => handleLogFilter("startDate", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -373,7 +388,7 @@ export default function LogsPage() {
                         placeholder="Filter by role..."
                         value={logFilter.role}
                         onChange={(e) => handleLogFilter("role", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -381,7 +396,7 @@ export default function LogsPage() {
                         placeholder="Filter by action..."
                         value={logFilter.action}
                         onChange={(e) => handleLogFilter("action", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <Button
@@ -393,14 +408,14 @@ export default function LogsPage() {
                         !logFilter.role &&
                         !logFilter.action
                       }
-                      className="border-gray-300 hover:bg-gray-100"
+                      className="border-input text-foreground hover:bg-muted"
                     >
                       Clear Filters
                     </Button>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-gray-700">
-                      <thead className="bg-gray-100 sticky top-0">
+                    <table className="w-full text-sm text-foreground">
+                      <thead className="bg-muted sticky top-0">
                         <tr>
                           <th className="text-left p-4">Date/Time</th>
                           <th className="text-left p-4">Email</th>
@@ -411,7 +426,7 @@ export default function LogsPage() {
                       </thead>
                       <tbody>
                         {paginate(filteredLogs, currentPage.activity).map((log) => (
-                          <tr key={log.id} className="border-t hover:bg-gray-50 transition-colors">
+                          <tr key={log.id} className="border-t border-muted hover:bg-muted/50 transition-colors">
                             <td className="p-4">
                               {log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
                             </td>
@@ -430,7 +445,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, activity: prev.activity - 1 }))}
                         disabled={currentPage.activity === 1}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Previous
                       </Button>
@@ -438,7 +453,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, activity: prev.activity + 1 }))}
                         disabled={currentPage.activity * itemsPerPage >= filteredLogs.length}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Next
                       </Button>
@@ -446,7 +461,7 @@ export default function LogsPage() {
                     <Button
                       variant="outline"
                       onClick={() => exportToCSV(filteredLogs, "activity_logs.csv")}
-                      className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
+                      className="flex items-center gap-2 border-input text-foreground hover:bg-muted"
                     >
                       <Download className="h-4 w-4" /> Export to CSV
                     </Button>
@@ -454,30 +469,30 @@ export default function LogsPage() {
                   <Button
                     variant="outline"
                     onClick={fetchLogs}
-                    className="mt-4 border-blue-500 text-blue-500 hover:bg-blue-50"
+                    className="mt-4 border-primary text-primary hover:bg-primary/10"
                   >
                     Refresh Activity Logs
                   </Button>
                 </>
               ) : (
-                <p className="text-gray-500">No activity logs available</p>
+                <p className="text-muted-foreground">No activity logs available</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="chat">
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-xl text-gray-700">Chat Logs</CardTitle>
+          <Card className="shadow-lg bg-card text-card-foreground">
+            <CardHeader className="bg-muted">
+              <CardTitle className="text-xl text-foreground">Chat Logs</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {messageLogsLoading ? (
                 <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                 </div>
               ) : messageLogsError ? (
-                <p className="text-red-500">Error: {messageLogsError}</p>
+                <p className="text-destructive">Error: {messageLogsError}</p>
               ) : messageLogs.length > 0 ? (
                 <>
                   <div className="mb-6 flex flex-wrap gap-4">
@@ -486,7 +501,7 @@ export default function LogsPage() {
                         placeholder="Filter by Sender ID..."
                         value={messageLogFilter.sender}
                         onChange={(e) => handleMessageLogFilter("sender", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -494,36 +509,36 @@ export default function LogsPage() {
                         placeholder="Filter by Message Content..."
                         value={messageLogFilter.content}
                         onChange={(e) => handleMessageLogFilter("content", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <Button
                       variant="outline"
                       onClick={() => clearFilters("chat")}
                       disabled={!messageLogFilter.sender && !messageLogFilter.content}
-                      className="border-gray-300 hover:bg-gray-100"
+                      className="border-input text-foreground hover:bg-muted"
                     >
                       Clear Filters
                     </Button>
                   </div>
                   <div className="space-y-4">
                     {paginate(filteredMessageLogs, currentPage.chat).map((msg) => (
-                      <div key={msg.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div key={msg.id} className="border border-muted rounded-lg p-4 bg-muted/20">
                         <div
                           className="flex justify-between items-center cursor-pointer"
                           onClick={() => toggleMessageExpand(msg.id)}
                         >
-                          <p className="text-gray-700 font-medium">Last Updated: {msg.lastUpdated}</p>
+                          <p className="text-foreground font-medium">Last Updated: {msg.lastUpdated}</p>
                           {expandedMessages.includes(msg.id) ? (
-                            <ChevronUp className="h-5 w-5 text-gray-500" />
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-500" />
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
                         {expandedMessages.includes(msg.id) && (
                           <div className="mt-4 space-y-3">
                             {msg.messages.map((message: any) => (
-                              <div key={message.messageId} className="p-3 bg-white rounded-lg shadow-sm">
+                              <div key={message.messageId} className="p-3 bg-background rounded-lg shadow-sm">
                                 <p>
                                   <strong>Message:</strong> {message.message}
                                 </p>
@@ -562,7 +577,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, chat: prev.chat - 1 }))}
                         disabled={currentPage.chat === 1}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Previous
                       </Button>
@@ -570,7 +585,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, chat: prev.chat + 1 }))}
                         disabled={currentPage.chat * itemsPerPage >= filteredMessageLogs.length}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Next
                       </Button>
@@ -595,7 +610,7 @@ export default function LogsPage() {
                           "chat_logs.csv"
                         )
                       }
-                      className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
+                      className="flex items-center gap-2 border-input text-foreground hover:bg-muted"
                     >
                       <Download className="h-4 w-4" /> Export to CSV
                     </Button>
@@ -603,30 +618,30 @@ export default function LogsPage() {
                   <Button
                     variant="outline"
                     onClick={fetchMessageLogs}
-                    className="mt-4 border-blue-500 text-blue-500 hover:bg-blue-50"
+                    className="mt-4 border-primary text-primary hover:bg-primary/10"
                   >
                     Refresh Chat Logs
                   </Button>
                 </>
               ) : (
-                <p className="text-gray-500">No chat logs available</p>
+                <p className="text-muted-foreground">No chat logs available</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="clock">
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gray-50">
-              <CardTitle className="text-xl text-gray-700">Clock In/Out Logs</CardTitle>
+          <Card className="shadow-lg bg-card text-card-foreground">
+            <CardHeader className="bg-muted">
+              <CardTitle className="text-xl text-foreground">Clock In/Out Logs</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               {clockLogsLoading ? (
                 <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                 </div>
               ) : clockLogsError ? (
-                <p className="text-red-500">Error: {clockLogsError}</p>
+                <p className="text-destructive">Error: {clockLogsError}</p>
               ) : clockLogs.length > 0 ? (
                 <>
                   <div className="mb-6 flex flex-wrap gap-4">
@@ -635,7 +650,7 @@ export default function LogsPage() {
                         placeholder="Filter by Name..."
                         value={clockLogFilter.name}
                         onChange={(e) => handleClockLogFilter("name", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <div className="flex-1 min-w-[200px]">
@@ -644,21 +659,21 @@ export default function LogsPage() {
                         placeholder="Filter by Date"
                         value={clockLogFilter.startDate}
                         onChange={(e) => handleClockLogFilter("startDate", e.target.value)}
-                        className="border-gray-300 focus:border-blue-500"
+                        className="border-input bg-background text-foreground focus:border-primary"
                       />
                     </div>
                     <Button
                       variant="outline"
                       onClick={() => clearFilters("clock")}
                       disabled={!clockLogFilter.name && !clockLogFilter.startDate}
-                      className="border-gray-300 hover:bg-gray-100"
+                      className="border-input text-foreground hover:bg-muted"
                     >
                       Clear Filters
                     </Button>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-gray-700">
-                      <thead className="bg-gray-100 sticky top-0">
+                    <table className="w-full text-sm text-foreground">
+                      <thead className="bg-muted sticky top-0">
                         <tr>
                           <th className="text-left p-4">Date/Time</th>
                           <th className="text-left p-4">Name</th>
@@ -668,7 +683,7 @@ export default function LogsPage() {
                       </thead>
                       <tbody>
                         {paginate(filteredClockLogs, currentPage.clock).map((log) => (
-                          <tr key={log.id} className="border-t hover:bg-gray-50 transition-colors">
+                          <tr key={log.id} className="border-t border-muted hover:bg-muted/50 transition-colors">
                             <td className="p-4">
                               {log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}
                             </td>
@@ -686,7 +701,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, clock: prev.clock - 1 }))}
                         disabled={currentPage.clock === 1}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Previous
                       </Button>
@@ -694,7 +709,7 @@ export default function LogsPage() {
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => ({ ...prev, clock: prev.clock + 1 }))}
                         disabled={currentPage.clock * itemsPerPage >= filteredClockLogs.length}
-                        className="border-gray-300 hover:bg-gray-100"
+                        className="border-input text-foreground hover:bg-muted"
                       >
                         Next
                       </Button>
@@ -702,7 +717,7 @@ export default function LogsPage() {
                     <Button
                       variant="outline"
                       onClick={() => exportToCSV(filteredClockLogs, "clock_logs.csv")}
-                      className="flex items-center gap-2 border-gray-300 hover:bg-gray-100"
+                      className="flex items-center gap-2 border-input text-foreground hover:bg-muted"
                     >
                       <Download className="h-4 w-4" /> Export to CSV
                     </Button>
@@ -710,13 +725,13 @@ export default function LogsPage() {
                   <Button
                     variant="outline"
                     onClick={fetchClockLogs}
-                    className="mt-4 border-blue-500 text-blue-500 hover:bg-blue-50"
+                    className="mt-4 border-primary text-primary hover:bg-primary/10"
                   >
                     Refresh Clock Logs
                   </Button>
                 </>
               ) : (
-                <p className="text-gray-500">No clock logs available</p>
+                <p className="text-muted-foreground">No clock logs available</p>
               )}
             </CardContent>
           </Card>
