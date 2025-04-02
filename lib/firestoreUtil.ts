@@ -1,5 +1,16 @@
 import { db } from "@/lib/firebaseConfig";
-import { doc, setDoc, onSnapshot, arrayUnion, updateDoc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  arrayUnion,
+  updateDoc,
+  getDoc,
+  query,
+  collection,
+  getDocs,
+  where, addDoc
+} from "firebase/firestore";
 
 export interface Message {
   messageId: string;
@@ -148,3 +159,76 @@ export const getMessages = (userId1: string, userId2: string, callback: (message
 
   return unsubscribe;
 };
+
+
+// Create a new group
+export async function createGroup(
+  name: string,
+  instructorEmail: string,
+  members: string[],
+  schoolId: string,
+  createdBy: string,
+) {
+  try {
+    const groupRef = await addDoc(collection(db, "groups"), {
+      name,
+      instructor_email: instructorEmail,
+      members,
+      school_id: schoolId,
+      created_at: new Date(),
+      created_by: createdBy,
+    })
+
+    return groupRef.id
+  } catch (error) {
+    console.error("Error creating group:", error)
+    throw error
+  }
+}
+
+// Join an existing group
+export async function joinGroup(groupId: string, userId: string) {
+  try {
+    const groupRef = doc(db, "groups", groupId)
+    await updateDoc(groupRef, {
+      members: arrayUnion(userId),
+    })
+
+    return true
+  } catch (error) {
+    console.error("Error joining group:", error)
+    throw error
+  }
+}
+
+// Get all groups for a school
+export async function getSchoolGroups(schoolId: string) {
+  try {
+    const groupsQuery = query(collection(db, "groups"), where("school_id", "==", schoolId))
+
+    const snapshot = await getDocs(groupsQuery)
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+  } catch (error) {
+    console.error("Error fetching groups:", error)
+    throw error
+  }
+}
+
+// Get groups that a user is a member of
+export async function getUserGroups(userId: string) {
+  try {
+    const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", userId))
+
+    const snapshot = await getDocs(groupsQuery)
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+  } catch (error) {
+    console.error("Error fetching user groups:", error)
+    throw error
+  }
+}
