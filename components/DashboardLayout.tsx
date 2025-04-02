@@ -52,9 +52,12 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
   const avatarPath = LOCAL_AVATARS[avatarSeed - 1]?.path || LOCAL_AVATARS[0].path;
 
+  // Sync with backend only on initial mount
   React.useEffect(() => {
     const syncAvatarWithBackend = async () => {
       setMounted(true);
+      if (!userData) return;
+
       try {
         const user = auth.currentUser;
         if (user) {
@@ -78,6 +81,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             const newSeed = 1;
             setAvatarSeed(newSeed);
             await saveAvatarSeedToBackend(newSeed, token);
+            const updatedUser = { ...userData, avatarSeed: newSeed };
+            localStorage.setItem("user", JSON.stringify(updatedUser));
           }
         } else if (!avatarSeed) {
           setAvatarSeed(1);
@@ -90,8 +95,10 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       }
     };
 
-    syncAvatarWithBackend();
-  }, [avatarSeed, userData]);
+    if (!mounted) {
+      syncAvatarWithBackend();
+    }
+  }, [mounted, userData]); // Removed avatarSeed from dependencies
 
   if (!userData) {
     return <p className="text-center mt-10">Loading...</p>;
