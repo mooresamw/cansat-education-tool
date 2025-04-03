@@ -64,14 +64,23 @@ export default function StudentMessagePage() {
     fetchInstructors();
   }, [user]);
 
-  // 3. Real-time listener for messages and mark them as read
+  // 3. Real-time listener for messages with mark-as-read logic
   useEffect(() => {
     if (selectedInstructor && user) {
       const unsubscribe = getMessages(
-        user.uid,
+        user.user_id,
         selectedInstructor.user_id,
         (newMessages: any[]) => {
           setMessages(newMessages);
+          newMessages.forEach((msg) => {
+            if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
+              markMessageAsRead(
+                user.user_id,
+                [user.user_id, selectedInstructor.user_id].sort().join("_"),
+                msg.messageId
+              );
+            }
+          });
         }
       );
       return () => unsubscribe();

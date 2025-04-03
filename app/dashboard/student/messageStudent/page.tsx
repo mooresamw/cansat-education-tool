@@ -4,7 +4,13 @@ import { useEffect, useState, useRef } from "react"
 import { auth, db } from "@/lib/firebaseConfig"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { FiMessageCircle, FiSend } from "react-icons/fi"
-import { sendMessage, getMessages, handleReaction, handleEditMessage } from "@/lib/firestoreUtil"
+import {
+  sendMessage,
+  handleReaction,
+  handleEditMessage,
+  getMessages,
+  markMessageAsRead,
+} from "@/lib/firestoreUtil";
 import { DashboardLayout } from "@/components/DashboardLayout"
 import Loading from "@/components/Loading"
 import {
@@ -23,6 +29,7 @@ import { Plus, Users } from "lucide-react"
 import { addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore"
 
 export default function StudentChatPage() {
+
   const [user, setUser] = useState<any>(null)
   const [students, setStudents] = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState<any>(null)
@@ -38,6 +45,7 @@ export default function StudentChatPage() {
   const [instructorEmail, setInstructorEmail] = useState("")
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [groups, setGroups] = useState<any[]>([])
+
   // Fetch the currently authenticated user (student) and their data
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -98,15 +106,28 @@ export default function StudentChatPage() {
     fetchStudents()
   }, [user])
 
-  // Real-time listener for messages
+  // 3. Real-time listener for messages with mark-as-read logic
   useEffect(() => {
     if (selectedStudent && user) {
-      const unsubscribe = getMessages(user.uid, selectedStudent.id, (newMessages: any[]) => {
-        setMessages(newMessages)
-      })
-      return () => unsubscribe()
+      const unsubscribe = getMessages(
+        user.user_id,
+        selectedStudent.user_id,
+        (newMessages: any[]) => {
+          setMessages(newMessages);
+          newMessages.forEach((msg) => {
+            if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
+              markMessageAsRead(
+                user.user_id,
+                [user.user_id, selectedStudent.user_id].sort().join("_"),
+                msg.messageId
+              );
+            }
+          });
+        }
+      );
+      return () => unsubscribe();
     }
-  }, [selectedStudent, user])
+  }, [selectedStudent, user]);
 
   useEffect(() => {
     async function fetchGroups() {
@@ -347,25 +368,57 @@ export default function StudentChatPage() {
         </header>
 
         <div className="flex flex-1 overflow-hidden bg-gray-50">
-          {/* Sidebar: Students List */}
-          <div className="w-80 border-r border-border flex flex-col">
-            <div className="p-4 bg-card shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Students</h2>
+        {/* Sidebar: Students List */}
+        <div className="w-80 border-r border-border flex flex-col">
+          <div className="p-4 bg-card shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Students</h2>
             </div>
             <div className="flex-1 overflow-y-auto bg-card">
-              {students.map((student) => (
+              {(() => {
+                // Find the group(s) the current user is a member of
+                const userGroups = groups.filter((group) =>
+                  group.members?.some((member: { user_id: string; joined_at: any }) => member.user_id === user.uid)
+                )
+
+                // If the user is not in any group, show a message
+                if (userGroups.length === 0) {
+                  return (
+                    <div className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">You are not in any group. Join or create a group to see members.</p>
+                    </div>
+                  )
+                }
+
+                // Get the members of the group(s) the user is in
+                const groupMemberIds = userGroups
+                  .flatMap((group) => group.members?.map((member: { user_id: string; joined_at: any }) => member.user_id) || [])
+                  .filter((id: string) => id !== user.uid) // Exclude the current user from the list
+
+                // Filter students to only include those in the same group(s)
+                const groupStudents = students.filter((student) => groupMemberIds.includes(student.id))
+
+                // If there are no other students in the group, show a message
+                if (groupStudents.length === 0) {
+                  return (
+                    <div className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">No other students in your group.</p>
+                    </div>
+                  )
+                }
+
+                // Render the filtered list of students
+                return groupStudents.map((student) => (
                   <div
-                      key={student.id}
-                      onClick={() => setSelectedStudent(student)}
-                      className={`flex bg-card items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
-                          selectedStudent?.id === student.id
-                              ? "bg-accent border-l-4 border-blue-500"
-                              : "hover:bg-accent border-l-4 border-transparent"
-                      }`}
+                    key={student.id}
+                    onClick={() => setSelectedStudent(student)}
+                    className={`flex bg-card items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
+                      selectedStudent?.id === student.id
+                        ? "bg-accent border-l-4 border-blue-500"
+                        : "hover:bg-accent border-l-4 border-transparent"
+                    }`}
                   >
                     <div className="flex-shrink-0">
-                      <div
-                          className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                      <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
                         {student.name?.[0]?.toUpperCase() || "S"}
                       </div>
                     </div>
@@ -373,21 +426,22 @@ export default function StudentChatPage() {
                       <p className="text-sm font-medium text-primary truncate">{student.name}</p>
                       <p className="text-xs text-gray-500 truncate">{student.email || "Student"}</p>
                     </div>
-                    <FiMessageCircle className="h-5 w-5 text-gray-400"/>
+                    <FiMessageCircle className="h-5 w-5 text-gray-400" />
                   </div>
-              ))}
+                ))
+              })()}
             </div>
             <div className="flex justify-end space-x-4 px-6 py-2 bg-card border-b border-border">
               <Button variant="outline" onClick={() => setCreateGroupOpen(true)} className="flex items-center gap-2">
-                <Plus size={16}/>
+                <Plus size={16} />
                 Create Group
               </Button>
               <Button variant="outline" onClick={() => setJoinGroupOpen(true)} className="flex items-center gap-2">
-                <Users size={16}/>
+                <Users size={16} />
                 Join Group
               </Button>
-            </div>
           </div>
+        </div>
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">

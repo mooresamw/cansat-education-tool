@@ -371,7 +371,7 @@ export default function InstructorMessagePage() {
                             {isSender && (
                               <div className="ml-2 flex-shrink-0">
                                 <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
-                                  {user.displayName?.[0] || "I"}
+                                  {user.name?.[0] || "I"}
                                 </div>
                               </div>
                             )}

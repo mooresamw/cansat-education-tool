@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {Notifications} from "@/components/Notifications";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -45,6 +46,7 @@ const getUser = () => {
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const userData = getUser();
+  const userId = userData.user_id
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
@@ -235,10 +237,11 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               className="pl-9 bg-input text-input-foreground border-input focus:ring-0 focus:border-ring"
             />
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative w-24">
+          <div className="flex items-center gap-16">
+            <div className="relative w-8">
               <ThemeToggle />
             </div>
+            <Notifications userId={userId} userRole={userType} />
             <Popover>
               <PopoverTrigger asChild>
                 <Button
