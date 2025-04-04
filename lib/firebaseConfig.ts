@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBBp7LFwOfwS-7AbeWPBeADCBFCdAV69hs",
-  authDomain: "cansat-education-tool.firebaseapp.com",
-  projectId: "cansat-education-tool",
-  storageBucket: "cansat-education-tool.firebasestorage.app",
-  messagingSenderId: "293736072539",
-  appId: "1:293736072539:web:d85cb7130cc4f0fd02867e",
-  measurementId: "G-FPX0J8647Q",
+  apiKey: process.env.FIREBASE_KEY,
+  authDomain: process.env.AUTH_DOMAIN,
+  projectId: process.env.PROJECT_ID,
+  storageBucket: process.env.STORAGE_BUCKET,
+  messagingSenderId: process.env.MESSAGE_SENDER_ID,
+  appId: process.env.APP_ID,
+  measurementId: process.env.MEASUREMENT_ID,
 };
 
 // Initialize Firebase
