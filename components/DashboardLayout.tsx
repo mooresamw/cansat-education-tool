@@ -32,12 +32,12 @@ interface DashboardLayoutProps {
 }
 
 const LOCAL_AVATARS = [
-  { id: "avatar1", path: "/avatars/avatar1.png" },
-  { id: "avatar2", path: "/avatars/avatar2.png" },
-  { id: "avatar3", path: "/avatars/avatar3.png" },
-  { id: "avatar4", path: "/avatars/avatar4.png" },
-  { id: "avatar5", path: "/avatars/avatar5.png" },
-  { id: "avatar6", path: "/avatars/avatar6.png" },
+  { id: "avatar1", path: "/avatars/avatar0.png" },
+  { id: "avatar2", path: "/avatars/avatar1.png" },
+  { id: "avatar3", path: "/avatars/avatar2.png" },
+  { id: "avatar4", path: "/avatars/avatar3.png" },
+  { id: "avatar5", path: "/avatars/avatar4.png" },
+  { id: "avatar6", path: "/avatars/avatar5.png" },
 ];
 
 const getUser = () => {
@@ -230,12 +230,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between border-b border-border px-6 py-6 bg-header">
           <div className="relative w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-9 bg-input text-input-foreground border-input focus:ring-0 focus:border-ring"
-            />
+
           </div>
           <div className="flex items-center gap-16">
             <div className="relative w-8">
@@ -246,7 +241,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-10 w-10 rounded-full p-0 hover:scale-105 transition-transform focus:ring-2 focus:ring-primary"
+                  className="h-12 w-12 rounded-full p-0 hover:scale-105 transition-transform focus:ring-2 focus:ring-primary"
                 >
                   <Image
                     src={avatarPath}

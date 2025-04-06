@@ -1,12 +1,13 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { collection, query, where, onSnapshot } from "firebase/firestore"
+import {collection, query, where, onSnapshot, getDocs} from "firebase/firestore"
 import { Timestamp } from "firebase/firestore" // Import Timestamp for type checking
 import { db } from "@/lib/firebaseConfig"
 import { Bell, MessageCircleIcon, UsersIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {id} from "postcss-selector-parser";
 
 interface NotificationsProps {
   userId: string
@@ -46,6 +47,15 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
     }
   }
 
+  // Function to get user name from id since message data doesnt provide
+  async function getName(id: string): Promise<string> {
+    const q = query(collection(db, "users"),
+        where("user_id", "==", id));
+    const snapshot = await getDocs(q);
+    const userData_ = snapshot.docs.map((doc) => ({...doc.data(), id: doc.id}));
+    return userData_[0].name
+  }
+
   useEffect(() => {
     const fetchRoleIds = async () => {
       const usersRef = collection(db, "users")
@@ -74,7 +84,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
     let unsubscribeQuery
 
     if (userRole === "student" && instructorIds.length > 0) {
-      const messagesRef = collection(db, "messages")
+      const messagesRef = collection(db, "chats")
       const q = query(messagesRef, where("participants", "array-contains", userId))
       unsubscribeQuery = onSnapshot(q, (snapshot) => {
         let instructorUnread = 0
@@ -94,6 +104,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
             const isUnread = msg.sender !== userId && readStatus[userId] !== true
             if (isUnread) {
               const messageData = {
+                sender: getName(msg.sender),
                 message: msg.message,
                 timestamp: formatTimestamp(msg.timestamp), // Use the helper function
                 involvesInstructor,
@@ -118,7 +129,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
         setUnreadCount(instructorUnread + teamUnread)
       })
     } else if (userRole === "instructor" && studentIds.length > 0) {
-      const messagesRef = collection(db, "messages")
+      const messagesRef = collection(db, "chats")
       const q = query(messagesRef, where("participants", "array-contains", userId))
       unsubscribeQuery = onSnapshot(q, (snapshot) => {
         let studentUnread = 0
@@ -135,6 +146,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
             const isUnread = msg.sender !== userId && readStatus[userId] !== true
             if (isUnread) {
               const messageData = {
+                sender: getName(msg.sender),
                 message: msg.message,
                 timestamp: formatTimestamp(msg.timestamp), // Use the helper function
                 involvesStudent,
@@ -182,7 +194,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
                 <MessageCircleIcon className="h-4 w-4" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">New message from instructor</p>
+                <p className="text-sm font-medium">New message from instructor {notif.sender}</p>
                 <p className="text-xs text-muted-foreground">{notif.message}</p>
                 <p className="text-xs text-muted-foreground mt-1">{notif.timestamp}</p>
               </div>
@@ -195,7 +207,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
                 <UsersIcon className="h-4 w-4" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">New team message</p>
+                <p className="text-sm font-medium">New team message from {notif.sender}</p>
                 <p className="text-xs text-muted-foreground">{notif.message}</p>
                 <p className="text-xs text-muted-foreground mt-1">{notif.timestamp}</p>
               </div>
@@ -211,7 +223,7 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
             <MessageCircleIcon className="h-4 w-4" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">New message from</p>
+            <p className="text-sm font-medium">New message from {notif.sender}</p>
             <p className="text-xs text-muted-foreground">{notif.message}</p>
             <p className="text-xs text-muted-foreground mt-1">{notif.timestamp}</p>
           </div>
@@ -260,9 +272,9 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
         </div>
         <div className="max-h-80 overflow-y-auto">{renderNotifications()}</div>
         <div className="border-t border-border p-2">
-          <Button variant="ghost" size="sm" className="w-full text-xs justify-center">
-            View all notifications
-          </Button>
+          {unreadCount == 0  && (
+              <p className="p-3 text-sm text-muted-foreground">No new notifications</p>
+          )}
         </div>
       </PopoverContent>
     </Popover>

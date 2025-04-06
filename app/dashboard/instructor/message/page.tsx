@@ -17,7 +17,8 @@ import Loading from "@/components/Loading";
 export default function InstructorMessagePage() {
   const [user, setUser] = useState<any>(null); // Logged-in instructor
   const [students, setStudents] = useState<any[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedChat, setSelectedChat] = useState<any>(null); // Student or group
+  const [isGroupChat, setIsGroupChat] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -64,65 +65,76 @@ export default function InstructorMessagePage() {
     fetchStudents();
   }, [user]);
 
-  // 3. Real-time listener for messages with mark-as-read logic
+  // Fetch messages for selected chat
   useEffect(() => {
-    if (selectedStudent && user) {
-      const unsubscribe = getMessages(
-        user.uid,
-        selectedStudent.user_id,
-        (newMessages: any[]) => {
-          setMessages(newMessages);
-          newMessages.forEach((msg) => {
-            if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
-              markMessageAsRead(
-                user.uid,
-                [user.uid, selectedStudent.user_id].sort().join("_"),
-                msg.messageId
-              );
-            }
-          });
-        }
-      );
-      return () => unsubscribe();
-    }
-  }, [selectedStudent, user]);
+    if (!selectedChat || !user) return;
 
-  // 4. Send a message
+    const chatId = isGroupChat
+      ? selectedChat.id // Group ID
+      : [user.uid, selectedChat.id].sort().join("_"); // One-on-one ID
+
+    const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
+      setMessages(newMessages);
+      newMessages.forEach((msg) => {
+        if (msg.sender !== user.uid && !msg.read?.[user.uid]) {
+          markMessageAsRead(chatId, user.uid, msg.messageId);
+        }
+      });
+    });
+    return () => unsubscribe();
+  }, [selectedChat, user, isGroupChat]);
+
+   // Send a message
   const handleSendMessage = async () => {
-    if (!user) {
-      alert("You must be logged in to send a message.");
+    if (!user || !message.trim() || !selectedChat) {
+      alert("You must be logged in and select a chat to send a message.");
       return;
     }
-    if (selectedStudent && message.trim()) {
-      try {
-        await sendMessage(user.uid, selectedStudent.user_id, message);
-        setMessage("");
-      } catch (error) {
-        console.error("Error sending message:", error);
-        alert("Failed to send message.");
-      }
-    } else {
-      alert("Please select a student and type a message.");
+
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.id].sort().join("_");
+    const participants = isGroupChat
+      ? selectedChat.members.map((m: any) => (typeof m === "string" ? m : m.user_id))
+      : [user.uid, selectedChat.id];
+
+    try {
+      await sendMessage(chatId, user.uid, message, participants);
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message.");
     }
   };
 
-  // 5. Handle reaction
+  // Reaction handler
   const handleReactionClick = async (messageId: string, emoji: string) => {
-    if (!user || !selectedStudent) return;
+    if (!user || !selectedChat) return;
+
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.id].sort().join("_");
+
     try {
-      await handleReaction(user.uid, selectedStudent.user_id, messageId, emoji);
+      await handleReaction(chatId, user.uid, messageId, emoji);
     } catch (error) {
       console.error("Error updating reaction:", error);
       alert("Failed to update reaction.");
     }
   };
 
-  // 6. Handle edit
+  // Edit message handler
   const handleEditMessageClick = async (messageId: string, newText: string) => {
-    if (!user || !selectedStudent) return;
+    if (!user || !selectedChat) return;
+
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.id].sort().join("_");
+
     try {
-      await handleEditMessage(user.uid, selectedStudent.user_id, messageId, newText);
+      await handleEditMessage(chatId, user.uid, messageId, newText);
       setEditingMessageId(null);
+      setEditingText("");
     } catch (error) {
       console.error("Error editing message:", error);
       alert("Failed to edit message.");
@@ -180,9 +192,9 @@ export default function InstructorMessagePage() {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  onClick={() => setSelectedStudent(student)}
+                  onClick={() => setSelectedChat(student)}
                   className={`flex bg-card items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
-                    selectedStudent?.id === student.id
+                    selectedChat?.id === student.id
                       ? "bg-accent border-l-4 border-blue-500"
                       : "hover:bg-accent border-l-4 border-transparent"
                   }`}
@@ -208,16 +220,16 @@ export default function InstructorMessagePage() {
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
-            {selectedStudent ? (
+            {selectedChat ? (
               <>
                 {/* Chat Header */}
                 <div className="bg-card p-4 shadow-sm flex items-center space-x-3">
                   <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xl">
-                    {selectedStudent.name?.[0]?.toUpperCase() || "S"}
+                    {selectedChat.name?.[0]?.toUpperCase() || "S"}
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-primary">
-                      {selectedStudent.name}
+                      {selectedChat.name}
                     </h2>
                     <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
                       Active now
@@ -232,7 +244,7 @@ export default function InstructorMessagePage() {
                       <FiMessageCircle className="h-12 w-12" />
                       <p className="text-lg">No messages yet</p>
                       <p className="text-sm">
-                        Start a conversation with {selectedStudent.name}
+                        Start a conversation with {selectedChat.name}
                       </p>
                     </div>
                   ) : (
@@ -270,7 +282,7 @@ export default function InstructorMessagePage() {
                             {!isSender && (
                               <div className="mr-2 flex-shrink-0">
                                 <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
-                                  {selectedStudent.name?.[0]?.toUpperCase() || "S"}
+                                  {selectedChat.name?.[0]?.toUpperCase() || "S"}
                                 </div>
                               </div>
                             )}

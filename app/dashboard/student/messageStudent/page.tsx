@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useRef } from "react"
-import { auth, db } from "@/lib/firebaseConfig"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { FiMessageCircle, FiSend } from "react-icons/fi"
+import { useEffect, useState, useRef } from "react";
+import { auth, db } from "@/lib/firebaseConfig";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { FiMessageCircle, FiSend } from "react-icons/fi";
 import {
   sendMessage,
   handleReaction,
@@ -11,8 +11,8 @@ import {
   getMessages,
   markMessageAsRead,
 } from "@/lib/firestoreUtil";
-import { DashboardLayout } from "@/components/DashboardLayout"
-import Loading from "@/components/Loading"
+import { DashboardLayout } from "@/components/DashboardLayout";
+import Loading from "@/components/Loading";
 import {
   Dialog,
   DialogContent,
@@ -20,75 +20,76 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Users } from "lucide-react"
-import { addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Users } from "lucide-react";
+import { addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore";
 
 export default function StudentChatPage() {
-
-  const [user, setUser] = useState<any>(null)
-  const [students, setStudents] = useState<any[]>([])
-  const [selectedStudent, setSelectedStudent] = useState<any>(null)
-  const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<any[]>([])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const [editingText, setEditingText] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [createGroupOpen, setCreateGroupOpen] = useState(false)
-  const [joinGroupOpen, setJoinGroupOpen] = useState(false)
-  const [groupName, setGroupName] = useState("")
-  const [instructorEmail, setInstructorEmail] = useState("")
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-  const [groups, setGroups] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedChat, setSelectedChat] = useState<any>(null); // Student or group
+  const [isGroupChat, setIsGroupChat] = useState(false); // Flag for chat type
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [joinGroupOpen, setJoinGroupOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [instructorEmail, setInstructorEmail] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch the currently authenticated user (student) and their data
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        const userDoc = await getDocs(query(collection(db, "users"), where("user_id", "==", currentUser.uid)))
+        const userDoc = await getDocs(query(collection(db, "users"), where("user_id", "==", currentUser.uid)));
         if (!userDoc.empty) {
-          const userData = userDoc.docs[0].data()
-          setUser({ ...currentUser, ...userData })
-          setLoading(false)
+          const userData = userDoc.docs[0].data();
+          setUser({ ...currentUser, ...userData });
+          setLoading(false);
         }
       } else {
-        setUser(null)
+        setUser(null);
       }
-    })
-    return () => unsubscribe()
-  }, [])
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch students from the same school, excluding the current user
   useEffect(() => {
     async function fetchStudents() {
-      if (!user || !user.school_id) return
+      if (!user || !user.school_id) return;
 
       const studentsQuery = query(
         collection(db, "users"),
         where("role", "==", "student"),
         where("school_id", "==", user.school_id),
-      )
-      const snapshot = await getDocs(studentsQuery)
+      );
+      const snapshot = await getDocs(studentsQuery);
       const studentsList = snapshot.docs
         .map((doc) => {
-          const data = doc.data()
+          const data = doc.data();
           return {
             id: doc.id,
             uid: data.user_id,
             ...data,
-          }
+          };
         })
-        .filter((student) => student.uid !== user.uid)
+        .filter((student) => student.uid !== user.uid);
 
       // Get all groups to check which students are already in groups
-      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id))
-      const groupsSnapshot = await getDocs(groupsQuery)
-      const allGroups = groupsSnapshot.docs.map((doc) => doc.data())
+      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
+      const groupsSnapshot = await getDocs(groupsQuery);
+      const allGroups = groupsSnapshot.docs.map((doc) => doc.data());
 
       // Mark students who are already in groups
       studentsList.forEach((student) => {
@@ -98,99 +99,144 @@ export default function StudentChatPage() {
             group.members.some((member: any) =>
               typeof member === "string" ? member === student.uid : member.user_id === student.uid,
             ),
-        )
-      })
+        );
+      });
 
-      setStudents(studentsList)
+      setStudents(studentsList);
     }
-    fetchStudents()
-  }, [user])
+    fetchStudents();
+  }, [user]);
 
-  // 3. Real-time listener for messages with mark-as-read logic
+  // Fetch messages for selected chat
   useEffect(() => {
-    if (selectedStudent && user) {
-      const unsubscribe = getMessages(
-        user.user_id,
-        selectedStudent.user_id,
-        (newMessages: any[]) => {
-          setMessages(newMessages);
-          newMessages.forEach((msg) => {
-            if (msg.sender !== user.uid && msg.read?.[user.uid] !== true) {
-              markMessageAsRead(
-                user.user_id,
-                [user.user_id, selectedStudent.user_id].sort().join("_"),
-                msg.messageId
-              );
-            }
-          });
-        }
-      );
-      return () => unsubscribe();
-    }
-  }, [selectedStudent, user]);
+    if (!selectedChat || !user) return;
 
+    const chatId = isGroupChat
+      ? selectedChat.id // Group ID
+      : [user.uid, selectedChat.uid].sort().join("_"); // One-on-one ID
+
+    const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
+      setMessages(newMessages);
+      newMessages.forEach((msg) => {
+        if (msg.sender !== user.uid && !msg.read?.[user.uid]) {
+          markMessageAsRead(chatId, user.uid, msg.messageId);
+        }
+      });
+    });
+    return () => unsubscribe();
+  }, [selectedChat, user, isGroupChat]);
+
+  // Fetch groups
   useEffect(() => {
     async function fetchGroups() {
-      if (!user || !user.school_id) return
+      if (!user || !user.school_id) return;
 
-      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id))
-      const snapshot = await getDocs(groupsQuery)
-      const groupsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-      setGroups(groupsList)
+      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
+      const snapshot = await getDocs(groupsQuery);
+      const groupsList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setGroups(groupsList);
+    }
+    if (user) fetchGroups();
+  }, [user]);
+
+  // Send a message
+  const handleSendMessage = async () => {
+    if (!user || !message.trim() || !selectedChat) {
+      alert("You must be logged in and select a chat to send a message.");
+      return;
     }
 
-    if (user) {
-      fetchGroups()
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.uid].sort().join("_");
+    const participants = isGroupChat
+      ? selectedChat.members.map((m: any) => (typeof m === "string" ? m : m.user_id))
+      : [user.uid, selectedChat.uid];
+
+    try {
+      await sendMessage(chatId, user.uid, message, participants);
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message.");
     }
-  }, [user])
+  };
+
+  // Reaction handler
+  const handleReactionClick = async (messageId: string, emoji: string) => {
+    if (!user || !selectedChat) return;
+
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.uid].sort().join("_");
+
+    try {
+      await handleReaction(chatId, user.uid, messageId, emoji);
+    } catch (error) {
+      console.error("Error updating reaction:", error);
+      alert("Failed to update reaction.");
+    }
+  };
+
+  // Edit message handler
+  const handleEditMessageClick = async (messageId: string, newText: string) => {
+    if (!user || !selectedChat) return;
+
+    const chatId = isGroupChat
+      ? selectedChat.id
+      : [user.uid, selectedChat.uid].sort().join("_");
+
+    try {
+      await handleEditMessage(chatId, user.uid, messageId, newText);
+      setEditingMessageId(null);
+      setEditingText("");
+    } catch (error) {
+      console.error("Error editing message:", error);
+      alert("Failed to edit message.");
+    }
+  };
+
+  // Scroll to bottom on messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || !instructorEmail.trim() || selectedMembers.length === 0) {
-      alert("Please fill all fields and select at least one member")
-      return
+      alert("Please fill all fields and select at least one member");
+      return;
     }
 
     try {
-      // Check if the current user is already in any group
-      const userInGroup = groups.some((group) => {
-        return (
-          group.members &&
-          group.members.some((member: any) =>
-            typeof member === "string" ? member === user.uid : member.user_id === user.uid,
-          )
-        )
-      })
-
+      const userInGroup = groups.some((group) =>
+        group.members?.some((member: any) =>
+          typeof member === "string" ? member === user.uid : member.user_id === user.uid,
+        ),
+      );
       if (userInGroup) {
-        alert("You are already a member of a group. You can only belong to one group at a time.")
-        return
+        alert("You are already in a group. You can only belong to one group at a time.");
+        return;
       }
 
-      // Check if any selected members are already in groups
       const selectedMembersInGroups = students
         .filter((student) => selectedMembers.includes(student.uid) && student.inGroup)
-        .map((student) => student.name)
-
+        .map((student) => student.name);
       if (selectedMembersInGroups.length > 0) {
-        alert(`The following students are already in groups: ${selectedMembersInGroups.join(", ")}`)
-        return
+        alert(`The following students are already in groups: ${selectedMembersInGroups.join(", ")}`);
+        return;
       }
 
-      // Create the members array with user_id and joined_at timestamp
-      const currentTimestamp = new Date()
+      const currentTimestamp = new Date();
       const members = [
         ...selectedMembers.map((memberId: string) => ({
           user_id: memberId,
           joined_at: currentTimestamp,
         })),
-        // Add the current user (creator) to the members list
-        {
-          user_id: user.uid,
-          joined_at: currentTimestamp,
-        },
-      ]
+        { user_id: user.uid, joined_at: currentTimestamp },
+      ];
 
-      // Create the group in Firestore with the updated members schema
       await addDoc(collection(db, "groups"), {
         name: groupName,
         instructor_email: instructorEmail,
@@ -198,153 +244,82 @@ export default function StudentChatPage() {
         school_id: user.school_id,
         created_at: currentTimestamp,
         created_by: user.uid,
-      })
+      });
 
-      // Reset form and close dialog
-      setGroupName("")
-      setInstructorEmail("")
-      setSelectedMembers([])
-      setCreateGroupOpen(false)
+      setGroupName("");
+      setInstructorEmail("");
+      setSelectedMembers([]);
+      setCreateGroupOpen(false);
 
-      // Refresh groups list and student list (to update inGroup status)
-      await refreshGroupsAndStudents()
+      await refreshGroupsAndStudents();
 
-      alert("Group created successfully!")
+      alert("Group created successfully!");
     } catch (error) {
-      console.error("Error creating group:", error)
-      alert("Failed to create group. Please try again.")
+      console.error("Error creating group:", error);
+      alert("Failed to create group.");
     }
-  }
+  };
 
   const handleJoinGroup = async (groupId: string) => {
     try {
-      // Check if the user is already in any group
-      const userInGroup = groups.some((group) => {
-        return (
-          group.members &&
-          group.members.some((member: any) =>
-            typeof member === "string" ? member === user.uid : member.user_id === user.uid,
-          )
-        )
-      })
-
+      const userInGroup = groups.some((group) =>
+        group.members?.some((member: any) =>
+          typeof member === "string" ? member === user.uid : member.user_id === user.uid,
+        ),
+      );
       if (userInGroup) {
-        alert("You are already a member of a group. You can only belong to one group at a time.")
-        return
+        alert("You are already in a group. You can only belong to one group at a time.");
+        return;
       }
 
-      // Update the group document to add the current user to members
-      const groupRef = doc(db, "groups", groupId)
-      const currentTimestamp = new Date()
-
+      const groupRef = doc(db, "groups", groupId);
+      const currentTimestamp = new Date();
       await updateDoc(groupRef, {
-        members: arrayUnion({
-          user_id: user.uid,
-          joined_at: currentTimestamp,
-        }),
-      })
+        members: arrayUnion({ user_id: user.uid, joined_at: currentTimestamp }),
+      });
 
-      // Refresh groups list and student list
-      await refreshGroupsAndStudents()
+      await refreshGroupsAndStudents();
 
-      setJoinGroupOpen(false)
-      alert("You have joined the group successfully!")
+      setJoinGroupOpen(false);
+      alert("You have joined the group successfully!");
     } catch (error) {
-      console.error("Error joining group:", error)
-      alert("Failed to join group. Please try again.")
+      console.error("Error joining group:", error);
+      alert("Failed to join group.");
     }
-  }
+  };
 
   const toggleMemberSelection = (studentId: string) => {
-    if (selectedMembers.includes(studentId)) {
-      setSelectedMembers(selectedMembers.filter((id) => id !== studentId))
-    } else {
-      setSelectedMembers([...selectedMembers, studentId])
-    }
-  }
-
-  // Send a message
-  const handleSendMessage = async () => {
-    if (!user) {
-      alert("You must be logged in to send a message.")
-      return
-    }
-    if (selectedStudent && message.trim()) {
-      if (selectedStudent.school_id !== user.school_id) {
-        alert("You can only message students from your school.")
-        return
-      }
-      try {
-        await sendMessage(user.uid, selectedStudent.id, message)
-        setMessage("")
-      } catch (error) {
-        console.error("Error sending message:", error)
-        alert("Failed to send message.")
-      }
-    } else {
-      alert("Please select a student and type a message.")
-    }
-  }
-
-  // Reaction handler
-  const handleReactionClick = async (messageId: string, emoji: string) => {
-    if (!user || !selectedStudent) return
-    try {
-      await handleReaction(user.uid, selectedStudent.id, messageId, emoji)
-    } catch (error) {
-      console.error("Error updating reaction:", error)
-      alert("Failed to update reaction.")
-    }
-  }
-
-  // Edit message handler
-  const handleEditMessageClick = async (messageId: string, newText: string) => {
-    if (!user || !selectedStudent) return
-    try {
-      await handleEditMessage(user.uid, selectedStudent.id, messageId, newText)
-      setEditingMessageId(null)
-    } catch (error) {
-      console.error("Error editing message:", error)
-      alert("Failed to edit message.")
-    }
-  }
-
-  // Scroll to bottom on messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [messages])
+    setSelectedMembers((prev) =>
+      prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId],
+    );
+  };
 
   const refreshGroupsAndStudents = async () => {
-    // Refresh groups list
-    const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id))
-    const groupsSnapshot = await getDocs(groupsQuery)
+    const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
+    const groupsSnapshot = await getDocs(groupsQuery);
     const groupsList = groupsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    }))
-    setGroups(groupsList)
+    }));
+    setGroups(groupsList);
 
-    // Refresh students list to update inGroup status
     const studentsQuery = query(
       collection(db, "users"),
       where("role", "==", "student"),
       where("school_id", "==", user.school_id),
-    )
-    const studentsSnapshot = await getDocs(studentsQuery)
+    );
+    const studentsSnapshot = await getDocs(studentsQuery);
     const studentsList = studentsSnapshot.docs
       .map((doc) => {
-        const data = doc.data()
+        const data = doc.data();
         return {
           id: doc.id,
           uid: data.user_id,
           ...data,
-        }
+        };
       })
-      .filter((student) => student.uid !== user.uid)
+      .filter((student) => student.uid !== user.uid);
 
-    // Mark students who are already in groups
     studentsList.forEach((student) => {
       student.inGroup = groupsList.some(
         (group) =>
@@ -352,84 +327,122 @@ export default function StudentChatPage() {
           group.members.some((member: any) =>
             typeof member === "string" ? member === student.uid : member.user_id === student.uid,
           ),
-      )
-    })
+      );
+    });
 
-    setStudents(studentsList)
-  }
+    setStudents(studentsList);
+  };
 
-  if (loading) return <Loading />
+  if (loading) return <Loading />;
+
   return (
-    <DashboardLayout userType={user.role}>
+    <DashboardLayout userType={user.role || "student"}>
       <div className="h-full flex flex-col">
         {/* Header */}
         <header className="bg-card text-primary shadow-md py-4 px-6">
-          <h1 className="text-2xl font-bold">Message a Student From {user.school_name.split(",")[0]}</h1>
+          <h1 className="text-2xl font-bold">Messages - {user.school_name.split(",")[0]}</h1>
         </header>
 
         <div className="flex flex-1 overflow-hidden bg-gray-50">
-        {/* Sidebar: Students List */}
-        <div className="w-80 border-r border-border flex flex-col">
-          <div className="p-4 bg-card shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Students</h2>
+          {/* Sidebar: Groups and Students List */}
+          <div className="w-80 border-r border-border flex flex-col">
+            <div className="p-4 bg-card shadow-sm">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Chats</h2>
             </div>
             <div className="flex-1 overflow-y-auto bg-card">
-              {(() => {
-                // Find the group(s) the current user is a member of
-                const userGroups = groups.filter((group) =>
-                  group.members?.some((member: { user_id: string; joined_at: any }) => member.user_id === user.uid)
-                )
-
-                // If the user is not in any group, show a message
-                if (userGroups.length === 0) {
-                  return (
-                    <div className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">You are not in any group. Join or create a group to see members.</p>
-                    </div>
-                  )
-                }
-
-                // Get the members of the group(s) the user is in
-                const groupMemberIds = userGroups
-                  .flatMap((group) => group.members?.map((member: { user_id: string; joined_at: any }) => member.user_id) || [])
-                  .filter((id: string) => id !== user.uid) // Exclude the current user from the list
-
-                // Filter students to only include those in the same group(s)
-                const groupStudents = students.filter((student) => groupMemberIds.includes(student.id))
-
-                // If there are no other students in the group, show a message
-                if (groupStudents.length === 0) {
-                  return (
-                    <div className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">No other students in your group.</p>
-                    </div>
-                  )
-                }
-
-                // Render the filtered list of students
-                return groupStudents.map((student) => (
-                  <div
-                    key={student.id}
-                    onClick={() => setSelectedStudent(student)}
-                    className={`flex bg-card items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
-                      selectedStudent?.id === student.id
-                        ? "bg-accent border-l-4 border-blue-500"
-                        : "hover:bg-accent border-l-4 border-transparent"
-                    }`}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
-                        {student.name?.[0]?.toUpperCase() || "S"}
+              {/* Groups Section - Only show groups the user is a member of */}
+              {groups.length > 0 && (
+                <div className="p-4 border-b">
+                  <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Group Chat</h3>
+                  {groups
+                    .filter((group) =>
+                      group.members?.some((member: any) =>
+                        typeof member === "string" ? member === user.uid : member.user_id === user.uid,
+                      ),
+                    )
+                    .map((group) => (
+                      <div
+                        key={group.id}
+                        onClick={() => {
+                          setSelectedChat(group);
+                          setIsGroupChat(true);
+                        }}
+                        className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
+                          selectedChat?.id === group.id && isGroupChat
+                            ? "bg-accent border-l-4 border-purple-500"
+                            : "hover:bg-accent border-l-4 border-transparent"
+                        }`}
+                      >
+                        <div className="flex-shrink-0">
+                          <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                            {group.name?.[0]?.toUpperCase() || "G"}
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-primary truncate">{group.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{group.members.length} members</p>
+                        </div>
+                        <FiMessageCircle className="h-5 w-5 text-gray-400" />
                       </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Students Section */}
+              <div className="p-4">
+                <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Direct Messaging</h3>
+                {(() => {
+                  const userGroups = groups.filter((group) =>
+                    group.members?.some((member: { user_id: string }) => member.user_id === user.uid),
+                  );
+                  if (userGroups.length === 0) {
+                    return (
+                      <div className="text-center text-sm text-muted-foreground">
+                        Join or create a group to see members.
+                      </div>
+                    );
+                  }
+
+                  const groupMemberIds = userGroups
+                    .flatMap((group) => group.members?.map((member: { user_id: string }) => member.user_id) || [])
+                    .filter((id: string) => id !== user.uid);
+                  const groupStudents = students.filter((student) => groupMemberIds.includes(student.uid));
+
+                  if (groupStudents.length === 0) {
+                    return (
+                      <div className="text-center text-sm text-muted-foreground">
+                        No other students in your group.
+                      </div>
+                    );
+                  }
+
+                  return groupStudents.map((student) => (
+                    <div
+                      key={student.id}
+                      onClick={() => {
+                        setSelectedChat(student);
+                        setIsGroupChat(false);
+                      }}
+                      className={`flex items-center p-4 space-x-3 cursor-pointer transition-colors duration-150 ${
+                        selectedChat?.id === student.id && !isGroupChat
+                          ? "bg-accent border-l-4 border-blue-500"
+                          : "hover:bg-accent border-l-4 border-transparent"
+                      }`}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                          {student.name?.[0]?.toUpperCase() || "S"}
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-primary truncate">{student.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{student.email || "Student"}</p>
+                      </div>
+                      <FiMessageCircle className="h-5 w-5 text-gray-400" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-primary truncate">{student.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{student.email || "Student"}</p>
-                    </div>
-                    <FiMessageCircle className="h-5 w-5 text-gray-400" />
-                  </div>
-                ))
-              })()}
+                  ));
+                })()}
+              </div>
             </div>
             <div className="flex justify-end space-x-4 px-6 py-2 bg-card border-b border-border">
               <Button variant="outline" onClick={() => setCreateGroupOpen(true)} className="flex items-center gap-2">
@@ -440,24 +453,30 @@ export default function StudentChatPage() {
                 <Users size={16} />
                 Join Group
               </Button>
+            </div>
           </div>
-        </div>
 
           {/* Chat Area */}
           <div className="flex-1 flex flex-col">
-            {selectedStudent ? (
-                <>
-                  {/* Chat Header */}
-                  <div className="bg-card p-4 shadow-sm flex items-center space-x-3">
-                    <div
-                        className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-xl">
-                      {selectedStudent.name?.[0]?.toUpperCase() || "S"}
-                    </div>
-                    <div>
-                    <h2 className="text-lg font-semibold text-primary">{selectedStudent.name}</h2>
-                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                      Active now
-                    </span>
+            {selectedChat ? (
+              <>
+                {/* Chat Header */}
+                <div className="bg-card p-4 shadow-sm flex items-center space-x-3">
+                  <div
+                    className={`h-12 w-12 rounded-full flex items-center justify-center bg-blue-500 text-white font-medium text-xl
+                    }`}
+                  >
+                    {selectedChat.name?.[0]?.toUpperCase() || (isGroupChat ? "G" : "S")}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-primary">{selectedChat.name}</h2>
+                    {isGroupChat ? (
+                      <p className="text-sm text-gray-500">{selectedChat.members.length} members</p>
+                    ) : (
+                      <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                        Active now
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -467,11 +486,17 @@ export default function StudentChatPage() {
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
                       <FiMessageCircle className="h-12 w-12" />
                       <p className="text-lg">No messages yet</p>
-                      <p className="text-sm">Start a conversation with {selectedStudent.name}</p>
+                      <p className="text-sm">
+                        Start a conversation with {isGroupChat ? `${selectedChat.name} group` : selectedChat.name}
+                      </p>
                     </div>
                   ) : (
                     messages.map((msg) => {
-                      const isSender = msg.sender === user?.uid
+                      const isSender = msg.sender === user?.uid;
+                      const senderData = isGroupChat
+                        ? students.find((s) => s.uid === msg.sender) || user
+                        : selectedChat;
+
                       return (
                         <div
                           key={msg.messageId}
@@ -480,16 +505,18 @@ export default function StudentChatPage() {
                           {!isSender && (
                             <div className="mr-2 flex-shrink-0">
                               <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
-                                {selectedStudent.name?.[0]?.toUpperCase() || "S"}
+                                {senderData?.name?.[0]?.toUpperCase() || "S"}
                               </div>
                             </div>
                           )}
-
                           <div
                             className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
                               isSender ? "bg-blue-500 text-white rounded-br-sm" : "bg-white text-gray-900 rounded-bl-sm"
                             }`}
                           >
+                            {isGroupChat && !isSender && (
+                              <p className="text-xs text-gray-500 mb-1">{senderData?.name}</p>
+                            )}
                             {editingMessageId === msg.messageId ? (
                               <div className="space-y-2">
                                 <textarea
@@ -501,13 +528,13 @@ export default function StudentChatPage() {
                                 <div className="flex gap-2 justify-end">
                                   <button
                                     onClick={() => handleEditMessageClick(msg.messageId, editingText)}
-                                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                   >
                                     Save
                                   </button>
                                   <button
                                     onClick={() => setEditingMessageId(null)}
-                                    className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                    className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                                   >
                                     Cancel
                                   </button>
@@ -517,52 +544,54 @@ export default function StudentChatPage() {
                               <>
                                 <p className="break-words">
                                   {msg.message}
-                                  {msg.edited && <span className="ml-2 text-xs text-gray-300 italic">(edited)</span>}
+                                  {msg.edited && (
+                                    <span className="ml-2 text-xs text-gray-300 italic">(edited)</span>
+                                  )}
                                 </p>
                                 {isSender && (
                                   <button
                                     onClick={() => {
-                                      setEditingMessageId(msg.messageId)
-                                      setEditingText(msg.message)
+                                      setEditingMessageId(msg.messageId);
+                                      setEditingText(msg.message);
                                     }}
-                                    className="mt-1 text-xs text-blue-200 hover:text-blue-100 transition-colors"
+                                    className="mt-1 text-xs text-blue-200 hover:text-blue-100"
                                   >
                                     Edit
                                   </button>
                                 )}
+                                <div className="mt-2 flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleReactionClick(msg.messageId, "👍")}
+                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                  >
+                                    👍
+                                  </button>
+                                  <button
+                                    onClick={() => handleReactionClick(msg.messageId, "❤️")}
+                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                  >
+                                    ❤️
+                                  </button>
+                                  <button
+                                    onClick={() => handleReactionClick(msg.messageId, "😆")}
+                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                  >
+                                    😆
+                                  </button>
+                                  {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
+                                    <span
+                                      key={uid}
+                                      className={`text-sm px-1 rounded-full ${
+                                        isSender ? "bg-blue-600/20" : "bg-gray-200"
+                                      }`}
+                                    >
+                                      {emoji as string}
+                                    </span>
+                                  ))}
+                                </div>
                               </>
                             )}
-
-                            <div className="mt-2 flex items-center gap-2">
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "👍")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                👍
-                              </button>
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "❤️")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                ❤️
-                              </button>
-                              <button
-                                onClick={() => handleReactionClick(msg.messageId, "😆")}
-                                className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
-                              >
-                                😆
-                              </button>
-                              {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
-                                <span
-                                  key={uid}
-                                  className={`text-sm px-1 rounded-full ${isSender ? "bg-blue-600/20" : "bg-gray-200"}`}
-                                >
-                                  {emoji as string}
-                                </span>
-                              ))}
-                            </div>
                           </div>
-
                           {isSender && (
                             <div className="ml-2 flex-shrink-0">
                               <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
@@ -571,7 +600,7 @@ export default function StudentChatPage() {
                             </div>
                           )}
                         </div>
-                      )
+                      );
                     })
                   )}
                   <div ref={messagesEndRef} />
@@ -585,11 +614,11 @@ export default function StudentChatPage() {
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type your message here..."
                       rows={2}
-                      className="w-full p-3 pr-16 resize-none bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                      className="w-full p-3 pr-16 resize-none bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
                       onClick={handleSendMessage}
-                      className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                      className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full"
                     >
                       <FiSend className="h-5 w-5" />
                     </button>
@@ -597,19 +626,18 @@ export default function StudentChatPage() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="flex-1 flex flex-col bg-card items-center justify-center">
                 <div className="max-w-md text-center space-y-4">
                   <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
-                  <h3 className="text-xl font-semibold text-gray-900">Select a student</h3>
-                  <p className="text-gray-500">
-                    Choose a student from the list to view messages and start a conversation
-                  </p>
+                  <h3 className="text-xl font-semibold text-gray-900">Select a chat</h3>
+                  <p className="text-gray-500">Choose a student or group to start messaging</p>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
       {/* Create Group Dialog */}
       <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
         <DialogContent className="sm:max-w-md">
@@ -619,9 +647,7 @@ export default function StudentChatPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="group-name" className="text-right">
-                Group Name
-              </Label>
+              <Label htmlFor="group-name" className="text-right">Group Name</Label>
               <Input
                 id="group-name"
                 value={groupName}
@@ -631,9 +657,7 @@ export default function StudentChatPage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="instructor-email" className="text-right">
-                Instructor Email
-              </Label>
+              <Label htmlFor="instructor-email" className="text-right">Instructor Email</Label>
               <Input
                 id="instructor-email"
                 value={instructorEmail}
@@ -646,12 +670,24 @@ export default function StudentChatPage() {
             <div className="grid grid-cols-4 items-start gap-4">
               <Label className="text-right pt-2">Add Members</Label>
               <div className="col-span-3 border rounded-md p-3 max-h-60 overflow-y-auto">
+                <div className="relative w-64 mb-3">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search students..."
+                    className="pl-8 font-medium"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
                 {students.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No students available</p>
                 ) : (
                   <div className="space-y-2">
                     {students
-                      .filter((student) => !student.inGroup)
+                      .filter(
+                        (student) =>
+                          !student.inGroup && student.name.toLowerCase().includes(searchTerm.toLowerCase()),
+                      )
                       .map((student) => (
                         <div key={student.uid} className="flex items-center space-x-2">
                           <Checkbox
@@ -659,7 +695,10 @@ export default function StudentChatPage() {
                             checked={selectedMembers.includes(student.uid)}
                             onCheckedChange={() => toggleMemberSelection(student.uid)}
                           />
-                          <Label htmlFor={`student-${student.uid}`} className="flex items-center gap-2 cursor-pointer">
+                          <Label
+                            htmlFor={`student-${student.uid}`}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
                             <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">
                               {student.name?.[0]?.toUpperCase() || "S"}
                             </div>
@@ -701,13 +740,9 @@ export default function StudentChatPage() {
             ) : (
               <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
                 {groups.map((group) => {
-                  // Check if user is a member of this group
-                  const isMember =
-                    group.members &&
-                    group.members.some((member: any) =>
-                      typeof member === "string" ? member === user.uid : member.user_id === user.uid,
-                    )
-
+                  const isMember = group.members?.some((member: any) =>
+                    typeof member === "string" ? member === user.uid : member.user_id === user.uid,
+                  );
                   return (
                     <div key={group.id} className="border rounded-lg p-4 bg-card">
                       <div className="flex justify-between items-start">
@@ -716,17 +751,17 @@ export default function StudentChatPage() {
                           <p className="text-sm text-muted-foreground">Instructor: {group.instructor_email}</p>
                         </div>
                         {isMember ? (
-                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Joined</span>
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Joined
+                          </span>
                         ) : (
                           <Button
                             size="sm"
                             onClick={() => handleJoinGroup(group.id)}
-                            disabled={groups.some(
-                              (g) =>
-                                g.members &&
-                                g.members.some((member: any) =>
-                                  typeof member === "string" ? member === user.uid : member.user_id === user.uid,
-                                ),
+                            disabled={groups.some((g) =>
+                              g.members?.some((member: any) =>
+                                typeof member === "string" ? member === user.uid : member.user_id === user.uid,
+                              ),
                             )}
                           >
                             Join
@@ -737,12 +772,10 @@ export default function StudentChatPage() {
                         <p className="text-xs text-muted-foreground mb-1">Members:</p>
                         <div className="flex flex-wrap gap-1">
                           {group.members?.map((member: any) => {
-                            const memberId = typeof member === "string" ? member : member.user_id
+                            const memberId = typeof member === "string" ? member : member.user_id;
                             const memberData =
-                              students.find((s) => s.uid === memberId) || (memberId === user.uid ? user : null)
-
-                            if (!memberData) return null
-
+                              students.find((s) => s.uid === memberId) || (memberId === user.uid ? user : null);
+                            if (!memberData) return null;
                             return (
                               <div
                                 key={memberId}
@@ -753,12 +786,12 @@ export default function StudentChatPage() {
                                 </div>
                                 <span>{memberData.name || "Unknown"}</span>
                               </div>
-                            )
+                            );
                           })}
                         </div>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -771,5 +804,5 @@ export default function StudentChatPage() {
         </DialogContent>
       </Dialog>
     </DashboardLayout>
-  )
+  );
 }
