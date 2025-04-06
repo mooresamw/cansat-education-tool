@@ -10,6 +10,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   signOut,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -24,14 +25,14 @@ const LoginSignupPage = () => {
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
-  const [user, setUser] = useState<any>(null); // Explicitly type as any or define an interface
+  const [user, setUser] = useState<any>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const [notification, setNotification] = useState("");
   const [selectedSchool, setSelectedSchool] = useState({
     school_name: "",
     school_id: "",
   });
-  const [errors, setErrors] = useState<any>({}); // Explicitly type as any or define an interface
+  const [errors, setErrors] = useState<any>({});
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [passwordCriteria, setPasswordCriteria] = useState({
     length: false,
@@ -40,6 +41,8 @@ const LoginSignupPage = () => {
     special: false,
     number: false,
   });
+  const [isForgotPassword, setIsForgotPassword] = useState(false); // New state for forgot password
+  const [resetEmail, setResetEmail] = useState(""); // Email for password reset
 
   const router = useRouter();
 
@@ -90,6 +93,7 @@ const LoginSignupPage = () => {
     setNotification("");
     setErrors({});
     setShowPasswordRequirements(false);
+    setIsForgotPassword(false); // Reset forgot password state
   };
 
   const handleSchoolSelect = (name: string, placeId: any) => {
@@ -119,6 +123,12 @@ const LoginSignupPage = () => {
 
     if (!validateForm()) {
       setNotification("Please fill out all required fields");
+      return;
+    }
+
+    const allCriteriaMet = Object.values(passwordCriteria).every((criteria) => criteria === true);
+    if (!allCriteriaMet) {
+      setNotification("Password must meet all requirements");
       return;
     }
 
@@ -187,10 +197,8 @@ const LoginSignupPage = () => {
         return;
       }
 
-      // Get the Firebase ID token
       const idToken = await user.getIdToken();
 
-      // Send login event to backend
       const loginResponse = await fetch("http://localhost:8080/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -243,6 +251,24 @@ const LoginSignupPage = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setNotification("Please enter your email address.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setNotification("Password reset email sent. Please check your inbox.");
+      setResetEmail("");
+      setIsForgotPassword(false); // Return to login form after sending
+    } catch (error: any) {
+      console.error("Error sending password reset email:", error.message);
+      setNotification(`Error: ${error.message}. Please try again.`);
+    }
+  };
+
   return (
     <>
       <div className="min-h-screen flex items-center justify-center bg-black p-4">
@@ -259,66 +285,110 @@ const LoginSignupPage = () => {
                   <h1 className="text-white text-xl font-medium">CanSat</h1>
                 </Link>
               </div>
-              <h2 className="text-2xl font-semibold mb-6 text-white">Sign in</h2>
-              {notification && !isSignUp && (
-                <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
-                  {notification}
-                </div>
+              {!isForgotPassword ? (
+                <>
+                  <h2 className="text-2xl font-semibold mb-6 text-white">Sign in</h2>
+                  {notification && !isSignUp && (
+                    <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
+                      {notification}
+                    </div>
+                  )}
+                  <form onSubmit={handleLogin} className="space-y-6">
+                    <div className="relative">
+                      <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                      />
+                    </div>
+                    <div className="relative">
+                      <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                      >
+                        {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="rounded-sm border-gray-700 bg-gray-900 text-white focus:ring-0"
+                        />
+                        <span className="ml-2 text-sm text-gray-400">Remember me</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-sm text-gray-400 hover:text-white"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
+                    >
+                      Sign In
+                    </button>
+                    <div className="md:hidden mt-4 text-center">
+                      <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
+                        Don't have an account? <span className="font-semibold">Sign Up</span>
+                      </span>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-semibold mb-6 text-white">Reset Password</h2>
+                  {notification && (
+                    <div className="mb-4 p-3 bg-gray-900 text-white border border-gray-700 text-sm">
+                      {notification}
+                    </div>
+                  )}
+                  <form onSubmit={handleForgotPassword} className="space-y-6">
+                    <div className="relative">
+                      <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type="email"
+                        placeholder="Enter your email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
+                    >
+                      Send Reset Link
+                    </button>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(false)}
+                        className="text-sm text-gray-400 hover:text-white"
+                      >
+                        Back to Sign In
+                      </button>
+                    </div>
+                  </form>
+                </>
               )}
-              <form onSubmit={handleLogin} className="space-y-6">
-                <div className="relative">
-                  <HiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                  />
-                </div>
-                <div className="relative">
-                  <HiLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 focus:ring-white text-white placeholder-gray-500 border border-gray-800"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                  >
-                    {showPassword ? <HiEyeOff className="w-5 h-5" /> : <HiEye className="w-5 h-5" />}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded-sm border-gray-700 bg-gray-900 text-white focus:ring-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-400">Remember me</span>
-                  </label>
-                  <a href="#" className="text-sm text-gray-400 hover:text-white">
-                    Forgot Password?
-                  </a>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"
-                >
-                  Sign In
-                </button>
-                <div className="md:hidden mt-4 text-center">
-                  <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
-                    Don't have an account? <span className="font-semibold">Sign Up</span>
-                  </span>
-                </div>
-              </form>
             </div>
 
             {/* Sign Up Form */}
@@ -381,9 +451,9 @@ const LoginSignupPage = () => {
                     onFocus={() => setShowPasswordRequirements(true)}
                     onBlur={() => setShowPasswordRequirements(false)}
                     required
-                    className={`w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 text-white placeholder-gray-500 border border-gray-800 ${
-                      errors.password ? "focus:ring-red-500 border-red-500" : "focus:ring-white"
-                    }`}
+                    className={`w-full pl-10 pr-12 py-2 bg-gray-900 rounded-sm focus:outline-none focus:ring-1 text-white placeholder-gray-500 border ${
+                      errors.password ? "border-red-500 focus:ring-red-500" : "border-gray-800 focus:ring-white"
+                    } border-2`}
                   />
                   <button
                     type="button"
@@ -426,7 +496,7 @@ const LoginSignupPage = () => {
                             One lowercase letter
                           </span>
                         </li>
-                        <li className="flex items-start">
+                        <li className="flex item s-start">
                           {passwordCriteria.special ? (
                             <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
                           ) : (
@@ -460,7 +530,7 @@ const LoginSignupPage = () => {
                   )}
                   {errors.school && <p className="text-red-500 text-xs mt-1">{errors.school}</p>}
                 </div>
-                
+
                 <button
                   type="submit"
                   className="w-full bg-white text-black py-2 px-4 rounded-sm hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-white transition-colors"

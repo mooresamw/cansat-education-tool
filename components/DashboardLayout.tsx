@@ -32,13 +32,13 @@ interface DashboardLayoutProps {
 }
 
 const LOCAL_AVATARS = [
-  { id: "avatar1", path: "/avatars/avatar0.png" },
-  { id: "avatar2", path: "/avatars/avatar1.png" },
-  { id: "avatar3", path: "/avatars/avatar2.png" },
-  { id: "avatar4", path: "/avatars/avatar3.png" },
-  { id: "avatar5", path: "/avatars/avatar4.png" },
-  { id: "avatar6", path: "/avatars/avatar5.png" },
-];
+  { id: "avatar1", path: "/avatars/avatar1.png" },
+  { id: "avatar2", path: "/avatars/avatar2.png" },
+  { id: "avatar3", path: "/avatars/avatar3.png" },
+  { id: "avatar4", path: "/avatars/avatar4.png" },
+  { id: "avatar5", path: "/avatars/avatar5.png" },
+  { id: "avatar6", path: "/avatars/avatar6.png" },
+]
 
 const getUser = () => {
   return JSON.parse(localStorage.getItem("user") || "null");
