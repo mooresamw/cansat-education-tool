@@ -17,8 +17,8 @@ import Loading from "@/components/Loading";
 export default function StudentMessagePage() {
   const [user, setUser] = useState<any>(null);
   const [instructors, setInstructors] = useState<any[]>([]);
-  const [selectedChat, setSelectedChat] = useState<any>(null); // Student or group
-  const [isGroupChat, setIsGroupChat] = useState(false); // Flag for chat type
+  const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [isGroupChat, setIsGroupChat] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,14 +66,13 @@ export default function StudentMessagePage() {
   }, [user]);
 
   // 3. Real-time listener for messages with mark-as-read logic
-  // Fetch messages for selected chat
   useEffect(() => {
     if (!selectedChat || !user) return;
-    console.log(selectedChat.id)
+    console.log(selectedChat.id);
     const chatId = isGroupChat
-      ? selectedChat.id // Group ID
-      : [user.uid, selectedChat.id].sort().join("_"); // One-on-one ID
-    console.log(chatId)
+      ? selectedChat.id
+      : [user.uid, selectedChat.id].sort().join("_");
+    console.log(chatId);
     const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
       setMessages(newMessages);
       newMessages.forEach((msg) => {
@@ -84,7 +83,6 @@ export default function StudentMessagePage() {
     });
     return () => unsubscribe();
   }, [selectedChat, user, isGroupChat]);
-
 
   // Send a message
   const handleSendMessage = async () => {
@@ -131,7 +129,7 @@ export default function StudentMessagePage() {
 
     const chatId = isGroupChat
       ? selectedChat.id
-      : [user.uid, selectedChat.uid].sort().join("_");
+      : [user.uid, selectedChat.id].sort().join("_");
 
     try {
       await handleEditMessage(chatId, user.uid, messageId, newText);
@@ -150,8 +148,18 @@ export default function StudentMessagePage() {
     }
   }, [messages]);
 
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp: any) => {
+    return timestamp
+      ? new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Just now";
+  };
+
   // Helper function to format date for separators
-  const formatDateSeparator = (timestamp: string) => {
+  const formatDateSeparator = (timestamp: any) => {
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date(today);
@@ -251,12 +259,7 @@ export default function StudentMessagePage() {
                   ) : (
                     messages.map((msg, index) => {
                       const isSender = msg.sender === user.uid;
-                      const timestamp = msg.timestamp
-                        ? new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Just now";
+                      const timestamp = formatTimestamp(msg.timestamp);
 
                       // Check if we need a date separator
                       const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : "";
@@ -396,42 +399,42 @@ export default function StudentMessagePage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-              {/* Message Input */}
-              <div className="bg-card border-t border-border p-4">
-                <div className="relative">
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
-                    rows={2}
-                    className="w-full p-3 pr-16 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
-                  >
-                    <FiSend className="h-5 w-5" />
-                  </button>
+                {/* Message Input */}
+                <div className="bg-card border-t border-border p-4">
+                  <div className="relative">
+                    <textarea
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type your message here..."
+                      rows={2}
+                      className="w-full p-3 pr-16 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+                    />
+                    <button
+                      onClick={handleSendMessage}
+                      className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                    >
+                      <FiSend className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // If no instructor is selected
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="max-w-md text-center space-y-4">
+                  <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    Select an instructor
+                  </h3>
+                  <p className="text-gray-500">
+                    Choose an instructor from the list to view messages and start a conversation
+                  </p>
                 </div>
               </div>
-            </>
-          ) : (
-            // If no instructor is selected
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="max-w-md text-center space-y-4">
-                <FiMessageCircle className="h-16 w-16 text-gray-300 mx-auto" />
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Select an instructor
-                </h3>
-                <p className="text-gray-500">
-                  Choose an instructor from the list to view messages and start a conversation
-                </p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-      </DashboardLayout>
+    </DashboardLayout>
   );
 }

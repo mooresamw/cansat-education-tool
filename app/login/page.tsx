@@ -41,8 +41,9 @@ const LoginSignupPage = () => {
     special: false,
     number: false,
   });
-  const [isForgotPassword, setIsForgotPassword] = useState(false); // New state for forgot password
-  const [resetEmail, setResetEmail] = useState(""); // Email for password reset
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false); // New state for verification email
 
   const router = useRouter();
 
@@ -93,7 +94,8 @@ const LoginSignupPage = () => {
     setNotification("");
     setErrors({});
     setShowPasswordRequirements(false);
-    setIsForgotPassword(false); // Reset forgot password state
+    setIsForgotPassword(false);
+    setVerificationSent(false); // Reset verification state
   };
 
   const handleSchoolSelect = (name: string, placeId: any) => {
@@ -137,6 +139,7 @@ const LoginSignupPage = () => {
       const user = userCredential.user;
 
       await sendEmailVerification(user);
+      setVerificationSent(true); // Indicate verification email was sent
       console.log("Verification email sent to:", email);
 
       const response = await fetch("http://localhost:8080/register", {
@@ -170,7 +173,9 @@ const LoginSignupPage = () => {
         localStorage.setItem("rememberMe", "false");
       }
 
-      setNotification("Account created successfully. Please check your email to verify your account.");
+      setNotification(
+        "Account created successfully. Please check your email to verify your account. Didn't receive it? Use the resend option below."
+      );
 
       setEmail("");
       setPassword("");
@@ -192,7 +197,10 @@ const LoginSignupPage = () => {
       const user = userCredential.user;
 
       if (!user.emailVerified) {
-        setNotification("Please verify your email before logging in.");
+        setNotification(
+          "Please verify your email before logging in. Check your inbox or click below to resend the verification email."
+        );
+        setVerificationSent(true); // Show resend option
         await signOut(auth);
         return;
       }
@@ -262,9 +270,26 @@ const LoginSignupPage = () => {
       await sendPasswordResetEmail(auth, resetEmail);
       setNotification("Password reset email sent. Please check your inbox.");
       setResetEmail("");
-      setIsForgotPassword(false); // Return to login form after sending
+      setIsForgotPassword(false);
     } catch (error: any) {
       console.error("Error sending password reset email:", error.message);
+      setNotification(`Error: ${error.message}. Please try again.`);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user && !user.emailVerified) {
+        await sendEmailVerification(user);
+        setNotification("Verification email resent. Please check your inbox or spam folder.");
+      } else if (user && user.emailVerified) {
+        setNotification("Your email is already verified. Please log in.");
+      } else {
+        setNotification("No user is currently signed in. Please sign up or log in first.");
+      }
+    } catch (error: any) {
+      console.error("Error resending verification email:", error.message);
       setNotification(`Error: ${error.message}. Please try again.`);
     }
   };
@@ -345,6 +370,15 @@ const LoginSignupPage = () => {
                     >
                       Sign In
                     </button>
+                    {verificationSent && (
+                      <button
+                        type="button"
+                        onClick={handleResendVerification}
+                        className="w-full mt-2 text-sm text-gray-400 hover:text-white underline"
+                      >
+                        Resend Verification Email
+                      </button>
+                    )}
                     <div className="md:hidden mt-4 text-center">
                       <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
                         Don't have an account? <span className="font-semibold">Sign Up</span>
@@ -496,7 +530,7 @@ const LoginSignupPage = () => {
                             One lowercase letter
                           </span>
                         </li>
-                        <li className="flex item s-start">
+                        <li className="flex items-start">
                           {passwordCriteria.special ? (
                             <FaCheckCircle className="mt-0.5 mr-2 h-4 w-4 text-green-500 flex-shrink-0" />
                           ) : (
@@ -537,6 +571,15 @@ const LoginSignupPage = () => {
                 >
                   Sign Up
                 </button>
+                {verificationSent && (
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    className="w-full mt-2 text-sm text-gray-400 hover:text-white underline"
+                  >
+                    Resend Verification Email
+                  </button>
+                )}
                 <div className="md:hidden mt-4 text-center">
                   <span onClick={toggleForm} className="text-sm text-gray-400 hover:text-white cursor-pointer">
                     Already have an account? <span className="font-semibold">Sign In</span>

@@ -31,8 +31,8 @@ import { addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore";
 export default function StudentChatPage() {
   const [user, setUser] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [selectedChat, setSelectedChat] = useState<any>(null); // Student or group
-  const [isGroupChat, setIsGroupChat] = useState(false); // Flag for chat type
+  const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [isGroupChat, setIsGroupChat] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,12 +86,10 @@ export default function StudentChatPage() {
         })
         .filter((student) => student.uid !== user.uid);
 
-      // Get all groups to check which students are already in groups
       const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
       const groupsSnapshot = await getDocs(groupsQuery);
       const allGroups = groupsSnapshot.docs.map((doc) => doc.data());
 
-      // Mark students who are already in groups
       studentsList.forEach((student) => {
         student.inGroup = allGroups.some(
           (group) =>
@@ -112,8 +110,8 @@ export default function StudentChatPage() {
     if (!selectedChat || !user) return;
 
     const chatId = isGroupChat
-      ? selectedChat.id // Group ID
-      : [user.uid, selectedChat.uid].sort().join("_"); // One-on-one ID
+      ? selectedChat.id
+      : [user.uid, selectedChat.uid].sort().join("_");
 
     const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
       setMessages(newMessages);
@@ -202,6 +200,36 @@ export default function StudentChatPage() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp: any) => {
+    return timestamp
+      ? new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Just now";
+  };
+
+  // Helper function for date separators
+  const formatDateSeparator = (timestamp: any) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+    return date.toLocaleDateString([], {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   const handleCreateGroup = async () => {
     if (!groupName.trim() || !instructorEmail.trim() || selectedMembers.length === 0) {
@@ -350,7 +378,6 @@ export default function StudentChatPage() {
               <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Chats</h2>
             </div>
             <div className="flex-1 overflow-y-auto bg-card">
-              {/* Groups Section - Only show groups the user is a member of */}
               {groups.length > 0 && (
                 <div className="p-4 border-b">
                   <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Group Chat</h3>
@@ -388,7 +415,6 @@ export default function StudentChatPage() {
                 </div>
               )}
 
-              {/* Students Section */}
               <div className="p-4">
                 <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Direct Messaging</h3>
                 {(() => {
@@ -460,11 +486,9 @@ export default function StudentChatPage() {
           <div className="flex-1 flex flex-col">
             {selectedChat ? (
               <>
-                {/* Chat Header */}
                 <div className="bg-card p-4 shadow-sm flex items-center space-x-3">
                   <div
-                    className={`h-12 w-12 rounded-full flex items-center justify-center bg-blue-500 text-white font-medium text-xl
-                    }`}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center bg-blue-500 text-white font-medium text-xl`}
                   >
                     {selectedChat.name?.[0]?.toUpperCase() || (isGroupChat ? "G" : "S")}
                   </div>
@@ -480,7 +504,6 @@ export default function StudentChatPage() {
                   </div>
                 </div>
 
-                {/* Messages List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-card">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
@@ -491,114 +514,136 @@ export default function StudentChatPage() {
                       </p>
                     </div>
                   ) : (
-                    messages.map((msg) => {
+                    messages.map((msg, index) => {
                       const isSender = msg.sender === user?.uid;
                       const senderData = isGroupChat
                         ? students.find((s) => s.uid === msg.sender) || user
                         : selectedChat;
+                      const timestamp = formatTimestamp(msg.timestamp);
+
+                      // Date separator logic
+                      const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : "";
+                      const prevDate =
+                        index > 0 && messages[index - 1].timestamp
+                          ? new Date(messages[index - 1].timestamp).toDateString()
+                          : null;
+                      const showDateSeparator = index === 0 || currentDate !== prevDate;
 
                       return (
-                        <div
-                          key={msg.messageId}
-                          className={`flex items-end ${isSender ? "justify-end" : "justify-start"}`}
-                        >
-                          {!isSender && (
-                            <div className="mr-2 flex-shrink-0">
-                              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
-                                {senderData?.name?.[0]?.toUpperCase() || "S"}
-                              </div>
+                        <div key={msg.messageId} className="space-y-2">
+                          {showDateSeparator && (
+                            <div className="text-center my-2">
+                              <span className="inline-block bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full">
+                                {formatDateSeparator(msg.timestamp)}
+                              </span>
                             </div>
                           )}
-                          <div
-                            className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
-                              isSender ? "bg-blue-500 text-white rounded-br-sm" : "bg-white text-gray-900 rounded-bl-sm"
-                            }`}
-                          >
-                            {isGroupChat && !isSender && (
-                              <p className="text-xs text-gray-500 mb-1">{senderData?.name}</p>
-                            )}
-                            {editingMessageId === msg.messageId ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editingText}
-                                  onChange={(e) => setEditingText(e.target.value)}
-                                  className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-black bg-gray-50"
-                                  style={{ minHeight: "60px" }}
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={() => handleEditMessageClick(msg.messageId, editingText)}
-                                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingMessageId(null)}
-                                    className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                                  >
-                                    Cancel
-                                  </button>
+                          <div className={`flex items-end ${isSender ? "justify-end" : "justify-start"}`}>
+                            {!isSender && (
+                              <div className="mr-2 flex-shrink-0">
+                                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
+                                  {senderData?.name?.[0]?.toUpperCase() || "S"}
                                 </div>
                               </div>
-                            ) : (
-                              <>
-                                <p className="break-words">
-                                  {msg.message}
-                                  {msg.edited && (
-                                    <span className="ml-2 text-xs text-gray-300 italic">(edited)</span>
-                                  )}
-                                </p>
-                                {isSender && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingMessageId(msg.messageId);
-                                      setEditingText(msg.message);
-                                    }}
-                                    className="mt-1 text-xs text-blue-200 hover:text-blue-100"
-                                  >
-                                    Edit
-                                  </button>
-                                )}
-                                <div className="mt-2 flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleReactionClick(msg.messageId, "👍")}
-                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
-                                  >
-                                    👍
-                                  </button>
-                                  <button
-                                    onClick={() => handleReactionClick(msg.messageId, "❤️")}
-                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
-                                  >
-                                    ❤️
-                                  </button>
-                                  <button
-                                    onClick={() => handleReactionClick(msg.messageId, "😆")}
-                                    className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
-                                  >
-                                    😆
-                                  </button>
-                                  {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
-                                    <span
-                                      key={uid}
-                                      className={`text-sm px-1 rounded-full ${
-                                        isSender ? "bg-blue-600/20" : "bg-gray-200"
-                                      }`}
+                            )}
+                            <div
+                              className={`relative max-w-sm p-4 rounded-3xl shadow-lg transition-all duration-200 ${
+                                isSender ? "bg-blue-500 text-white rounded-br-sm" : "bg-white text-gray-900 rounded-bl-sm"
+                              }`}
+                            >
+                              {isGroupChat && !isSender && (
+                                <p className="text-xs text-gray-500 mb-1">{senderData?.name}</p>
+                              )}
+                              {editingMessageId === msg.messageId ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={editingText}
+                                    onChange={(e) => setEditingText(e.target.value)}
+                                    className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-black bg-gray-50"
+                                    style={{ minHeight: "60px" }}
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      onClick={() => handleEditMessageClick(msg.messageId, editingText)}
+                                      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                     >
-                                      {emoji as string}
-                                    </span>
-                                  ))}
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingMessageId(null)}
+                                      className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
                                 </div>
-                              </>
+                              ) : (
+                                <>
+                                  <p className="break-words">
+                                    {msg.message}
+                                    {msg.edited && (
+                                      <span className="ml-2 text-xs text-gray-300 italic">(edited)</span>
+                                    )}
+                                  </p>
+                                  <div
+                                    className={`text-xs mt-1 ${
+                                      isSender ? "text-blue-200" : "text-gray-500"
+                                    }`}
+                                  >
+                                    {timestamp}
+                                  </div>
+                                  {isSender && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingMessageId(msg.messageId);
+                                        setEditingText(msg.message);
+                                      }}
+                                      className="mt-1 text-xs text-blue-200 hover:text-blue-100"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleReactionClick(msg.messageId, "👍")}
+                                      className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                    >
+                                      👍
+                                    </button>
+                                    <button
+                                      onClick={() => handleReactionClick(msg.messageId, "❤️")}
+                                      className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                    >
+                                      ❤️
+                                    </button>
+                                    <button
+                                      onClick={() => handleReactionClick(msg.messageId, "😆")}
+                                      className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105"
+                                    >
+                                      😆
+                                    </button>
+                                    {Object.entries(msg.reactions || {}).map(([uid, emoji]) => (
+                                      <span
+                                        key={uid}
+                                        className={`text-sm px-1 rounded-full ${
+                                          isSender ? "bg-blue-600/20" : "bg-gray-200"
+                                        }`}
+                                      >
+                                        {emoji as string}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {isSender && (
+                              <div className="ml-2 flex-shrink-0">
+                                <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
+                                  {user?.name?.[0] || "Y"}
+                                </div>
+                              </div>
                             )}
                           </div>
-                          {isSender && (
-                            <div className="ml-2 flex-shrink-0">
-                              <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-sm">
-                                {user?.name?.[0] || "Y"}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })
@@ -606,7 +651,6 @@ export default function StudentChatPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
                 <div className="bg-card border-t border-border p-4">
                   <div className="relative">
                     <textarea

@@ -15,9 +15,9 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import Loading from "@/components/Loading";
 
 export default function InstructorMessagePage() {
-  const [user, setUser] = useState<any>(null); // Logged-in instructor
+  const [user, setUser] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [selectedChat, setSelectedChat] = useState<any>(null); // Student or group
+  const [selectedChat, setSelectedChat] = useState<any>(null);
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
@@ -70,8 +70,8 @@ export default function InstructorMessagePage() {
     if (!selectedChat || !user) return;
 
     const chatId = isGroupChat
-      ? selectedChat.id // Group ID
-      : [user.uid, selectedChat.id].sort().join("_"); // One-on-one ID
+      ? selectedChat.id
+      : [user.uid, selectedChat.id].sort().join("_");
 
     const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
       setMessages(newMessages);
@@ -84,7 +84,7 @@ export default function InstructorMessagePage() {
     return () => unsubscribe();
   }, [selectedChat, user, isGroupChat]);
 
-   // Send a message
+  // Send a message
   const handleSendMessage = async () => {
     if (!user || !message.trim() || !selectedChat) {
       alert("You must be logged in and select a chat to send a message.");
@@ -148,8 +148,18 @@ export default function InstructorMessagePage() {
     }
   }, [messages]);
 
+  // Helper function to format timestamp
+  const formatTimestamp = (timestamp: any) => {
+    return timestamp
+      ? new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Just now";
+  };
+
   // Helper function to format date for separators
-  const formatDateSeparator = (timestamp: string) => {
+  const formatDateSeparator = (timestamp: any) => {
     const date = new Date(timestamp);
     const today = new Date();
     const yesterday = new Date(today);
@@ -250,12 +260,7 @@ export default function InstructorMessagePage() {
                   ) : (
                     messages.map((msg, index) => {
                       const isSender = msg.sender === user.uid;
-                      const timestamp = msg.timestamp
-                        ? new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Just now";
+                      const timestamp = formatTimestamp(msg.timestamp);
 
                       // Check if we need a date separator
                       const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : "";
