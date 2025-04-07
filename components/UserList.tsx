@@ -1,7 +1,6 @@
 "use client"
 
-import React, {useEffect} from "react"
-import { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
@@ -9,71 +8,86 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {onAuthStateChanged} from "firebase/auth";
-import {auth} from "@/lib/firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth"
+import { auth } from "@/lib/firebaseConfig"
 
-const initialUsers = [
+// Define User interface for type safety
+interface User {
+  user_id: number
+  name: string
+  email: string
+  role: string
+}
+
+const initialUsers: User[] = [
   { user_id: 1, name: "John Doe", email: "john@example.com", role: "Student" },
   { user_id: 2, name: "Jane Smith", email: "jane@example.com", role: "Instructor" },
   { user_id: 3, name: "Bob Johnson", email: "bob@example.com", role: "Student" },
 ]
 
 export function UserList() {
-  const [users, setUsers] = useState(initialUsers)
-  const [editingUser, setEditingUser] = useState<(typeof users)[0] | null>(null)
+  const [users, setUsers] = useState<User[]>(initialUsers)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
-
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Fetch user data on page load
   useEffect(() => {
     const fetchUsers = async () => {
+      setIsLoading(true)
       try {
-        const response = await fetch("http://localhost:8080/users", {});
-        const data = await response.json();
-        setUsers(data);
+        const response = await fetch("http://localhost:8080/users")
+        if (!response.ok) throw new Error("Failed to fetch users")
+        const data: User[] = await response.json()
+        setUsers(data)
       } catch (error) {
-        console.log("Error fetching data:", error);
+        console.error("Error fetching data:", error)
+        setError("Failed to load users")
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    fetchUsers();
-  }, []);
+    fetchUsers()
+  }, [])
 
-  const handleEdit = (user: (typeof users)[0]) => {
+  const handleEdit = (user: User) => {
     setEditingUser(user)
     setIsEditDialogOpen(true)
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingUser) {
-      try {
-        const response = await fetch("http://localhost:8080/edit-user", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: editingUser.user_id,
-            email: editingUser.email,
-            name: editingUser.name,
-            role: editingUser.role,
-          }),
-        });
+    if (!editingUser) return
 
-        if (!response.ok) {
-          throw new Error("Failed to update user");
-        }
+    setIsLoading(true)
+    try {
+      const response = await fetch("http://localhost:8080/edit-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editingUser),
+      })
 
-        // Update state after successful edit
-        setUsers(users.map((user) => user.user_id === editingUser.user_id ? editingUser : user));
-
-        setIsEditDialogOpen(false);
-      } catch (error) {
-        console.error("Error updating user:", error);
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to update user: ${errorText}`)
       }
+
+      setUsers(users.map((user) => 
+        user.user_id === editingUser.user_id ? editingUser : user
+      ))
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+    } catch (error) {
+      console.error("Error updating user:", error)
+      setError(error.message)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -83,31 +97,39 @@ export function UserList() {
   }
 
   const confirmDelete = async () => {
-    if (userToDelete) {
-        try {
-            const response = await fetch("http://localhost:8080/delete-user", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ user_id: userToDelete }),
-            });
+    if (userToDelete === null) return
 
-            if (!response.ok) {
-                throw new Error("Failed to delete user");
-            }
+    setIsLoading(true)
+    try {
+      const response = await fetch("http://localhost:8080/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user_id: userToDelete }),
+      })
 
-            // Update state after successful deletion
-            setUsers(users.filter((user) => user.user_id !== userToDelete));
-            setIsDeleteDialogOpen(false);
-        } catch (error) {
-            console.error("Error deleting user:", error);
-        }
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to delete user: ${response.status} - ${errorText}`)
+      }
+
+      setUsers(users.filter((user) => user.user_id !== userToDelete))
+      setIsDeleteDialogOpen(false)
+      setUserToDelete(null)
+    } catch (error) {
+      console.error("Error deleting user:", error)
+      setError(error.message)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {isLoading && <div className="text-center">Loading...</div>}
+      
       <Table>
         <TableHeader>
           <TableRow>
@@ -125,11 +147,21 @@ export function UserList() {
               <TableCell>{user.role}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEdit(user)}
+                    disabled={isLoading}
+                  >
                     <Pencil className="h-4 w-4 mr-1" />
                     Edit
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(user.user_id)}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDelete(user.user_id)}
+                    disabled={isLoading}
+                  >
                     <Trash2 className="h-4 w-4 mr-1" />
                     Delete
                   </Button>
@@ -154,8 +186,11 @@ export function UserList() {
                 <Input
                   id="name"
                   value={editingUser?.name || ""}
-                  onChange={(e) => setEditingUser((prev) => (prev ? { ...prev, name: e.target.value } : null))}
+                  onChange={(e) => setEditingUser((prev) => 
+                    prev ? { ...prev, name: e.target.value } : null
+                  )}
                   className="col-span-3"
+                  disabled={isLoading}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -165,8 +200,11 @@ export function UserList() {
                 <Input
                   id="email"
                   value={editingUser?.email || ""}
-                  onChange={(e) => setEditingUser((prev) => (prev ? { ...prev, email: e.target.value } : null))}
+                  onChange={(e) => setEditingUser((prev) => 
+                    prev ? { ...prev, email: e.target.value } : null
+                  )}
                   className="col-span-3"
+                  disabled={isLoading}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -175,21 +213,26 @@ export function UserList() {
                 </Label>
                 <Select
                   value={editingUser?.role || ""}
-                  onValueChange={(value) => setEditingUser((prev) => (prev ? { ...prev, role: value } : null))}
+                  onValueChange={(value) => setEditingUser((prev) => 
+                    prev ? { ...prev, role: value } : null
+                  )}
+                  disabled={isLoading}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="instructor">Instructor</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="Student">Student</SelectItem>
+                    <SelectItem value="Instructor">Instructor</SelectItem>
+                    <SelectItem value="Admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Saving..." : "Save changes"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -202,11 +245,19 @@ export function UserList() {
           </DialogHeader>
           <p>Are you sure you want to delete this user? This action cannot be undone.</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={isLoading}
+            >
+              {isLoading ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

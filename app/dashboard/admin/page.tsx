@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -29,7 +29,7 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, sendEmailVerificati
 import { auth, db } from "@/lib/firebaseConfig";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
 import { IoIosNotifications } from "react-icons/io";
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, getDocs } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -44,6 +44,9 @@ export default function AdminDashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [acknowledgedVerifiedUsers, setAcknowledgedVerifiedUsers] = useState<string[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [refreshUserList, setRefreshUserList] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false); // New state for create user loading
 
   const handleSchoolSelect = (name: string, placeId: any) => {
     setSelectedSchool({ school_name: name, school_id: placeId });
@@ -68,7 +71,7 @@ export default function AdminDashboard() {
       console.log("onAuthStateChanged triggered, user:", user?.uid, "current admin userId:", userId);
       if (user) {
         const uid = user.uid;
-        if (!userId) setUserId(uid); // Set initial admin UID only if not already set
+        if (!userId) setUserId(uid);
         const token = await user.getIdToken();
 
         const response = await fetch("http://127.0.0.1:8080/check-role", {
@@ -78,7 +81,6 @@ export default function AdminDashboard() {
         });
         const data = await response.json();
 
-        // Only redirect if the current user's role is not admin
         if (data.role !== "admin" && uid === userId) {
           router.push(`/dashboard/${data.role}`);
         } else if (data.role === "admin") {
@@ -90,7 +92,6 @@ export default function AdminDashboard() {
           }
         }
       } else if (!user && userId) {
-        // Only redirect to login if the admin logs out
         router.push("/login");
       }
       setLoading(false);
@@ -128,31 +129,40 @@ export default function AdminDashboard() {
     console.log("Step 1: Form submission prevented");
 
     if (!newUser.name || !newUser.email || !newUser.password || !newUser.role || !selectedSchool.school_name) {
-      setNotification("Please fill out all required fields");
+      setDialogError("Please fill out all required fields");
       console.log("Step 2: Validation failed");
       return;
     }
 
+    setCreatingUser(true); // Start loading
     try {
-      console.log("Step 3: Creating Firebase user");
-      
-      // Store current admin user before creating new user
+      console.log("Step 3: Checking if email already exists");
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", newUser.email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        setDialogError("Error: use client - This email is already in use.");
+        console.log("Step 4: Email already exists");
+        return;
+      }
+
+      console.log("Step 5: Creating Firebase user");
       const currentUser = auth.currentUser;
-      
       const userCredential = await createUserWithEmailAndPassword(auth, newUser.email, newUser.password);
       const user = userCredential.user;
-      console.log("Step 4: Firebase user created, UID:", user.uid);
+      console.log("Step 6: Firebase user created, UID:", user.uid);
 
-      console.log("Step 5: Sending verification email");
+      console.log("Step 7: Sending verification email");
       await sendEmailVerification(user);
-      console.log("Step 6: Verification email sent");
+      console.log("Step 8: Verification email sent");
 
-      // Immediately restore the admin session
       if (currentUser) {
         await auth.updateCurrentUser(currentUser);
       }
 
-      console.log("Step 7: Registering with backend");
+      console.log("Step 9: Registering with backend");
       const response = await fetch("http://localhost:8080/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,7 +175,7 @@ export default function AdminDashboard() {
           school_id: selectedSchool.school_id,
         }),
       });
-      console.log("Step 8: Backend response status:", response.status);
+      console.log("Step 10: Backend response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -173,23 +183,32 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json();
-      console.log("Step 9: User registered successfully:", data);
+      console.log("Step 11: User registered successfully:", data);
 
       setNotification("Account created successfully. A verification email has been sent to the user.");
       setIsCreateUserDialogOpen(false);
       setNewUser({ name: "", email: "", password: "", role: "" });
       setSelectedSchool({ school_name: "", school_id: "" });
-      console.log("Step 10: Form reset, dialog closed");
+      setDialogError(null);
+      setRefreshUserList((prev) => !prev);
+      console.log("Step 12: Form reset, dialog closed, user list refresh triggered");
 
     } catch (error: any) {
       console.error("Error creating user:", error.message);
       let errorMessage = "Error: Please try again.";
-      if (error.code === "auth/email-already-in-use") errorMessage = "Error: This email is already in use.";
-      else if (error.code === "auth/invalid-email") errorMessage = "Error: Invalid email format.";
-      else if (error.code === "auth/weak-password") errorMessage = "Error: Password must be at least 6 characters.";
-      else errorMessage = `Error: ${error.message}`;
-      setNotification(errorMessage);
-      console.log("Step 11: Error handled");
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "Error: use client - This email is already in use.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Error: Invalid email format.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Error: Password must be at least 6 characters.";
+      } else {
+        errorMessage = `Error: ${error.message}`;
+      }
+      setDialogError(errorMessage);
+      console.log("Step 13: Error handled");
+    } finally {
+      setCreatingUser(false); // Stop loading
     }
   };
 
@@ -230,9 +249,9 @@ export default function AdminDashboard() {
       <div className="relative">
         <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
         {notification && (
-          <div className="mb-4 p-4 bg-blue-100 text-blue-800 rounded flex justify-between">
+          <div className="mb-4 p-4 bg-gray-100 text-black-800 rounded flex justify-between">
             <span>{notification}</span>
-            <button onClick={() => setNotification(null)} className="text-blue-600 underline">
+            <button onClick={() => setNotification(null)} className="text-black-600 underline">
               Dismiss
             </button>
           </div>
@@ -247,6 +266,11 @@ export default function AdminDashboard() {
                   <DialogHeader><DialogTitle>Create New User</DialogTitle></DialogHeader>
                   <form onSubmit={handleCreateUser}>
                     <div className="grid gap-4 py-4">
+                      {dialogError && (
+                        <div className="p-2 bg-red-100 text-red-800 rounded text-sm">
+                          {dialogError}
+                        </div>
+                      )}
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">Name</Label>
                         <Input
@@ -254,6 +278,7 @@ export default function AdminDashboard() {
                           value={newUser.name}
                           onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                           className="col-span-3"
+                          disabled={creatingUser} // Disable input during loading
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
@@ -264,6 +289,7 @@ export default function AdminDashboard() {
                           value={newUser.email}
                           onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                           className="col-span-3"
+                          disabled={creatingUser} // Disable input during loading
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
@@ -274,15 +300,20 @@ export default function AdminDashboard() {
                           value={newUser.password}
                           onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                           className="col-span-3"
+                          disabled={creatingUser} // Disable input during loading
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="school" className="text-right">School</Label>
-                        <HighSchoolSearch onSelect={handleSchoolSelect} Style={"Management"} />
+                        <HighSchoolSearch onSelect={handleSchoolSelect} Style={"Management"} disabled={creatingUser} />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="role" className="text-right">Role</Label>
-                        <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                        <Select 
+                          value={newUser.role} 
+                          onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                          disabled={creatingUser} // Disable select during loading
+                        >
                           <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a role" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="student">student</SelectItem>
@@ -292,16 +323,18 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                     </div>
-                    <DialogFooter><Button type="submit">Create User</Button></DialogFooter>
+                    <DialogFooter>
+                      <Button type="submit" disabled={creatingUser}>
+                        {creatingUser ? "Creating..." : "Create User"}
+                      </Button>
+                    </DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Activity Monitoring</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Activity Monitoring</CardTitle></CardHeader>
             <CardContent>
               <Button onClick={() => router.push("/dashboard/admin/logs")}>
                 View Activity Logs
@@ -309,9 +342,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Resource Management</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Resource Management</CardTitle></CardHeader>
             <CardContent>
               <Button onClick={() => router.push("/dashboard/admin/resource-manager")}>
                 Upload Training Materials
@@ -323,12 +354,11 @@ export default function AdminDashboard() {
         <Tabs defaultValue="users" className="w-full">
           <TabsList>
             <TabsTrigger value="users">User List</TabsTrigger>
-
           </TabsList>
           <TabsContent value="users">
             <Card>
               <CardHeader><CardTitle>User List</CardTitle></CardHeader>
-              <CardContent><UserList /></CardContent>
+              <CardContent><UserList key={refreshUserList ? "refresh" : "static"} /></CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="chats">
