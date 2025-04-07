@@ -352,12 +352,12 @@ def upload_pdf():
         if not file.filename.endswith(".pdf"):
             return jsonify({"error": "Only PDF files are allowed"}), 400
 
-        id_token = request.form.get("idToken")
-        if not id_token:
-            return jsonify({"error": "Authentication token required"}), 401
-        decoded_token = auth.verify_id_token(id_token)
-        uid = decoded_token["uid"]
-        user_data = get_user_data(uid)
+        id_token = request.form.get("userId")
+        # if not id_token:
+        #     return jsonify({"error": "Authentication token required"}), 401
+        # decoded_token = auth.verify_id_token(id_token)
+        # uid = decoded_token["uid"]
+        user_data = get_user_data(id_token)
 
         filename = file.filename
         blob = bucket.blob(f"pdfs/{filename}")
@@ -366,7 +366,7 @@ def upload_pdf():
 
         log_ref = db.collection("logs").document()
         log_ref.set({
-            "user_id": uid,
+            "user_id": id_token,
             "email": user_data.get("email", "unknown"),
             "name": user_data.get("name", "unknown"),
             "role": user_data.get("role", "unknown"),

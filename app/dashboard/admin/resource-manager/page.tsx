@@ -21,9 +21,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import {type File, FileText, Plus, Trash2, Upload} from "lucide-react"
+import {onAuthStateChanged} from "firebase/auth";
+import {auth, db} from "@/lib/firebaseConfig";
+import {doc, getDoc} from "firebase/firestore";
+import {useRouter} from "next/navigation";
 
 export default function AdminPdfManager() {
+  const router = useRouter();
   const [pdfs, setPdfs] = useState([])
+  const [userId, setUserId] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [pdfToDelete, setPdfToDelete] = useState<string | null>(null)
@@ -32,7 +38,44 @@ export default function AdminPdfManager() {
   const [newPdf, setNewPdf] = useState({
     file: null as File | null,
   })
+  const [userRole, setUserRole] = useState<string | null>(null);
+    const [acknowledgedVerifiedUsers, setAcknowledgedVerifiedUsers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
+    // Auth state listener for admin only
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("onAuthStateChanged triggered, user:", user?.uid, "current admin userId:", userId);
+      if (user) {
+        const uid = user.uid;
+        if (!userId) setUserId(uid);
+        const token = await user.getIdToken();
+
+        const response = await fetch("http://127.0.0.1:8080/check-role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: token }),
+        });
+        const data = await response.json();
+
+        if (data.role !== "admin" && uid === userId) {
+          router.push(`/dashboard/${data.role}`);
+        } else if (data.role === "admin") {
+          setUserRole(data.role);
+          const userRef = doc(db, "users", uid);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            setAcknowledgedVerifiedUsers(userDoc.data().acknowledgedVerifiedUsers || []);
+          }
+        }
+      } else if (!user && userId) {
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, userId]);
 
     // Fetch user data on page load
   useEffect(() => {
@@ -57,6 +100,7 @@ export default function AdminPdfManager() {
 
     const formData = new FormData();
     formData.append("file", pdfUpload); // Send file as "file" key
+    formData.append("userId", userId);
 
     try {
       const response = await fetch("http://localhost:8080/upload-pdf", {
@@ -66,7 +110,10 @@ export default function AdminPdfManager() {
 
       const data = await response.json();
       if (response.ok) {
-        setUploadMessage(`File uploaded successfully! View: ${data.url}`);
+        // setUploadMessage(`File uploaded successfully! View: ${data.url}`);
+        toast.success("PDF uploaded", {
+          description: `${data.url} has been successfully deleted.`,
+        })
       } else {
         setUploadMessage(`Error: ${data.error}`);
       }
