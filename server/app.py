@@ -380,18 +380,43 @@ def upload_pdf():
         return jsonify({"error": str(e)}), 500
 
 # API route to delete a pdf from Firebase Storage
+# API route to delete a pdf from Firebase Storage
 @app.route("/delete-pdf", methods=["POST"])
 def delete_pdf():
     try:
-        file_name = request.json.get("file_name")
+        data = request.json
+        file_name = data.get("file_name")
+        id_token = data.get("idToken")  # Expect idToken from frontend
+
         if not file_name:
             return jsonify({"error": "File name is required"}), 400
+        if not id_token:
+            return jsonify({"error": "Authentication token required"}), 401
+
+        # Verify the user
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token["uid"]
+        user_data = get_user_data(uid)
 
         blob = bucket.blob(file_name)
         if not blob.exists():
             return jsonify({"error": "File not found"}), 404
 
+        # Delete the file from Firebase Storage
         blob.delete()
+
+        # Log the deletion action
+        log_ref = db.collection("logs").document()
+        log_ref.set({
+            "user_id": uid,
+            "email": user_data.get("email", "unknown"),
+            "name": user_data.get("name", "unknown"),
+            "role": user_data.get("role", "unknown"),
+            "timestamp": datetime.now().isoformat(),
+            "action": "PDF Deleted",
+            "filename": file_name
+        })
+
         return jsonify({"message": f"Successfully deleted {file_name}"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

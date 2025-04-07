@@ -144,35 +144,32 @@ export default function AdminPdfManager() {
   const confirmDelete = async () => {
     if (pdfToDelete) {
       try {
-        // Find the PDF object to get its name
-        const pdf = pdfs.find(p => p.id === pdfToDelete);
+        const pdf = pdfs.find((p) => p.id === pdfToDelete);
         if (!pdf) return;
-
-        // Make API call to delete the file
-        const response = await fetch('http://localhost:8080/delete-pdf', {
-          method: 'POST',
+  
+        // Get the current user's ID token
+        const idToken = await auth.currentUser?.getIdToken();
+  
+        const response = await fetch("http://localhost:8080/delete-pdf", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ file_name: pdf.name })
+          body: JSON.stringify({ file_name: pdf.name, idToken }), // Include idToken
         });
-
+  
         if (!response.ok) {
-          throw new Error('Failed to delete PDF');
+          throw new Error("Failed to delete PDF");
         }
-
-        // Update state only if deletion is successful
+  
         setPdfs(pdfs.filter((pdf) => pdf.id !== pdfToDelete));
         setIsDeleteDialogOpen(false);
         setPdfToDelete(null);
         toast.success("PDF Deleted", {
           description: `${pdfToDelete} has been successfully deleted.`,
-        })
-
+        });
       } catch (error) {
-        console.error('Error deleting PDF:', error);
-        // Optionally add error handling UI feedback here
-        // For example: setErrorMessage('Failed to delete PDF');
+        console.error("Error deleting PDF:", error);
       }
     }
   };
