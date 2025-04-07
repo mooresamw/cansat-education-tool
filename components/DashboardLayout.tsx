@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebaseConfig";
 import {
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "@/components/theme-toggle";
-import {Notifications} from "@/components/Notifications";
+import { Notifications } from "@/components/Notifications";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -38,27 +38,54 @@ const LOCAL_AVATARS = [
   { id: "avatar4", path: "/avatars/avatar4.png" },
   { id: "avatar5", path: "/avatars/avatar5.png" },
   { id: "avatar6", path: "/avatars/avatar6.png" },
-]
+];
 
-const getUser = () => {
-  return JSON.parse(localStorage.getItem("user") || "null");
-};
-
+// Move getUser inside the component and use useState/useEffect
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
-  const userData = getUser();
-  const userId = userData.user_id
+  const [userData, setUserData] = React.useState<any>(null); // Initialize as null
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = React.useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
-  const [avatarSeed, setAvatarSeed] = React.useState(() => userData?.avatarSeed || 1);
+  const [avatarSeed, setAvatarSeed] = React.useState<number | null>(null);
 
-  const avatarPath = LOCAL_AVATARS[avatarSeed - 1]?.path || LOCAL_AVATARS[0].path;
+  // Load user data from localStorage only on client-side
+  React.useEffect(() => {
+    const storedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    setUserData(parsedUser);
+    setAvatarSeed(parsedUser?.avatarSeed || 1);
+    setMounted(true); // Mark as mounted after first render
+  }, []);
 
-  // Sync with backend only on initial mount
+  const userId = userData?.user_id;
+  const avatarPath = LOCAL_AVATARS[(avatarSeed || 1) - 1]?.path || LOCAL_AVATARS[0].path;
+
+  // Role-based route protection
+  React.useEffect(() => {
+    if (!mounted || !userData) return; // Wait until mounted and userData is set
+
+    const userRole = userData.role as "admin" | "instructor" | "student";
+    const allowedRoutes = {
+      admin: ["/dashboard"], // Admin can access any dashboard route
+      instructor: ["/dashboard/instructor"],
+      student: ["/dashboard/student"],
+    };
+
+    const isAuthorized =
+      userRole === "admin"
+        ? pathname.startsWith("/dashboard") // Admin can access any /dashboard/* route
+        : allowedRoutes[userRole].some((route) => pathname.startsWith(route));
+
+    if (!isAuthorized) {
+      router.push(`/dashboard/${userRole}`);
+    }
+  }, [pathname, userData, router, mounted]);
+
+  // Sync avatar with backend
   React.useEffect(() => {
     const syncAvatarWithBackend = async () => {
-      setMounted(true);
-      if (!userData) return;
+      if (!userData || !mounted) return;
 
       try {
         const user = auth.currentUser;
@@ -67,7 +94,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           const response = await fetch("http://127.0.0.1:8080/user/avatar", {
             method: "GET",
             headers: {
-              "Authorization": `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           });
@@ -78,6 +105,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               setAvatarSeed(backendSeed);
               const updatedUser = { ...userData, avatarSeed: backendSeed };
               localStorage.setItem("user", JSON.stringify(updatedUser));
+              setUserData(updatedUser);
             }
           } else {
             const newSeed = 1;
@@ -85,6 +113,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             await saveAvatarSeedToBackend(newSeed, token);
             const updatedUser = { ...userData, avatarSeed: newSeed };
             localStorage.setItem("user", JSON.stringify(updatedUser));
+            setUserData(updatedUser);
           }
         } else if (!avatarSeed) {
           setAvatarSeed(1);
@@ -97,16 +126,19 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       }
     };
 
-    if (!mounted) {
+    if (mounted) {
       syncAvatarWithBackend();
     }
-  }, [mounted, userData]); // Removed avatarSeed from dependencies
+  }, [mounted, userData, avatarSeed]);
 
-  if (!userData) {
-    return <p className="text-center mt-10">Loading...</p>;
+  if (!mounted) {
+    return <p className="text-center mt-10">Loading...</p>; // Show loading until client-side mount
   }
 
-  userType = userData.role as "admin" | "instructor" | "student";
+  if (!userData) {
+    router.push("/"); // Redirect to login if no user data
+    return null;
+  }
 
   const handleSignOut = async () => {
     try {
@@ -123,7 +155,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         }
       }
 
-      await signOut(auth);
+      //await signOut(auth);
       localStorage.removeItem("user");
       router.push("/");
     } catch (error: any) {
@@ -136,7 +168,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       const response = await fetch("http://127.0.0.1:8080/user/avatar", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ avatarSeed: newSeed }),
@@ -164,6 +196,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       }
       const updatedUser = { ...userData, avatarSeed: newSeed };
       localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUserData(updatedUser);
     } catch (error) {
       console.error("Failed to update avatar:", error);
       setAvatarSeed(userData.avatarSeed || 1);
@@ -182,7 +215,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           </Link>
         </div>
         <nav className="space-y-1 px-2">
-          {userType === "admin" && (
+          {userData.role === "admin" && (
             <>
               <NavItem href="/dashboard/admin/logs" icon={<ActivityIcon className="h-4 w-4" />}>
                 Activity Monitoring
@@ -192,7 +225,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               </NavItem>
             </>
           )}
-          {userType === "instructor" && (
+          {userData.role === "instructor" && (
             <>
               <NavItem href="/dashboard/student/training-materials" icon={<FolderIcon className="h-4 w-4" />}>
                 Access Materials
@@ -205,7 +238,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               </NavItem>
             </>
           )}
-          {userType === "student" && (
+          {userData.role === "student" && (
             <>
               <NavItem
                 href="/dashboard/student/training-materials"
@@ -229,14 +262,12 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between border-b border-border px-6 py-6 bg-header">
-          <div className="relative w-72">
-
-          </div>
+          <div className="relative w-72"></div>
           <div className="flex items-center gap-16">
             <div className="relative w-8">
               <ThemeToggle />
             </div>
-            <Notifications userId={userId} userRole={userType} />
+            <Notifications userId={userId} userRole={userData.role} />
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -311,9 +342,11 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                                 target.src = "/avatars/avatar1.png";
                               }}
                             />
-                            <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
-                              avatarSeed === index + 1 ? 'bg-black/20' : ''
-                            }`}></div>
+                            <div
+                              className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
+                                avatarSeed === index + 1 ? "bg-black/20" : ""
+                              }`}
+                            ></div>
                           </button>
                         ))}
                       </div>
