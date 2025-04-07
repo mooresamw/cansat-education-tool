@@ -251,7 +251,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                     className="h-full w-full rounded-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "/avatars/default-avatar.png";
+                      target.src = "/avatars/avatar1.png";
                     }}
                   />
                 </Button>
@@ -268,7 +268,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                         className="h-full w-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = "/avatars/default-avatar.png";
+                          target.src = "/avatars/avatar1.png";
                         }}
                       />
                     </div>
@@ -308,7 +308,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = "/avatars/default-avatar.png";
+                                target.src = "/avatars/avatar1.png";
                               }}
                             />
                             <div className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
