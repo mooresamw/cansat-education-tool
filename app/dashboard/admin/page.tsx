@@ -369,12 +369,6 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
 
-        <div onClick={handleBellClick} className="fixed top-4 right-16 bg-blue-500 text-white rounded-full cursor-pointer shadow-lg flex items-center justify-center w-10 h-10">
-          <IoIosNotifications size={20} />
-          {verifiedUserCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{verifiedUserCount}</span>
-          )}
-        </div>
 
         {showNotifications && (
           <div className="fixed top-14 right-16 bg-white shadow-lg rounded-md p-4 w-72 z-10">

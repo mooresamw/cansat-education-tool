@@ -277,18 +277,7 @@ export default function StudentDashboard() {
             </Card>
           </div>
 
-          {/* Bell Icon */}
-          <div
-            onClick={handleBellClick}
-            className="fixed top-5 right-16 bg-blue-500 text-white rounded-full cursor-pointer shadow-lg flex items-center justify-center w-10 h-10"
-          >
-            <IoIosNotifications size={20} />
-            {(instructorUnreadCount + teamUnreadCount) > 0 && (
-              <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {instructorUnreadCount + teamUnreadCount}
-              </span>
-            )}
-          </div>
+          
 
           {/* Notification Dropdown */}
           {showNotifications && (
