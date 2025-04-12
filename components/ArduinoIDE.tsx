@@ -4,76 +4,110 @@ import { useState, useEffect } from "react"
 import Editor from "@monaco-editor/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight, Play, Lightbulb, HelpCircle, Lock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Play, Lightbulb, HelpCircle, Lock, CheckCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {sampleproblems} from "@/components/sampleproblems";
-import {getUser} from "@/lib/getUser";
+import { getUser } from "@/lib/getUser"
+import type { CodingProblem } from "@/lib/CodingProblem"
+import theme from "tailwindcss/defaultTheme";
 
-const problems = sampleproblems;
+interface ArduinoIDEProps {
+  problems: CodingProblem[]
+}
 
-
-export default function ArduinoIDE() {
+export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
   const [currentProblem, setCurrentProblem] = useState(0)
-  const [code, setCode] = useState(problems[currentProblem].initialCode)
+  const [code, setCode] = useState("")
   const [output, setOutput] = useState("")
   const [isCorrect, setIsCorrect] = useState(false)
-  const [progress, setProgress] = useState(new Array(problems.length).fill(false))
-  const [hintsUsed, setHintsUsed] = useState(new Array(problems.length).fill({ viewed: false, closed: false }))
-  const [hintAccordionOpen, setHintAccordionOpen] = useState(new Array(problems.length).fill(false))
-  const [explanationsAvailable, setExplanationsAvailable] = useState(new Array(problems.length).fill(false))
+  const [progress, setProgress] = useState<boolean[]>([])
+  const [hintsUsed, setHintsUsed] = useState<{ viewed: boolean; closed: boolean }[]>([])
+  const [hintAccordionOpen, setHintAccordionOpen] = useState<boolean[]>([])
+  const [explanationsAvailable, setExplanationsAvailable] = useState<boolean[]>([])
   const [userId, setUserId] = useState<string>("")
+  const [hintAction, setHintAction] = useState<"view" | "close" | null>(null)
 
-  // Fetch progress on page load
+  // Utility function to fix escaped newlines
+  const unescapeNewlines = (str: string): string => {
+    return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t")
+  }
+
   useEffect(() => {
-    const userData = getUser();
-    setUserId(userData.user_id);
+    // Initialize state based on problems length
+    setProgress(new Array(problems.length).fill(false))
+    setHintsUsed(new Array(problems.length).fill({ viewed: false, closed: false }))
+    setHintAccordionOpen(new Array(problems.length).fill(false))
+    setExplanationsAvailable(new Array(problems.length).fill(false))
+    setCode(problems.length > 0 ? unescapeNewlines(problems[0].initialCode) : "")
+
+    const userData = getUser()
+    setUserId(userData.user_id)
     const fetchProgress = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userData.user_id}&type=coding-problem`);
-        const data = await response.json();
+        const response = await fetch(
+          `http://localhost:8080/get-user-progress?user_id=${userData.user_id}&type=coding-problem`,
+        )
+        const data = await response.json()
 
-        if (Array.isArray(data)) {
-          const progressMap = new Map(data.map(item => [item.material_id, item.completed]));
-          const updatedProgress = problems.map(problem => progressMap.get(problem.id) || false);
-          setProgress(updatedProgress);
+        if (Array.isArray(data) && problems.length > 0) {
+          const progressMap = new Map(data.map((item) => [item.material_id, item.completed]))
+          const updatedProgress = problems.map((problem) => progressMap.get(problem.id) || false)
+          setProgress(updatedProgress)
 
-          // Automatically set `currentProblem` to the first incomplete problem
-          const nextProblemIndex = updatedProgress.findIndex(completed => !completed);
-          setCurrentProblem(nextProblemIndex !== -1 ? nextProblemIndex : 0);
-          setCode(problems[nextProblemIndex !== -1 ? nextProblemIndex : 0].initialCode);
+          const nextProblemIndex = updatedProgress.findIndex((completed) => !completed)
+          const safeIndex =
+            problems.length > 0
+              ? Math.min(Math.max(nextProblemIndex !== -1 ? nextProblemIndex : 0, 0), problems.length - 1)
+              : 0
+          setCurrentProblem(safeIndex)
+          setCode(problems[safeIndex] ? unescapeNewlines(problems[safeIndex].initialCode) : "")
         }
       } catch (error) {
-        console.error("Error fetching progress:", error);
+        console.error("Error fetching progress:", error)
+        if (problems.length > 0) {
+          setCurrentProblem(0)
+          setCode(unescapeNewlines(problems[0].initialCode))
+        }
       }
-    };
+    }
 
-    fetchProgress();
-  }, []);
+    fetchProgress()
+  }, [problems])
 
-  // Function to send code to backend to run
+  useEffect(() => {
+    if (hintAction) {
+      setHintsUsed((prev) => {
+        const newHintsUsed = [...prev]
+        if (hintAction === "view") {
+          newHintsUsed[currentProblem] = { ...newHintsUsed[currentProblem], viewed: true }
+        } else if (hintAction === "close") {
+          newHintsUsed[currentProblem] = { viewed: true, closed: true }
+        }
+        return newHintsUsed
+      })
+      setHintAction(null) // Reset hintAction after applying the effect
+    }
+  }, [hintAction, currentProblem])
+
   const runCode = async () => {
-    console.log(code)
     const response = await fetch("http://localhost:8080/run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-        });
-    const result = await response.json();
-
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    })
+    const result = await response.json()
     const output = result.output
     setOutput(output)
-    const correct = output === problems[currentProblem].expectedOutput
+    const correct = output === problems[currentProblem]?.expectedOutput
     setIsCorrect(correct)
-    console.log(output)
   }
 
   const handlePrevious = () => {
     if (currentProblem > 0) {
       setCurrentProblem(currentProblem - 1)
-      setCode(problems[currentProblem - 1].initialCode)
+      setCode(problems[currentProblem - 1] ? unescapeNewlines(problems[currentProblem - 1].initialCode) : "")
       setOutput("")
       setIsCorrect(false)
     }
@@ -82,18 +116,17 @@ export default function ArduinoIDE() {
   const handleNext = () => {
     if (currentProblem < problems.length - 1) {
       setCurrentProblem(currentProblem + 1)
-      setCode(problems[currentProblem + 1].initialCode)
+      setCode(problems[currentProblem + 1] ? unescapeNewlines(problems[currentProblem + 1].initialCode) : "")
       setOutput("")
       setIsCorrect(false)
     }
   }
 
-  // Student marks a problem as completed
   const markAsCompleted = async () => {
     if (isCorrect && !progress[currentProblem]) {
-      const updatedProgress = [...progress];
-      updatedProgress[currentProblem] = true;
-      setProgress(updatedProgress);
+      const updatedProgress = [...progress]
+      updatedProgress[currentProblem] = true
+      setProgress(updatedProgress)
 
       try {
         const requestBody = {
@@ -104,46 +137,58 @@ export default function ArduinoIDE() {
           completed: true,
           completion_date: new Date().toISOString(),
           accessed_at: new Date().toISOString(),
-        };
+        }
 
         const response = await fetch("http://localhost:8080/mark-progress", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
-        });
+        })
 
         if (!response.ok) {
-          console.error("Failed to update progress:", await response.text());
+          console.error("Failed to update progress:", await response.text())
         }
       } catch (error) {
-        console.error("Error updating progress:", error);
+        console.error("Error updating progress:", error)
       }
     }
-  };
-
-
-  const useHint = (action: "view" | "close") => {
-    setHintsUsed((prev) => {
-      const newHintsUsed = [...prev]
-      if (action === "view") {
-        newHintsUsed[currentProblem] = { ...newHintsUsed[currentProblem], viewed: true }
-      } else if (action === "close") {
-        newHintsUsed[currentProblem] = { viewed: true, closed: true }
-      }
-      return newHintsUsed
-    })
   }
 
   const toggleHintAccordion = () => {
     setHintAccordionOpen((prev) => {
       const newHintAccordionOpen = [...prev]
       newHintAccordionOpen[currentProblem] = !newHintAccordionOpen[currentProblem]
-      useHint(newHintAccordionOpen[currentProblem] ? "view" : "close") // Moved useHint call outside conditional
+      setHintAction(newHintAccordionOpen[currentProblem] ? "view" : "close")
       return newHintAccordionOpen
     })
   }
 
   const completedCount = progress.filter(Boolean).length
+
+  // Function to get difficulty badge color
+  const getDifficultyBadgeClass = (difficulty: string) => {
+    switch (difficulty) {
+      case "Easy":
+        return "bg-green-100 text-green-800"
+      case "Medium":
+        return "bg-yellow-500 text-amber-900"
+      case "Hard":
+        return "bg-red-500 text-white"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  if (!problems || problems.length === 0) {
+    return (
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertTitle>No Problems Available</AlertTitle>
+          <AlertDescription>No coding problems were loaded. Please try again or contact support.</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -157,19 +202,38 @@ export default function ArduinoIDE() {
         <Card className="col-span-1">
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle>{problems[currentProblem].title}</CardTitle>
-              <Badge variant={problems[currentProblem].difficulty === "Easy" ? "secondary" : "destructive"}>
-                {problems[currentProblem].difficulty}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <CardTitle>
+                  {problems.length > 0 && currentProblem >= 0 && currentProblem < problems.length
+                    ? problems[currentProblem].title
+                    : "Loading Problem..."}
+                </CardTitle>
+                {progress[currentProblem] && (
+                  <Badge className="bg-green-500 text-white flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" /> Completed
+                  </Badge>
+                )}
+              </div>
+              <div
+                className={`px-2 py-1 rounded-full text-xs ${
+                  problems.length > 0 && problems[currentProblem]?.difficulty
+                    ? getDifficultyBadgeClass(problems[currentProblem].difficulty)
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {problems.length > 0 && problems[currentProblem]?.difficulty
+                  ? problems[currentProblem].difficulty
+                  : "Unknown"}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">{problems[currentProblem].description}</p>
+            <p className="mb-4">{problems[currentProblem]?.description || "No description available."}</p>
             <Accordion type="single" collapsible value={hintAccordionOpen[currentProblem] ? "hint" : ""}>
               <AccordionItem value="hint">
-                <AccordionTrigger onClick={toggleHintAccordion} disabled={hintsUsed[currentProblem].closed}>
+                <AccordionTrigger onClick={toggleHintAccordion} disabled={hintsUsed[currentProblem]?.closed}>
                   <div className="flex items-center">
-                    {hintsUsed[currentProblem].closed ? (
+                    {hintsUsed[currentProblem]?.closed ? (
                       <Lock className="w-4 h-4 mr-2" />
                     ) : (
                       <Lightbulb className="w-4 h-4 mr-2" />
@@ -177,7 +241,7 @@ export default function ArduinoIDE() {
                     Hint
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>{problems[currentProblem].hint}</AccordionContent>
+                <AccordionContent>{problems[currentProblem]?.hint || "No hint available."}</AccordionContent>
               </AccordionItem>
               <AccordionItem value="explanation">
                 <AccordionTrigger disabled={!explanationsAvailable[currentProblem]}>
@@ -190,7 +254,9 @@ export default function ArduinoIDE() {
                     Explanation
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>{problems[currentProblem].explanation}</AccordionContent>
+                <AccordionContent>
+                  {problems[currentProblem]?.explanation || "No explanation available."}
+                </AccordionContent>
               </AccordionItem>
             </Accordion>
           </CardContent>
@@ -207,6 +273,9 @@ export default function ArduinoIDE() {
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
                   fontSize: 14,
+                  tabSize: 2,
+                  insertSpaces: true,
+                  theme: "vs-light",
                 }}
               />
             </CardContent>
@@ -216,8 +285,8 @@ export default function ArduinoIDE() {
               <CardTitle>Output</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-                <code>{output || "No output yet. Run your code to see the results."}</code>
+              <pre className="bg-accent p-4 rounded-md overflow-x-auto">
+                <code className="text-primary">{output || "No output yet. Run your code to see the results."}</code>
               </pre>
               {output && (
                 <Alert className="mt-4" variant={isCorrect ? "default" : "destructive"}>
