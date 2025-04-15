@@ -1,3 +1,5 @@
+import os
+import re
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import firestore, credentials, auth, storage
@@ -648,11 +650,38 @@ def run_code():
         temp.close()
 
         try:
-            subprocess.check_output(["g++", temp.name, "-o", "arduino_sim"])
+            # Compile the code
+            compile_result = subprocess.run(
+                ["g++", temp.name, "-o", "arduino_sim"],
+                capture_output=True,
+                text=True
+            )
+            if compile_result.returncode != 0:
+                # Compilation failed, extract error message
+                error_message = compile_result.stderr
+                # Remove file path like /var/folders/.../tmp3pu1i8rh.cpp:25:33:
+                error_message = re.sub(r'/[^:]+:\d+:\d+:', '', error_message)
+                # Extract the relevant error line
+                error_lines = error_message.splitlines()
+                relevant_error = next(
+                    (line for line in error_lines if "error:" in line),
+                    error_message.strip()  # Fallback to cleaned error message
+                )
+                return jsonify({"error": relevant_error.strip()})
+
+            # If compilation succeeded, run the program
             result = subprocess.check_output(["./arduino_sim"]).decode()
             return jsonify({"output": result})
+
         except subprocess.CalledProcessError as e:
+            # Handle runtime errors (if any)
             return jsonify({"error": e.output.decode()})
+        finally:
+            # Clean up temporary files
+            if os.path.exists("arduino_sim"):
+                os.remove("arduino_sim")
+            if os.path.exists(temp.name):
+                os.remove(temp.name)
 
 if __name__ == "__main__":
     app.run(debug=True, port=8080)

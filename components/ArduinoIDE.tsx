@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getUser } from "@/lib/getUser"
 import type { CodingProblem } from "@/lib/CodingProblem"
-import theme from "tailwindcss/defaultTheme";
+import { Loader2 } from "lucide-react"
 
 interface ArduinoIDEProps {
   problems: CodingProblem[]
@@ -21,13 +21,14 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
   const [currentProblem, setCurrentProblem] = useState(0)
   const [code, setCode] = useState("")
   const [output, setOutput] = useState("")
+  const [error, setError] = useState("")
   const [isCorrect, setIsCorrect] = useState(false)
   const [progress, setProgress] = useState<boolean[]>([])
   const [hintsUsed, setHintsUsed] = useState<{ viewed: boolean; closed: boolean }[]>([])
-  const [hintAccordionOpen, setHintAccordionOpen] = useState<boolean[]>([])
-  const [explanationsAvailable, setExplanationsAvailable] = useState<boolean[]>([])
+  const [accordionState, setAccordionState] = useState<{ hint: boolean; explanation: boolean }[]>([])
   const [userId, setUserId] = useState<string>("")
   const [hintAction, setHintAction] = useState<"view" | "close" | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
 
   // Utility function to fix escaped newlines
   const unescapeNewlines = (str: string): string => {
@@ -38,8 +39,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     // Initialize state based on problems length
     setProgress(new Array(problems.length).fill(false))
     setHintsUsed(new Array(problems.length).fill({ viewed: false, closed: false }))
-    setHintAccordionOpen(new Array(problems.length).fill(false))
-    setExplanationsAvailable(new Array(problems.length).fill(false))
+    setAccordionState(new Array(problems.length).fill({ hint: false, explanation: false }))
     setCode(problems.length > 0 ? unescapeNewlines(problems[0].initialCode) : "")
 
     const userData = getUser()
@@ -92,16 +92,31 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
   }, [hintAction, currentProblem])
 
   const runCode = async () => {
-    const response = await fetch("http://localhost:8080/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    })
-    const result = await response.json()
-    const output = result.output
-    setOutput(output)
-    const correct = output === problems[currentProblem]?.expectedOutput
-    setIsCorrect(correct)
+    setIsRunning(true)
+    setOutput("")
+    setError("")
+    try {
+      const response = await fetch("http://localhost:8080/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      })
+      const result = await response.json()
+      if (result.error) {
+        setError(result.error)
+        setIsCorrect(false)
+      } else {
+        const output = result.output
+        setOutput(output)
+        const correct = output === problems[currentProblem]?.expectedOutput
+        setIsCorrect(correct)
+      }
+    } catch (error) {
+      setError("Error: Failed to run code. Please try again.")
+      setIsCorrect(false)
+    } finally {
+      setIsRunning(false)
+    }
   }
 
   const handlePrevious = () => {
@@ -109,6 +124,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
       setCurrentProblem(currentProblem - 1)
       setCode(problems[currentProblem - 1] ? unescapeNewlines(problems[currentProblem - 1].initialCode) : "")
       setOutput("")
+      setError("")
       setIsCorrect(false)
     }
   }
@@ -118,6 +134,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
       setCurrentProblem(currentProblem + 1)
       setCode(problems[currentProblem + 1] ? unescapeNewlines(problems[currentProblem + 1].initialCode) : "")
       setOutput("")
+      setError("")
       setIsCorrect(false)
     }
   }
@@ -154,12 +171,20 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     }
   }
 
-  const toggleHintAccordion = () => {
-    setHintAccordionOpen((prev) => {
-      const newHintAccordionOpen = [...prev]
-      newHintAccordionOpen[currentProblem] = !newHintAccordionOpen[currentProblem]
-      setHintAction(newHintAccordionOpen[currentProblem] ? "view" : "close")
-      return newHintAccordionOpen
+  const toggleAccordion = (type: "hint" | "explanation") => {
+    if (type === "explanation" && !progress[currentProblem]) {
+      return; // Prevent opening explanation if not completed
+    }
+    setAccordionState((prev) => {
+      const newState = [...prev]
+      newState[currentProblem] = {
+        ...newState[currentProblem],
+        [type]: !newState[currentProblem][type],
+      }
+      if (type === "hint") {
+        setHintAction(newState[currentProblem].hint ? "view" : "close")
+      }
+      return newState
     })
   }
 
@@ -229,9 +254,15 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
           </CardHeader>
           <CardContent>
             <p className="mb-4">{problems[currentProblem]?.description || "No description available."}</p>
-            <Accordion type="single" collapsible value={hintAccordionOpen[currentProblem] ? "hint" : ""}>
+            <Accordion
+              type="multiple"
+              value={[
+                accordionState[currentProblem]?.hint ? "hint" : "",
+                accordionState[currentProblem]?.explanation ? "explanation" : "",
+              ].filter(Boolean)}
+            >
               <AccordionItem value="hint">
-                <AccordionTrigger onClick={toggleHintAccordion} disabled={hintsUsed[currentProblem]?.closed}>
+                <AccordionTrigger onClick={() => toggleAccordion("hint")} disabled={hintsUsed[currentProblem]?.closed}>
                   <div className="flex items-center">
                     {hintsUsed[currentProblem]?.closed ? (
                       <Lock className="w-4 h-4 mr-2" />
@@ -244,9 +275,9 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
                 <AccordionContent>{problems[currentProblem]?.hint || "No hint available."}</AccordionContent>
               </AccordionItem>
               <AccordionItem value="explanation">
-                <AccordionTrigger disabled={!explanationsAvailable[currentProblem]}>
+                <AccordionTrigger onClick={() => toggleAccordion("explanation")}>
                   <div className="flex items-center">
-                    {explanationsAvailable[currentProblem] ? (
+                    {progress[currentProblem] ? (
                       <HelpCircle className="w-4 h-4 mr-2" />
                     ) : (
                       <Lock className="w-4 h-4 mr-2" />
@@ -285,10 +316,19 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
               <CardTitle>Output</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="bg-accent p-4 rounded-md overflow-x-auto">
-                <code className="text-primary">{output || "No output yet. Run your code to see the results."}</code>
+              <pre className="bg-accent p-4 rounded-md min-h-[100px] text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {isRunning ? (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                    <span className="text-sm text-muted-foreground">Running your code...</span>
+                  </div>
+                ) : error ? (
+                  <code className="text-red-500">{error}</code>
+                ) : (
+                  <code className="text-primary">{output || "No output yet. Run your code to see the results."}</code>
+                )}
               </pre>
-              {output && (
+              {output && !isRunning && !error && (
                 <Alert className="mt-4" variant={isCorrect ? "default" : "destructive"}>
                   <AlertTitle>{isCorrect ? "Correct!" : "Incorrect"}</AlertTitle>
                   <AlertDescription>
@@ -312,8 +352,16 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <Button onClick={runCode} variant="default">
-            <Play className="mr-2 h-4 w-4" /> Run Code
+          <Button onClick={runCode} variant="default" disabled={isRunning}>
+            {isRunning ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-4 w-4" /> Run Code
+              </>
+            )}
           </Button>
           <Button onClick={markAsCompleted} variant="secondary" disabled={!isCorrect || progress[currentProblem]}>
             Mark as Completed
