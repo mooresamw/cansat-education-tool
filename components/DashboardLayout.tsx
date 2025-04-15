@@ -68,7 +68,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     const userRole = userData.role as "admin" | "instructor" | "student";
     const allowedRoutes = {
       admin: ["/dashboard"], // Admin can access any dashboard route
-      instructor: ["/dashboard/instructor"],
+      instructor: ["/dashboard/instructor", "/dashboard/student"],
       student: ["/dashboard/student"],
     };
 
@@ -211,7 +211,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             href={`/dashboard/${userData.role}`}
             className="text-lg font-bold hover:text-primary transition-colors"
           >
-            CanSat Educational
+            CanSat Education Tool
           </Link>
         </div>
         <nav className="space-y-1 px-2">
@@ -253,7 +253,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 Collaboration Tools
               </NavItem>
               <NavItem href="/dashboard/student/message" icon={<MessageCircleIcon className="h-4 w-4" />}>
-                Direct Messaging
+                Instructor Communication
               </NavItem>
             </>
           )}
@@ -261,7 +261,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       </aside>
 
       <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between border-b border-border px-6 py-6 bg-header">
+        <header className="flex items-center justify-between border-b border-border px-3 py-3 bg-header">
           <div className="relative w-72"></div>
           <div className="flex items-center gap-16">
             <div className="relative w-8">

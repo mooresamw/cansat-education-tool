@@ -240,8 +240,7 @@ export default function StudentMessagePage() {
                     <h2 className="text-lg font-semibold text-primary">
                       {selectedChat.name}
                     </h2>
-                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                      Active now
+                    <span className="">
                     </span>
                   </div>
                 </div>

@@ -445,9 +445,9 @@ export default function InstructorDashboard() {
 
           {showClockHistory && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-              <div className="bg-gray-900 border border-gray-800 rounded-md p-6 w-full max-w-2xl">
+              <div className="bg-card border border-gray-800 rounded-md p-6 w-full max-w-2xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-white">Clock-In/Out History</h3>
+                  <h3 className="text-xl font-bold text-primary">Clock-In/Out History</h3>
                   <div className="space-x-2">
                     <Button
                       onClick={handleViewHistoryInNewTab}
@@ -467,7 +467,7 @@ export default function InstructorDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-gray-700 text-white">
+                        <tr className="border-b border-gray-700 text-primary">
                           <th className="py-2">Date</th>
                           <th className="py-2">Clock-In</th>
                           <th className="py-2">Clock-Out</th>
@@ -480,7 +480,7 @@ export default function InstructorDashboard() {
                             const clockInTime = entry.clockInTimestamp?.toDate();
                             const clockOutTime = entry.timestamp.toDate();
                             return (
-                              <tr key={index} className="border-b border-gray-800 text-white">
+                              <tr key={index} className="border-b border-accent text-primary">
                                 <td className="py-2">{clockInTime?.toLocaleDateString()}</td>
                                 <td className="py-2">{clockInTime?.toLocaleTimeString()}</td>
                                 <td className="py-2">{clockOutTime?.toLocaleTimeString()}</td>

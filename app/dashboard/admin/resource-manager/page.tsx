@@ -35,6 +35,19 @@ import Editor from "@monaco-editor/react"
 const escapeToNewlines = (str: string) => (str ? str.replace(/\\n/g, "\n") : "")
 const newlinesToEscape = (str: string) => (str ? str.replace(/\n/g, "\\n") : "")
 
+// Custom dialog content styles
+const customDialogStyles = {
+  width: "900px",
+  height: "600px",
+  maxWidth: "900px",
+  maxHeight: "600px",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  top: "50%",
+  left: "50%"
+}
+
 export default function AdminPdfManager() {
   const router = useRouter()
   const [pdfs, setPdfs] = useState([])
@@ -534,227 +547,239 @@ export default function AdminPdfManager() {
 
       {/* Add Coding Problem Dialog */}
       <Dialog open={isAddProblemDialogOpen} onOpenChange={setIsAddProblemDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Coding Problem</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddProblem}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="problem-id">Problem ID</Label>
-                  <Input
-                    id="problem-id"
-                    placeholder="arduino-id#"
-                    value={newProblem.id}
-                    onChange={(e) => setNewProblem({ ...newProblem, id: e.target.value })}
-                    required
-                  />
+        <DialogContent style={customDialogStyles} className="fixed inset-0 m-auto">
+          <div className="flex flex-col h-full w-full">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>Add New Coding Problem</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <form onSubmit={handleAddProblem} className="h-full">
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="problem-id">Problem ID</Label>
+                      <Input
+                        id="problem-id"
+                        placeholder="arduino-id#"
+                        value={newProblem.id}
+                        onChange={(e) => setNewProblem({ ...newProblem, id: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="problem-difficulty">Difficulty</Label>
+                      <Select
+                        value={newProblem.difficulty}
+                        onValueChange={(value) => setNewProblem({ ...newProblem, difficulty: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={5} align="start">
+                          <SelectItem value="Easy">Easy</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Hard">Hard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-title">Title</Label>
+                    <Input
+                      id="problem-title"
+                      placeholder="Problem title"
+                      value={newProblem.title}
+                      onChange={(e) => setNewProblem({ ...newProblem, title: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-description">Description</Label>
+                    <Textarea
+                      id="problem-description"
+                      placeholder="Problem description"
+                      value={newProblem.description}
+                      onChange={(e) => setNewProblem({ ...newProblem, description: e.target.value })}
+                      required
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-initial-code">Initial Code</Label>
+                    <div className="border rounded-md">
+                      <Editor
+                        height="180px"
+                        defaultLanguage="cpp"
+                        value={newProblem.initialCode}
+                        onChange={(value) => setNewProblem({ ...newProblem, initialCode: value || "" })}
+                        options={{
+                          minimap: { enabled: false },
+                          scrollBeyondLastLine: false,
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-hint">Hint</Label>
+                    <Textarea
+                      id="problem-hint"
+                      placeholder="Hint for solving the problem"
+                      value={newProblem.hint}
+                      onChange={(e) => setNewProblem({ ...newProblem, hint: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-explanation">Explanation</Label>
+                    <Textarea
+                      id="problem-explanation"
+                      placeholder="Explanation of the solution"
+                      value={newProblem.explanation}
+                      onChange={(e) => setNewProblem({ ...newProblem, explanation: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="problem-expected-output">Expected Output</Label>
+                    <Textarea
+                      id="problem-expected-output"
+                      placeholder="Expected output of the solution"
+                      value={newProblem.expectedOutput}
+                      onChange={(e) => setNewProblem({ ...newProblem, expectedOutput: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="problem-difficulty">Difficulty</Label>
-                  <Select
-                    value={newProblem.difficulty}
-                    onValueChange={(value) => setNewProblem({ ...newProblem, difficulty: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Easy">Easy</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-title">Title</Label>
-                <Input
-                  id="problem-title"
-                  placeholder="Problem title"
-                  value={newProblem.title}
-                  onChange={(e) => setNewProblem({ ...newProblem, title: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-description">Description</Label>
-                <Textarea
-                  id="problem-description"
-                  placeholder="Problem description"
-                  value={newProblem.description}
-                  onChange={(e) => setNewProblem({ ...newProblem, description: e.target.value })}
-                  required
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-initial-code">Initial Code</Label>
-                <Editor
-                  height="200px"
-                  defaultLanguage="cpp"
-                  value={newProblem.initialCode}
-                  onChange={(value) => setNewProblem({ ...newProblem, initialCode: value || "" })}
-                  options={{
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    fontSize: 14,
-                  }}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-hint">Hint</Label>
-                <Textarea
-                  id="problem-hint"
-                  placeholder="Hint for solving the problem"
-                  value={newProblem.hint}
-                  onChange={(e) => setNewProblem({ ...newProblem, hint: e.target.value })}
-                  rows={2}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-explanation">Explanation</Label>
-                <Textarea
-                  id="problem-explanation"
-                  placeholder="Explanation of the solution"
-                  value={newProblem.explanation}
-                  onChange={(e) => setNewProblem({ ...newProblem, explanation: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="problem-expected-output">Expected Output</Label>
-                <Textarea
-                  id="problem-expected-output"
-                  placeholder="Expected output of the solution"
-                  value={newProblem.expectedOutput}
-                  onChange={(e) => setNewProblem({ ...newProblem, expectedOutput: e.target.value })}
-                  rows={2}
-                />
-              </div>
+                <DialogFooter className="mt-4">
+                  <Button type="submit">Add Problem</Button>
+                </DialogFooter>
+              </form>
             </div>
-            <DialogFooter>
-              <Button type="submit">Add Problem</Button>
-            </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Coding Problem Dialog */}
       <Dialog open={isEditProblemDialogOpen} onOpenChange={setIsEditProblemDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Coding Problem</DialogTitle>
-          </DialogHeader>
-          {editingProblem && (
-            <form onSubmit={handleUpdateProblem}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-problem-id">Problem ID</Label>
-                    <Input id="edit-problem-id" value={editingProblem.id} disabled className="bg-gray-100" />
+        <DialogContent style={customDialogStyles} className="fixed inset-0 m-auto">
+          <div className="flex flex-col h-full w-full">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>Edit Coding Problem</DialogTitle>
+            </DialogHeader>
+            {editingProblem && (
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <form onSubmit={handleUpdateProblem} className="h-full">
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="edit-problem-id">Problem ID</Label>
+                        <Input id="edit-problem-id" value={editingProblem.id} disabled className="bg-gray-100" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="edit-problem-difficulty">Difficulty</Label>
+                        <Select
+                          value={editingProblem.difficulty}
+                          onValueChange={(value) => setEditingProblem({ ...editingProblem, difficulty: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select difficulty" />
+                          </SelectTrigger>
+                          <SelectContent position="popper" sideOffset={5} align="start">
+                            <SelectItem value="Easy">Easy</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Hard">Hard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-title">Title</Label>
+                      <Input
+                        id="edit-problem-title"
+                        placeholder="Problem title"
+                        value={editingProblem.title}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, title: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-description">Description</Label>
+                      <Textarea
+                        id="edit-problem-description"
+                        placeholder="Problem description"
+                        value={editingProblem.description}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, description: e.target.value })}
+                        required
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-initial-code">Initial Code</Label>
+                      <div className="border rounded-md">
+                        <Editor
+                          height="180px"
+                          defaultLanguage="cpp"
+                          value={editingProblem.initialCode}
+                          onChange={(value) => setEditingProblem({ ...editingProblem, initialCode: value || "" })}
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            fontSize: 14,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-hint">Hint</Label>
+                      <Textarea
+                        id="edit-problem-hint"
+                        placeholder="Hint for solving the problem"
+                        value={editingProblem.hint}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, hint: e.target.value })}
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-explanation">Explanation</Label>
+                      <Textarea
+                        id="edit-problem-explanation"
+                        placeholder="Explanation of the solution"
+                        value={editingProblem.explanation}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, explanation: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-problem-expected-output">Expected Output</Label>
+                      <Textarea
+                        id="edit-problem-expected-output"
+                        placeholder="Expected output of the solution"
+                        value={editingProblem.expectedOutput}
+                        onChange={(e) => setEditingProblem({ ...editingProblem, expectedOutput: e.target.value })}
+                        rows={2}
+                      />
+                    </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-problem-difficulty">Difficulty</Label>
-                    <Select
-                      value={editingProblem.difficulty}
-                      onValueChange={(value) => setEditingProblem({ ...editingProblem, difficulty: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select difficulty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Easy">Easy</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Hard">Hard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-title">Title</Label>
-                  <Input
-                    id="edit-problem-title"
-                    placeholder="Problem title"
-                    value={editingProblem.title}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, title: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-description">Description</Label>
-                  <Textarea
-                    id="edit-problem-description"
-                    placeholder="Problem description"
-                    value={editingProblem.description}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, description: e.target.value })}
-                    required
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-initial-code">Initial Code</Label>
-                  <Editor
-                    height="200px"
-                    defaultLanguage="cpp"
-                    value={editingProblem.initialCode}
-                    onChange={(value) => setEditingProblem({ ...editingProblem, initialCode: value || "" })}
-                    options={{
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      fontSize: 14,
-                    }}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-hint">Hint</Label>
-                  <Textarea
-                    id="edit-problem-hint"
-                    placeholder="Hint for solving the problem"
-                    value={editingProblem.hint}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, hint: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-explanation">Explanation</Label>
-                  <Textarea
-                    id="edit-problem-explanation"
-                    placeholder="Explanation of the solution"
-                    value={editingProblem.explanation}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, explanation: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-problem-expected-output">Expected Output</Label>
-                  <Textarea
-                    id="edit-problem-expected-output"
-                    placeholder="Expected output of the solution"
-                    value={editingProblem.expectedOutput}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, expectedOutput: e.target.value })}
-                    rows={2}
-                  />
-                </div>
+                  <DialogFooter className="mt-4">
+                    <Button type="submit">Update Problem</Button>
+                  </DialogFooter>
+                </form>
               </div>
-              <DialogFooter>
-                <Button type="submit">Update Problem</Button>
-              </DialogFooter>
-            </form>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

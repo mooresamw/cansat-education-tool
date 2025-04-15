@@ -497,8 +497,8 @@ export default function StudentChatPage() {
                     {isGroupChat ? (
                       <p className="text-sm text-gray-500">{selectedChat.members.length} members</p>
                     ) : (
-                      <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                        Active now
+                      <span className="">
+
                       </span>
                     )}
                   </div>
