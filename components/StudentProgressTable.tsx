@@ -61,7 +61,7 @@ export function StudentProgressTable() {
             user_id: student.user_id,
             name: userData.name, // Assuming userData has `name`
             email: userData.email, // Assuming userData has `email`
-            total_materials: 12 /*student.items.length,*/,
+            total_materials: 29 /*student.items.length,*/,
             completed_materials: student.items.filter((item: any) => item.completed).length,
             last_activity: student.items[0]?.completion_date || student.items[0]?.accessed_at, // Use last activity timestamp
             items: student.items, // Store the items for later use
@@ -107,9 +107,9 @@ export function StudentProgressTable() {
   }
 
   const getProgressColor = (percentage: number) => {
-    if (percentage < 30) return "bg-red-600"
-    if (percentage < 70) return "bg-yellow-500"
-    return "bg-green-500"
+    if (percentage < 30) return "bg-accent"
+    if (percentage < 70) return "bg-accent"
+    return "bg-accent"
   }
 
   const filteredStudents = students.filter(
