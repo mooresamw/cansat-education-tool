@@ -104,7 +104,7 @@ const LoginSignupPage = () => {
       school_id: placeId,
     });
     setErrors((prev) => ({ ...prev, school: "" }));
-    console.log("Selected School:", name, "Place ID:", placeId);
+    //console.log("Selected School:", name, "Place ID:", placeId);
   };
 
   const validateForm = () => {
@@ -140,7 +140,7 @@ const LoginSignupPage = () => {
 
       await sendEmailVerification(user);
       setVerificationSent(true); // Indicate verification email was sent
-      console.log("Verification email sent to:", email);
+      //console.log("Verification email sent to:", email);
 
       const response = await fetch("http://localhost:8080/register", {
         method: "POST",

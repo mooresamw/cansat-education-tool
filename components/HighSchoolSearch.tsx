@@ -1,12 +1,13 @@
 "use client";
-import {useEffect, useRef, useState} from "react";
-import {FaBook} from "react-icons/fa";
-import {Input} from "@/components/ui/input";
+import { useEffect, useRef, useState } from "react";
+import { FaBook } from "react-icons/fa";
+import { Input } from "@/components/ui/input";
 
 const HighSchoolSearch = ({ onSelect, Style }) => {
   const inputRef = useRef(null);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (!query) {
@@ -27,12 +28,11 @@ const HighSchoolSearch = ({ onSelect, Style }) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Goog-Api-Key": apiKey, // Replace with your working key
+              "X-Goog-Api-Key": apiKey,
             },
             body: JSON.stringify({
-              input: `${query} high school`, // Bias toward high schools
+              input: `${query} `,
               includedRegionCodes: ["us"],
-              includedPrimaryTypes: ["school"], // Filter to schools
             }),
           }
         );
@@ -43,12 +43,11 @@ const HighSchoolSearch = ({ onSelect, Style }) => {
         }
 
         const data = await response.json();
-        // Filter suggestions to ensure "high school" is in the name
         const highSchoolSuggestions = (data.suggestions || []).filter((suggestion) =>
-          suggestion.placePrediction.text.text.toLowerCase().includes("high school")
+          suggestion.placePrediction.text.text.toLowerCase().includes("university")
         );
         setSuggestions(highSchoolSuggestions);
-        console.log("Filtered High School Predictions:", highSchoolSuggestions);
+        //console.log("Filtered High School Predictions:", highSchoolSuggestions);
       } catch (error) {
         console.error("Fetch Error:", error);
       }
@@ -63,63 +62,79 @@ const HighSchoolSearch = ({ onSelect, Style }) => {
     const placeName = suggestion.placePrediction.text.text;
     const placeId = suggestion.placePrediction.placeId;
     onSelect(placeName, placeId);
-    setQuery(placeName); // Update input with selected name
-    setSuggestions([]); // Clear suggestions
+    setQuery(placeName);
+    setSuggestions([]);
+    setIsFocused(false);
+    inputRef.current.blur(); // Unfocus only after selection
   };
 
-  if(Style === 'SignUp') {
+  const handleListMouseDown = (e) => {
+    e.preventDefault(); // Prevent blur when clicking the list
+  };
+
+  if (Style === 'SignUp') {
     return (
-        <div className="relative">
-          <FaBook className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-          <input
-              ref={inputRef}
-              type="text"
-              placeholder="Search for your high school"
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
-              value={query}
-              onChange={handleInput}
-          />
-          {suggestions.length > 0 && (
-              <ul className="absolute z-10 bg-white border rounded w-full mt-1 max-h-60 overflow-auto">
-                {suggestions.map((suggestion, index) => (
-                    <li
-                        key={index}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => handleSelect(suggestion)}
-                    >
-                      {suggestion.placePrediction.text.text}
-                    </li>
-                ))}
-              </ul>
-          )}
-        </div>
+      <div className="relative">
+        <FaBook className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search for your high school"
+          className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400 border border-gray-200"
+          value={query}
+          onChange={handleInput}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 100)} // Delay blur to allow click
+        />
+        {isFocused && suggestions.length > 0 && (
+          <ul
+            className="absolute z-10 bg-white border rounded w-full mt-1 max-h-60 overflow-auto"
+            onMouseDown={handleListMouseDown} // Prevent blur on list interaction
+          >
+            {suggestions.map((suggestion, index) => (
+              <li
+                key={index}
+                className="p-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleSelect(suggestion)}
+              >
+                {suggestion.placePrediction.text.text}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     );
   } else {
     return (
-        <>
+      <>
         <Input
-            id="name"
-            ref={inputRef}
-            value={query}
-            placeholder="Search for your high school"
-            onChange={handleInput}
-            className="col-span-3"
+          id="name"
+          ref={inputRef}
+          value={query}
+          placeholder="Search for your high school"
+          onChange={handleInput}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 100)} // Delay blur to allow click
+          className="col-span-3"
         />
-              {suggestions.length > 0 && (
-              <ul className="absolute z-10 bg-white border rounded mt-16 max-h-20 overflow-auto">
-                {suggestions.map((suggestion, index) => (
-                    <li
-                        key={index}
-                        className="p-1 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => handleSelect(suggestion)}
-                    >
-                      {suggestion.placePrediction.text.text}
-                    </li>
-                ))}
-              </ul>
-          )}
-        </>
-    )
+        {isFocused && suggestions.length > 0 && (
+          <ul
+            className="absolute z-10 bg-white border rounded mt-16 max-h-20 overflow-auto"
+            onMouseDown={handleListMouseDown} // Prevent blur on list interaction
+          >
+            {suggestions.map((suggestion, index) => (
+              <li
+                key={index}
+                className="p-1 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleSelect(suggestion)}
+              >
+                {suggestion.placePrediction.text.text}
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    );
   }
 };
 
