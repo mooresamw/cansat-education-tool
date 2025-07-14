@@ -43,17 +43,27 @@ def login():
         uid = decoded_token["uid"]
 
         user_data = get_user_data(uid)
-        log_ref = db.collection("logs").document()
-        log_ref.set({
-            "user_id": uid,
-            "email": user_data.get("email", "unknown"),
-            "role": user_data.get("role", "unknown"),
+        log_ref = db.collection("logs").document(uid)
+        log_entry = {
+            "action": "User Logged In",
             "timestamp": datetime.now().isoformat(),
-            "action": "User Logged In"
-        })
+            "email": user_data.get("email", "unknown"),
+            "role": user_data.get("role", "unknown")
+        }
+
+        log_doc = log_ref.get()
+        if log_doc.exists:
+            log_ref.update({
+                "entries": firestore.ArrayUnion([log_entry])
+            })
+        else:
+            log_ref.set({
+                "entries": [log_entry]
+            })
 
         return jsonify({"message": "Login successful", "uid": uid}), 200
     except Exception as e:
+        print(f"Login error: {str(e)}")
         return jsonify({"error": str(e)}), 401
 
 # API route for logout
@@ -69,22 +79,32 @@ def logout():
         uid = decoded_token["uid"]
 
         user_data = get_user_data(uid)
-        log_ref = db.collection("logs").document()
-        log_ref.set({
-            "user_id": uid,
-            "email": user_data.get("email", "unknown"),
-            "role": user_data.get("role", "unknown"),
+        log_ref = db.collection("logs").document(uid)
+        log_entry = {
+            "action": "User Logged Out",
             "timestamp": datetime.now().isoformat(),
-            "action": "User Logged Out"
-        })
+            "email": user_data.get("email", "unknown"),
+            "role": user_data.get("role", "unknown")
+        }
+
+        log_doc = log_ref.get()
+        if log_doc.exists:
+            log_ref.update({
+                "entries": firestore.ArrayUnion([log_entry])
+            })
+        else:
+            log_ref.set({
+                "entries": [log_entry]
+            })
 
         return jsonify({"message": "Logout successful"}), 200
     except Exception as e:
+        print(f"Logout error: {str(e)}")
         return jsonify({"error": str(e)}), 401
 
-# API route to get avatar seed
-@app.route("/user/avatar", methods=["GET", "OPTIONS"])
-def get_avatar():
+# API route for avatar
+@app.route("/user/avatar", methods=["GET", "POST", "OPTIONS"])
+def avatar():
     if request.method == "OPTIONS":
         return "", 200
     try:
@@ -93,52 +113,47 @@ def get_avatar():
             return jsonify({"error": "No idToken provided"}), 401
         decoded_token = auth.verify_id_token(id_token)
         uid = decoded_token["uid"]
-
-        user_data = get_user_data(uid)
-        avatar_seed = user_data.get("avatarSeed", 1)  # Default to 1
-        return jsonify({"avatarSeed": avatar_seed}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 401
-
-# API route to set avatar seed
-@app.route("/user/avatar", methods=["POST", "OPTIONS"])
-def set_avatar():
-    if request.method == "OPTIONS":
-        return "", 200
-    try:
-        id_token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        if not id_token:
-            return jsonify({"error": "No idToken provided"}), 401
-        decoded_token = auth.verify_id_token(id_token)
-        uid = decoded_token["uid"]
-
-        data = request.json
-        print("Received data:", data)  # Debug log
-        avatar_seed = data.get("avatarSeed")
-
-        if avatar_seed is None:
-            return jsonify({"error": "avatarSeed is required"}), 400
-
-        # Validate avatar seed (must be an integer between 1 and 6)
-        try:
-            avatar_seed = int(avatar_seed)
-            if avatar_seed not in range(1, 7):
-                return jsonify({"error": "avatarSeed must be between 1 and 6"}), 400
-        except ValueError:
-            return jsonify({"error": "avatarSeed must be an integer"}), 400
 
         user_ref = db.collection("users").document(uid)
-        user_ref.update({
-            "avatarSeed": avatar_seed
-        })
 
-        return jsonify({"message": "Avatar updated successfully", "avatarSeed": avatar_seed}), 200
+        if request.method == "GET":
+            user_doc = user_ref.get()
+            if not user_doc.exists:
+                return jsonify({"error": "User not found"}), 404
+            user_data = user_doc.to_dict()
+            avatar_seed = user_data.get("avatarSeed", 1)
+            return jsonify({"avatarSeed": avatar_seed}), 200
+
+        elif request.method == "POST":
+            data = request.json
+            print("Received POST data:", data)
+            avatar_seed = data.get("avatarSeed")
+
+            if avatar_seed is None:
+                return jsonify({"error": "avatarSeed is required"}), 400
+
+            try:
+                avatar_seed = int(avatar_seed)
+                if avatar_seed not in range(1, 7):
+                    return jsonify({"error": "avatarSeed must be between 1 and 6"}), 400
+            except ValueError:
+                return jsonify({"error": "avatarSeed must be an integer"}), 400
+
+            user_ref.update({
+                "avatarSeed": avatar_seed
+            })
+
+            return jsonify({"message": "Avatar updated successfully", "avatarSeed": avatar_seed}), 200
+
     except Exception as e:
+        print(f"Avatar endpoint error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# API route to handle registering
-@app.route("/register", methods=["POST"])
+# API route for register
+@app.route("/register", methods=["POST", "OPTIONS"])
 def register():
+    if request.method == "OPTIONS":
+        return "", 200
     try:
         data = request.json
         user_id = data["user_id"]
@@ -163,15 +178,23 @@ def register():
             "avatarSeed": 1  # Default to avatar 1
         })
 
-        log_ref = db.collection("logs").document()
-        log_ref.set({
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "role": role,
+        log_ref = db.collection("logs").document(user_id)
+        log_entry = {
+            "action": "User Registered",
             "timestamp": datetime.now().isoformat(),
-            "action": "User Registered"
-        })
+            "email": email,
+            "role": role
+        }
+
+        log_doc = log_ref.get()
+        if log_doc.exists:
+            log_ref.update({
+            "entries": firestore.ArrayUnion([log_entry])
+            })
+        else:
+            log_ref.set({
+            "entries": [log_entry]
+            })
 
         return jsonify({
             "message": "User registered successfully. Please check your email to verify your account.",
@@ -182,6 +205,7 @@ def register():
             "verified": verified
         }), 200
     except Exception as e:
+        print(f"Register error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -217,15 +241,42 @@ def get_users():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# API route to send user information edits by admin to the database
-@app.route("/edit-user", methods=["POST"])
+# API route to edit user information (admin only)
+@app.route("/edit-user", methods=["POST", "OPTIONS"])
 def edit_user():
+    if request.method == "OPTIONS":
+        return "", 200
     try:
+        id_token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not id_token:
+            return jsonify({"error": "No idToken provided"}), 401
+        decoded_token = auth.verify_id_token(id_token)
+        admin_uid = decoded_token["uid"]
+
+        # Verify admin role
+        admin_data = get_user_data(admin_uid)
+        if admin_data.get("role") != "admin":
+            return jsonify({"error": "Unauthorized: Admin access required"}), 403
+
         data = request.json
-        user_id = data["user_id"]
-        email = data["email"]
-        name = data["name"]
-        role = data["role"]
+        user_id = data.get("user_id")
+        email = data.get("email")
+        name = data.get("name")
+        role = data.get("role")
+
+        if not all([user_id, email, name, role]):
+            return jsonify({"error": "Missing required fields: user_id, email, name, role"}), 400
+
+        # Validate role
+        valid_roles = ["admin", "instructor", "student"]
+        if role not in valid_roles:
+            return jsonify({"error": f"Invalid role. Must be one of: {', '.join(valid_roles)}"}), 400
+
+        # Verify user exists in Firebase Auth
+        try:
+            auth.get_user(user_id)
+        except Exception as e:
+            return jsonify({"error": f"User not found: {str(e)}"}), 404
 
         user_ref = db.collection("users").document(user_id)
         user_ref.update({
@@ -234,18 +285,28 @@ def edit_user():
             "role": role,
         })
 
-        log_ref = db.collection("logs").document()
-        log_ref.set({
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "role": role,
+        log_ref = db.collection("logs").document(user_id)
+        log_entry = {
+            "action": "User Edited",
             "timestamp": datetime.now().isoformat(),
-            "action": "User Edited"
-        })
+            "email": email,
+            "role": role,
+            "edited_by": admin_uid
+        }
+
+        log_doc = log_ref.get()
+        if log_doc.exists:
+            log_ref.update({
+                "entries": firestore.ArrayUnion([log_entry])
+            })
+        else:
+            log_ref.set({
+                "entries": [log_entry]
+            })
 
         return jsonify({"message": "User updated successfully"}), 200
     except Exception as e:
+        print(f"Edit user error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # API route to delete a user from the database
@@ -572,39 +633,59 @@ def clock_in_out():
         data = request.json
         id_token = data.get("idToken")
         action = data.get("action")
-        
+
         if not id_token or not action:
             return jsonify({"error": "Missing token or action"}), 400
-        
+
         if action not in ["in", "out"]:
             return jsonify({"error": "Invalid action"}), 400
 
         decoded_token = auth.verify_id_token(id_token)
         uid = decoded_token["uid"]
-        
+
         user_ref = db.collection("users").document(uid)
         user_doc = user_ref.get()
-        
+
         if not user_doc.exists:
             return jsonify({"error": "User not found"}), 404
-            
+
         user_data = user_doc.to_dict()
-        
+
         # Update clock status in users collection
         is_clocked_in = action == "in"
         user_ref.update({"isClockedIn": is_clocked_in})
-        
-        # Log the action
-        clock_ref = db.collection("clock_logs").document()
-        clock_ref.set({
-            "user_id": uid,
-            "name": user_data.get("name"),
+
+        # Prepare clock data with ISO string timestamp
+        clock_data = {
+            "action": action,
             "timestamp": datetime.now().isoformat(),
-            "action": f"Clocked {action}",
-            "date": datetime.now().date().isoformat(),
-            "time": datetime.now().time().isoformat()
-        })
-        
+        }
+
+        # If clocking out, calculate duration from the last clock-in
+        if action == "out":
+            clock_doc_ref = db.collection("clockHistory").document(uid)
+            clock_doc = clock_doc_ref.get()
+            if clock_doc.exists:
+                entries = clock_doc.to_dict().get("entries", [])
+                last_clock_in = next((entry for entry in reversed(entries) if
+                                      entry["action"] == "in" and "clockOutTimestamp" not in entry), None)
+                if last_clock_in:
+                    # Parse the ISO string timestamp from last clock-in
+                    clock_in_time = datetime.fromisoformat(last_clock_in["timestamp"])
+                    # Ensure both datetimes are timezone-naive
+                    clock_in_time = clock_in_time.replace(tzinfo=None)
+                    current_time = datetime.now().replace(tzinfo=None)
+                    # Store clockInTimestamp as ISO string
+                    clock_data["clockInTimestamp"] = last_clock_in["timestamp"]
+                    duration = int((current_time - clock_in_time).total_seconds())
+                    clock_data["duration"] = duration
+
+        # Append to the clockHistory document's entries array
+        clock_doc_ref = db.collection("clockHistory").document(uid)
+        clock_doc_ref.set({
+            "entries": firestore.ArrayUnion([clock_data])
+        }, merge=True)
+
         return jsonify({
             "message": f"Successfully clocked {action}",
             "user_id": uid,
@@ -612,9 +693,11 @@ def clock_in_out():
             "timestamp": datetime.now().isoformat(),
             "isClockedIn": is_clocked_in
         }), 200
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
 # API route to send the code to from student ide to the server
 @app.route('/run', methods=['POST'])
 def run_code():
@@ -625,8 +708,8 @@ def run_code():
 
         class serial {
             public:
-                static void println(const string& msg) { cout << msg; }
-                static void println(int num) { cout << num; }
+                static void println(const string& msg) { cout << msg << endl; }
+                static void println(int num) { cout << num << endl; }
                 static void begin(int rate) { int baudRate = rate; }
         };
 
