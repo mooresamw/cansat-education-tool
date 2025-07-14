@@ -43,7 +43,7 @@ const LoginSignupPage = () => {
   });
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
-  const [verificationSent, setVerificationSent] = useState(false); // New state for verification email
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const router = useRouter();
 
@@ -95,7 +95,7 @@ const LoginSignupPage = () => {
     setErrors({});
     setShowPasswordRequirements(false);
     setIsForgotPassword(false);
-    setVerificationSent(false); // Reset verification state
+    setVerificationSent(false);
   };
 
   const handleSchoolSelect = (name: string, placeId: any) => {
@@ -104,7 +104,6 @@ const LoginSignupPage = () => {
       school_id: placeId,
     });
     setErrors((prev) => ({ ...prev, school: "" }));
-    //console.log("Selected School:", name, "Place ID:", placeId);
   };
 
   const validateForm = () => {
@@ -139,8 +138,7 @@ const LoginSignupPage = () => {
       const user = userCredential.user;
 
       await sendEmailVerification(user);
-      setVerificationSent(true); // Indicate verification email was sent
-      //console.log("Verification email sent to:", email);
+      setVerificationSent(true);
 
       const response = await fetch("http://localhost:8080/register", {
         method: "POST",
@@ -155,11 +153,12 @@ const LoginSignupPage = () => {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to register user");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend registration failed: ${errorText}`);
+      }
 
       const data = await response.json();
-      console.log("User registered successfully:", data);
-
       localStorage.setItem("user", JSON.stringify(data));
       setUser(data);
 
@@ -184,6 +183,9 @@ const LoginSignupPage = () => {
       setSelectedSchool({ school_name: "", school_id: "" });
       setErrors({});
       setShowPasswordRequirements(false);
+
+      // Redirect to dashboard after signup
+      // router.push(`/dashboard/${data.role}`);
     } catch (error: any) {
       console.error("Error signing up:", error.message);
       setNotification(`Error: ${error.message}. Please try again.`);
@@ -200,8 +202,14 @@ const LoginSignupPage = () => {
         setNotification(
           "Please verify your email before logging in. Check your inbox or click below to resend the verification email."
         );
-        setVerificationSent(true); // Show resend option
+        setVerificationSent(true);
         await signOut(auth);
+        const idToken = await user.getIdToken();
+        await fetch("http://localhost:8080/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
         return;
       }
 
@@ -214,13 +222,14 @@ const LoginSignupPage = () => {
       });
 
       if (!loginResponse.ok) {
-        const errorText = await loginResponse.text();
-        console.error("Backend login failed:", errorText);
-        setNotification("Login succeeded, but backend notification failed. Contact support.");
-      } else {
-        const loginData = await loginResponse.json();
-        console.log("Backend login successful:", loginData);
+        const errorData = await loginResponse.json();
+        console.error("Backend login failed:", errorData.error);
+        setNotification(`Login succeeded, but backend logging failed: ${errorData.error}. Contact support.`);
+        return;
       }
+
+      const loginData = await loginResponse.json();
+      console.log("Backend login successful:", loginData);
 
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
@@ -228,11 +237,9 @@ const LoginSignupPage = () => {
         const userData = userDoc.data();
 
         if (userData.verified !== user.emailVerified) {
-          console.log("Updating verified field in Firestore to:", user.emailVerified);
           await updateDoc(userRef, {
             verified: user.emailVerified,
           });
-          console.log("Verified field updated successfully");
         }
 
         if (rememberMe) {
@@ -247,7 +254,6 @@ const LoginSignupPage = () => {
 
         localStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
-        console.log("User logged in successfully!");
         router.push(`/dashboard/${userData.role}`);
       } else {
         console.error("User not found in Firestore");
@@ -280,6 +286,8 @@ const LoginSignupPage = () => {
   const handleResendVerification = async () => {
     try {
       const user = auth.currentUser;
+      console.log(user)
+      await sendEmailVerification(user)
       if (user && !user.emailVerified) {
         await sendEmailVerification(user);
         setNotification("Verification email resent. Please check your inbox or spam folder.");
@@ -634,7 +642,6 @@ const LoginSignupPage = () => {
         </div>
       </div>
 
-      {/* Scoped CSS for the animation */}
       <style jsx>{`
         @keyframes fadeIn {
           from {

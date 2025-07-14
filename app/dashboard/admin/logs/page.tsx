@@ -60,7 +60,7 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     setLogsLoading(true);
     try {
-      const logsQuery = query(collection(db, "logs"), orderBy("timestamp", "desc"));
+      const logsQuery = query(collection(db, "logs"));
       const snapshot = await getDocs(logsQuery);
       if (snapshot.empty) {
         setLogs([]);
@@ -68,10 +68,25 @@ export default function LogsPage() {
         localStorage.setItem("activityLogs", JSON.stringify([]));
         return;
       }
-      const logList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const logList = [];
+      snapshot.forEach((doc) => {
+        const userId = doc.id;
+        const data = doc.data();
+        const entries = data.entries || [];
+        entries.forEach((entry, index) => {
+          logList.push({
+            id: `${userId}-${index}`, // Unique ID for each entry
+            user_id: userId,
+            email: entry.email || "N/A",
+            role: entry.role || "N/A",
+            action: entry.action || "N/A",
+            timestamp: entry.timestamp || "N/A",
+            edited_by: entry.edited_by || "N/A", // Include edited_by for "User Edited" actions
+          });
+        });
+      });
+      // Sort by timestamp in descending order
+      logList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setLogs(logList);
       setFilteredLogs(logList);
       if (typeof window !== "undefined") {
@@ -90,18 +105,47 @@ export default function LogsPage() {
     setClockLogsLoading(true);
     setClockLogsError(null);
     try {
-      const clockLogsQuery = query(collection(db, "clock_logs"), orderBy("timestamp", "desc"));
-      const snapshot = await getDocs(clockLogsQuery);
-      if (snapshot.empty) {
+      const clockHistoryQuery = query(collection(db, "clockHistory"));
+      const clockSnapshot = await getDocs(clockHistoryQuery);
+      const usersQuery = query(collection(db, "users"));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      // Create a map of user IDs to names
+      const userMap = new Map();
+      usersSnapshot.forEach((doc) => {
+        const data = doc.data();
+        userMap.set(doc.id, data.name || "Unknown");
+      });
+
+      if (clockSnapshot.empty) {
         setClockLogs([]);
         setFilteredClockLogs([]);
         localStorage.setItem("clockLogs", JSON.stringify([]));
         return;
       }
-      const clockLogList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+
+      const clockLogList = [];
+      clockSnapshot.forEach((doc) => {
+        const userId = doc.id;
+        const data = doc.data();
+        const entries = data.entries || [];
+        entries.forEach((entry, index) => {
+          if (entry.action === "out") { // Only include "out" actions
+            clockLogList.push({
+              id: `${userId}-${index}`, // Unique ID for each entry
+              user_id: userId,
+              name: userMap.get(userId) || "Unknown",
+              timestamp: entry.timestamp || "N/A",
+              clockInTimestamp: entry.clockInTimestamp || "N/A",
+              duration: entry.duration || null,
+            });
+          }
+        });
+      });
+
+      // Sort by timestamp in descending order
+      clockLogList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
       setClockLogs(clockLogList);
       setFilteredClockLogs(clockLogList);
       if (typeof window !== "undefined") {
@@ -166,7 +210,7 @@ export default function LogsPage() {
       const selectedDate = new Date(selectedDateStr);
       const startOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 0, 0, 0, 0));
       const endOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 23, 59, 59, 999));
-      
+
       filtered = filtered.filter((log) => {
         const logDate = new Date(log.timestamp);
         return logDate >= startOfDay && logDate <= endOfDay;
@@ -204,7 +248,7 @@ export default function LogsPage() {
       const selectedDate = new Date(selectedDateStr);
       const startOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 0, 0, 0, 0));
       const endOfDay = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate(), 23, 59, 59, 999));
-      
+
       filtered = filtered.filter((log) => {
         const logDate = new Date(log.timestamp);
         return logDate >= startOfDay && logDate <= endOfDay;
@@ -258,7 +302,11 @@ export default function LogsPage() {
 
   const exportToCSV = (data: any[], filename: string) => {
     const headers = Object.keys(data[0]).join(",");
-    const rows = data.map((row) => Object.values(row).join(",")).join("\n");
+    const rows = data.map((row) =>
+      Object.values(row).map((value) =>
+        typeof value === "string" && value.includes(",") ? `"${value}"` : value
+      ).join(",")
+    ).join("\n");
     const csv = `${headers}\n${rows}`;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -271,6 +319,13 @@ export default function LogsPage() {
 
   const handleBackToDashboard = () => {
     router.push("/dashboard/admin");
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs}h ${mins}m ${secs}s`;
   };
 
   useEffect(() => {
@@ -333,20 +388,20 @@ export default function LogsPage() {
       <h1 className="text-3xl font-bold mb-8 text-foreground">Logs Management</h1>
       <Tabs defaultValue="activity" className="w-full">
         <TabsList className="mb-6 bg-background border-b border-muted">
-          <TabsTrigger 
-            value="activity" 
+          <TabsTrigger
+            value="activity"
             className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
           >
             Activity Logs
           </TabsTrigger>
-          <TabsTrigger 
-            value="chat" 
+          <TabsTrigger
+            value="chat"
             className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
           >
             Chat Logs
           </TabsTrigger>
-          <TabsTrigger 
-            value="clock" 
+          <TabsTrigger
+            value="clock"
             className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:font-bold px-4 py-2 transition-all duration-100"
           >
             Clock In/Out Logs
@@ -422,6 +477,7 @@ export default function LogsPage() {
                           <th className="text-left p-4">UserID</th>
                           <th className="text-left p-4">Role</th>
                           <th className="text-left p-4">Action</th>
+                          <th className="text-left p-4">Edited By</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -434,6 +490,7 @@ export default function LogsPage() {
                             <td className="p-4">{log.user_id || "N/A"}</td>
                             <td className="p-4">{log.role || "N/A"}</td>
                             <td className="p-4">{log.action || "N/A"}</td>
+                            <td className="p-4">{log.edited_by || "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -678,7 +735,8 @@ export default function LogsPage() {
                           <th className="text-left p-4">Date/Time</th>
                           <th className="text-left p-4">Name</th>
                           <th className="text-left p-4">UserID</th>
-                          <th className="text-left p-4">Action</th>
+                          <th className="text-left p-4">Clock-In Time</th>
+                          <th className="text-left p-4">Duration</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -689,7 +747,10 @@ export default function LogsPage() {
                             </td>
                             <td className="p-4">{log.name || "N/A"}</td>
                             <td className="p-4">{log.user_id || "N/A"}</td>
-                            <td className="p-4">{log.action || "N/A"}</td>
+                            <td className="p-4">
+                              {log.clockInTimestamp ? new Date(log.clockInTimestamp).toLocaleString() : "N/A"}
+                            </td>
+                            <td className="p-4">{log.duration ? formatDuration(log.duration) : "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>

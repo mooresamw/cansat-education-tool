@@ -107,8 +107,9 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
         setIsCorrect(false)
       } else {
         const output = result.output
-        setOutput(output)
-        const correct = output === problems[currentProblem]?.expectedOutput
+        let trimmedOutput = output.replace(/\s+$/, '');
+        setOutput(trimmedOutput)
+        const correct = trimmedOutput === problems[currentProblem]?.expectedOutput
         setIsCorrect(correct)
       }
     } catch (error) {

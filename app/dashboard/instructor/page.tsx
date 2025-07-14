@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { checkUserRole } from "@/lib/checkAuth";
 import { useRouter } from "next/navigation";
 import { db, auth, getStudents } from "@/lib/firebaseConfig";
-import { collection, query, where, onSnapshot, addDoc, Timestamp } from "firebase/firestore";
+import {collection, doc, setDoc, onSnapshot, where, query} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { IoIosNotifications } from "react-icons/io";
 import { HiBookOpen, HiClock, HiChatAlt } from "react-icons/hi";
@@ -15,11 +15,9 @@ import { markMessageAsRead } from "@/lib/firestoreUtil";
 import { StudentProgressTable } from "@/components/StudentProgressTable";
 
 interface ClockHistoryEntry {
-  id: string;
-  userId: string;
   action: "in" | "out";
-  timestamp: any;
-  clockInTimestamp?: any;
+  timestamp: string; // Now a string (ISO format)
+  clockInTimestamp?: string; // Now a string (ISO format)
   duration?: number;
 }
 
@@ -159,23 +157,26 @@ export default function InstructorDashboard() {
   useEffect(() => {
     if (!userId) return;
 
-    const clockRef = collection(db, "clockHistory");
-    const q = query(clockRef, where("userId", "==", userId));
+    const clockDocRef = doc(db, "clockHistory", userId);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const history: ClockHistoryEntry[] = [];
-      snapshot.forEach((doc) => {
-        history.push({ id: doc.id, ...doc.data() } as ClockHistoryEntry);
-      });
-      setClockHistory(history.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds));
+    const unsubscribe = onSnapshot(clockDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const history: ClockHistoryEntry[] = data.entries || [];
+        setClockHistory(history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
 
-      const lastEntry = history[0];
-      if (lastEntry && lastEntry.action === "in" && !lastEntry.clockOutTimestamp) {
-        setIsClockedIn(true);
-        const startTime = new Date(lastEntry.timestamp.seconds * 1000);
-        const now = new Date();
-        setCurrentSessionDuration(Math.floor((now.getTime() - startTime.getTime()) / 1000));
+        const lastEntry = history[0];
+        if (lastEntry && lastEntry.action === "in" && !lastEntry.clockOutTimestamp) {
+          setIsClockedIn(true);
+          const startTime = new Date(lastEntry.timestamp);
+          const now = new Date();
+          setCurrentSessionDuration(Math.floor((now.getTime() - startTime.getTime()) / 1000));
+        } else {
+          setIsClockedIn(false);
+          setCurrentSessionDuration(0);
+        }
       } else {
+        setClockHistory([]);
         setIsClockedIn(false);
         setCurrentSessionDuration(0);
       }
@@ -219,24 +220,6 @@ export default function InstructorDashboard() {
       const data = await response.json();
       console.log(`Clock ${action} successful:`, data);
 
-      const clockData = {
-        userId,
-        action,
-        timestamp: Timestamp.fromDate(new Date()),
-      };
-
-      if (action === "out") {
-        const lastClockIn = clockHistory.find((entry) => entry.action === "in" && !entry.clockOutTimestamp);
-        if (lastClockIn) {
-          clockData.clockInTimestamp = lastClockIn.timestamp;
-          const duration = Math.floor(
-            (new Date().getTime() - lastClockIn.timestamp.toDate().getTime()) / 1000
-          );
-          clockData.duration = duration;
-        }
-      }
-
-      await addDoc(collection(db, "clockHistory"), clockData);
       setIsClockedIn(!isClockedIn);
     } catch (error) {
       console.error(`Error during clock ${action}:`, error);
@@ -307,8 +290,8 @@ export default function InstructorDashboard() {
                 ${clockHistory
                   .filter((entry) => entry.action === "out")
                   .map((entry) => {
-                    const clockInTime = entry.clockInTimestamp?.toDate();
-                    const clockOutTime = entry.timestamp.toDate();
+                    const clockInTime = new Date(entry.clockInTimestamp);
+                    const clockOutTime = new Date(entry.timestamp);
                     return `
                       <tr>
                         <td>${clockInTime?.toLocaleDateString()}</td>
@@ -412,8 +395,6 @@ export default function InstructorDashboard() {
             <StudentProgressTable />
           </div>
 
-        
-
           {showNotifications && (
             <div className="fixed top-14 right-16 bg-gray-900 border border-gray-800 shadow-lg rounded-md p-4 w-72 z-10">
               <h3 className="font-bold text-lg text-white">Unread Messages</h3>
@@ -477,8 +458,8 @@ export default function InstructorDashboard() {
                       <tbody>
                         {clockHistory.map((entry, index) => {
                           if (entry.action === "out") {
-                            const clockInTime = entry.clockInTimestamp?.toDate();
-                            const clockOutTime = entry.timestamp.toDate();
+                            const clockInTime = new Date(entry.clockInTimestamp);
+                            const clockOutTime = new Date(entry.timestamp);
                             return (
                               <tr key={index} className="border-b border-accent text-primary">
                                 <td className="py-2">{clockInTime?.toLocaleDateString()}</td>
