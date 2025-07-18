@@ -303,7 +303,7 @@ export default function StudentChatPage() {
       const groupRef = doc(db, "groups", groupId);
       const currentTimestamp = new Date();
       await updateDoc(groupRef, {
-        members: arrayUnion({ user_id: user.uid, joined_at: currentTimestamp }),
+        members: arrayUnion({ user_id: user.uid, name: user.name, joined_at: currentTimestamp }),
       });
 
       await refreshGroupsAndStudents();
