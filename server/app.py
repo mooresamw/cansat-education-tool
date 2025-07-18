@@ -541,7 +541,7 @@ def get_user_progress():
     try:
         user_id = request.args.get('user_id')
         progress_type = request.args.get('type')
-        if not user_id or not progress_type:
+        if not user_id:
             return jsonify({"error": "Missing required parameters"}), 400
 
         # Fetch the user document from Firestore
@@ -552,7 +552,8 @@ def get_user_progress():
         if progress_doc.exists:
             progress_data = progress_doc.to_dict()
             items = progress_data.get('items', [])
-
+            if not progress_type:
+                return jsonify(items), 200
             # Filter the progress by type (e.g., "training_material")
             filtered_items = [item for item in items if item.get('type') == progress_type]
         else:
@@ -709,7 +710,10 @@ def run_code():
         class serial {
             public:
                 static void println(const string& msg) { cout << msg << endl; }
-                static void println(int num) { cout << num << endl; }
+                static void println(int num) { 
+                    cout << num; 
+                    cout << endl;
+                }
                 static void begin(int rate) { int baudRate = rate; }
         };
 
@@ -754,6 +758,7 @@ def run_code():
 
             # If compilation succeeded, run the program
             result = subprocess.check_output(["./arduino_sim"]).decode()
+            print(result)
             return jsonify({"output": result})
 
         except subprocess.CalledProcessError as e:
