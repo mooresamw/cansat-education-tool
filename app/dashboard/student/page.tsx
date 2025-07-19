@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +25,7 @@ import {
   HiUser,
 } from "react-icons/hi"
 import { markMessageAsRead } from "@/lib/firestoreUtil"
-import {Circle} from "lucide-react";
+import { SignOutContext } from "@/components/DashboardLayout";
 
 interface ProgressItem {
   accessed_at: string
@@ -61,231 +61,210 @@ interface MemberProgress {
 }
 
 export default function StudentDashboard() {
-  const userRole = checkUserRole(["admin", "instructor", "student"])
-  const [instructorUnreadCount, setInstructorUnreadCount] = useState(0)
-  const [teamUnreadCount, setTeamUnreadCount] = useState(0)
-  const [notifications, setNotifications] = useState<any[]>([])
-  const [instructorNotifications, setInstructorNotifications] = useState<any[]>([])
-  const [teamNotifications, setTeamNotifications] = useState<any[]>([])
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [instructorIds, setInstructorIds] = useState<string[]>([])
-  const [progressData, setProgressData] = useState<ProgressItem[]>([])
-  const [progressLoading, setProgressLoading] = useState(true)
-  const [userGroup, setUserGroup] = useState<Group | null>(null)
-  const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([])
-  const [groupLoading, setGroupLoading] = useState(true)
-  const router = useRouter()
+const { isSigningOut } = useContext(SignOutContext);
+  const userRole = checkUserRole(["admin", "instructor", "student"]);
+  const [instructorUnreadCount, setInstructorUnreadCount] = useState(0);
+  const [teamUnreadCount, setTeamUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [instructorNotifications, setInstructorNotifications] = useState<any[]>([]);
+  const [teamNotifications, setTeamNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [instructorIds, setInstructorIds] = useState<string[]>([]);
+  const [progressData, setProgressData] = useState<ProgressItem[]>([]);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [userGroup, setUserGroup] = useState<Group | null>(null);
+  const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([]);
+  const [groupLoading, setGroupLoading] = useState(true);
+  const router = useRouter();
 
-  // Fetch instructor IDs
+// Fetch instructor IDs
   useEffect(() => {
+    if (isSigningOut) return;
+
     const fetchInstructors = async () => {
       try {
-        const instructors = await getInstructors()
-        const ids = instructors.map((instructor: any) => instructor.uid)
-        setInstructorIds(ids)
-        console.log("Instructor IDs:", ids)
+        const instructors = await getInstructors();
+        const ids = instructors.map((instructor: any) => instructor.uid);
+        setInstructorIds(ids);
+        console.log("Instructor IDs:", ids);
       } catch (error) {
-        console.error("Error fetching instructors:", error)
+        console.error("Error fetching instructors:", error);
       }
-    }
-    fetchInstructors()
-  }, [])
+    };
+    fetchInstructors();
+  }, [isSigningOut]);
 
-  // Fetch user's group
+// Fetch user's group
   useEffect(() => {
+    if (!userId || isSigningOut) return;
+
     const fetchUserGroup = async () => {
-      if (!userId) return
-
       try {
-        setGroupLoading(true)
-        const groupsRef = collection(db, "groups")
-        const q = query(groupsRef, where("members", "array-contains", { user_id: userId }))
+        setGroupLoading(true);
+        const groupsRef = collection(db, "groups");
+        const q = query(groupsRef, where("members", "array-contains", { user_id: userId }));
 
-        // Note: This query might not work exactly as expected due to Firestore limitations
-        // You might need to fetch all groups and filter client-side
-        const groupsSnapshot = await getDocs(collection(db, "groups"))
-        let userGroupData: Group | null = null
+        const groupsSnapshot = await getDocs(collection(db, "groups"));
+        let userGroupData: Group | null = null;
 
         groupsSnapshot.forEach((doc) => {
-          const groupData = doc.data() as Omit<Group, "id">
-          const isMember = groupData.members.some((member: GroupMember) => member.user_id === userId)
+          const groupData = doc.data() as Omit<Group, "id">;
+          const isMember = groupData.members.some((member: GroupMember) => member.user_id === userId);
 
           if (isMember) {
             userGroupData = {
               id: doc.id,
               ...groupData,
-            }
+            };
           }
-        })
+        });
 
         if (userGroupData) {
-          setUserGroup(userGroupData)
-          console.log("User's group:", userGroupData)
+          setUserGroup(userGroupData);
+          console.log("User's group:", userGroupData);
         }
       } catch (error) {
-        console.error("Error fetching user group:", error)
+        console.error("Error fetching user group:", error);
       } finally {
-        setGroupLoading(false)
+        setGroupLoading(false);
       }
-    }
+    };
 
-    if (userId) {
-      fetchUserGroup()
-    }
-  }, [userId])
+    fetchUserGroup();
+  }, [userId, isSigningOut]);
 
-  // Fetch progress for all group members
+// Fetch progress for all group members
   useEffect(() => {
-    const fetchGroupMemberProgress = async () => {
-      if (!userGroup || !userGroup.members) return
+    if (!userGroup || !userGroup.members || isSigningOut) return;
 
+    const fetchGroupMemberProgress = async () => {
       try {
         const memberProgressPromises = userGroup.members.map(async (member: GroupMember) => {
           try {
-            // Fetch progress data for each member
-            const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${member.user_id}`)
-            let progressData: ProgressItem[] = []
+            const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${member.user_id}`);
+            let progressData: ProgressItem[] = [];
 
             if (response.ok) {
-              progressData = await response.json()
+              progressData = await response.json();
             }
 
-            // Get the most recent progress item
             const recentProgress = progressData
               .filter((item) => item.completed)
-              .sort((a, b) => new Date(b.completion_date).getTime() - new Date(a.completion_date).getTime())[0]
+              .sort((a, b) => new Date(b.completion_date).getTime() - new Date(a.completion_date).getTime())[0];
 
-            const totalCompleted = progressData.filter((item) => item.completed).length
+            const totalCompleted = progressData.filter((item) => item.completed).length;
 
-            // Fetch user info (you might want to create a separate API for this)
-            // For now, we'll use placeholder data
-            const memberInfo: MemberProgress = {
-              user_id: member.user_id,
-              name: member.name, // Placeholder
-              email: `user${member.user_id.slice(-4)}@example.com`, // Placeholder
-              recentProgress,
-              totalCompleted,
-            }
-
-            return memberInfo
-          } catch (error) {
-            console.error(`Error fetching progress for member ${member.user_id}:`, error)
             return {
               user_id: member.user_id,
-              displayName: `User ${member.user_id.slice(-4)}`,
+              name: member.name,
+              email: `user${member.user_id.slice(-4)}@example.com`,
+              recentProgress,
+              totalCompleted,
+            };
+          } catch (error) {
+            console.error(`Error fetching progress for member ${member.user_id}:`, error);
+            return {
+              user_id: member.user_id,
+              name: `User ${member.user_id.slice(-4)}`,
               totalCompleted: 0,
-            }
+            };
           }
-        })
+        });
 
-        const memberProgressResults = await Promise.all(memberProgressPromises)
-        setGroupMemberProgress(memberProgressResults)
-        console.log(memberProgressResults)
-        console.log("Group member progress:", memberProgressResults)
+        const memberProgressResults = await Promise.all(memberProgressPromises);
+        setGroupMemberProgress(memberProgressResults);
+        console.log("Group member progress:", memberProgressResults);
       } catch (error) {
-        console.error("Error fetching group member progress:", error)
+        console.error("Error fetching group member progress:", error);
       }
-    }
+    };
 
-    if (userGroup) {
-      fetchGroupMemberProgress()
-    }
-  }, [userGroup])
+    fetchGroupMemberProgress();
+  }, [userGroup, isSigningOut]);
 
-  // Fetch student progress data
+// Fetch student progress data
   useEffect(() => {
-    const fetchProgressData = async () => {
-      if (!userId) return
+    if (!userId || isSigningOut) return;
 
+    const fetchProgressData = async () => {
       try {
-        setProgressLoading(true)
-        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userId}`)
+        setProgressLoading(true);
+        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userId}`);
         if (response.ok) {
-          const data = await response.json()
-          console.log(data)
-          setProgressData(data)
+          const data = await response.json();
+          setProgressData(data);
         } else {
-          console.error("Failed to fetch progress data")
+          console.error("Failed to fetch progress data");
         }
       } catch (error) {
-        console.error("Error fetching progress data:", error)
+        console.error("Error fetching progress data:", error);
       } finally {
-        setProgressLoading(false)
+        setProgressLoading(false);
       }
-    }
+    };
 
-    if (userId) {
-      fetchProgressData()
-    }
-  }, [userId])
+    fetchProgressData();
+  }, [userId, isSigningOut]);
 
-  // Authentication state listener
+// Authentication state listener
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(
       auth,
       (user) => {
         if (user) {
-          const uid = user.uid
-          setUserId(uid)
-          setLoading(false)
-          console.log("User authenticated, UID:", uid)
-          localStorage.setItem("userId", uid)
-        } else {
-          console.log("No user is authenticated")
-          setUserId(null)
-          setLoading(false)
-          router.push("/login")
+          const uid = user.uid;
+          setUserId(uid);
+          setLoading(false);
+          console.log("User authenticated, UID:", uid);
+          localStorage.setItem("userId", uid);
+        } else if (!isSigningOut) {
+          // Only navigate if not already signing out
+          console.log("No user is authenticated");
+          setUserId(null);
+          setLoading(false);
+          router.push("/login");
         }
       },
       (error) => {
-        console.error("Error in onAuthStateChanged:", error)
-        setLoading(false)
+        console.error("Error in onAuthStateChanged:", error);
+        setLoading(false);
       },
-    )
+    );
 
-    return () => unsubscribeAuth()
-  }, [router])
+    return () => unsubscribeAuth();
+  }, [router, isSigningOut]);
 
-  // Real-time notifications listener
+// Real-time notifications listener
   useEffect(() => {
-    if (!userRole || userRole !== "student") {
-      console.log("User role is not student or not authenticated:", userRole)
-      return
-    }
-    if (!userId) {
-      console.log("No userId available yet")
-      return
-    }
-    if (instructorIds.length === 0) {
-      console.log("Instructor IDs not yet loaded")
-      return
+    if (!userRole || userRole !== "student" || !userId || instructorIds.length === 0 || isSigningOut) {
+      console.log("Skipping notifications listener due to invalid state");
+      return;
     }
 
-    const messagesRef = collection(db, "messages")
-    const q = query(messagesRef, where("participants", "array-contains", userId))
+    const messagesRef = collection(db, "messages");
+    const q = query(messagesRef, where("participants", "array-contains", userId));
 
     const unsubscribeQuery = onSnapshot(
       q,
       (snapshot) => {
-        let instructorUnread = 0
-        let teamUnread = 0
-        const instructorMessages: any[] = []
-        const teamMessages: any[] = []
-        const allMessages: any[] = []
+        let instructorUnread = 0;
+        let teamUnread = 0;
+        const instructorMessages: any[] = [];
+        const teamMessages: any[] = [];
+        const allMessages: any[] = [];
 
         snapshot.forEach((doc) => {
-          const data = doc.data()
-          const conversationId = doc.id
-          const messages = data.messages || []
-          const otherParticipants = data.participants.filter((id: string) => id !== userId)
-          const involvesInstructor = otherParticipants.some((id: string) => instructorIds.includes(id))
-          const otherParticipantId = otherParticipants[0] // Assuming 1:1 chat
+          const data = doc.data();
+          const conversationId = doc.id;
+          const messages = data.messages || [];
+          const otherParticipants = data.participants.filter((id: string) => id !== userId);
+          const involvesInstructor = otherParticipants.some((id: string) => instructorIds.includes(id));
 
           messages.forEach((msg: any) => {
-            const readStatus = msg.read || {}
-            const isUnread = msg.sender !== userId && readStatus[userId] !== true
+            const readStatus = msg.read || {};
+            const isUnread = msg.sender !== userId && readStatus[userId] !== true;
 
             if (isUnread) {
               const messageData = {
@@ -296,39 +275,42 @@ export default function StudentDashboard() {
                 participants: data.participants,
                 conversationId: conversationId,
                 involvesInstructor,
-              }
+              };
 
-              allMessages.push(messageData)
+              allMessages.push(messageData);
 
               if (involvesInstructor) {
-                instructorUnread++
-                instructorMessages.push(messageData)
+                instructorUnread++;
+                instructorMessages.push(messageData);
               } else {
-                teamUnread++
-                teamMessages.push(messageData)
+                teamUnread++;
+                teamMessages.push(messageData);
               }
             }
-          })
-        })
+          });
+        });
 
-        console.log("Instructor unread count:", instructorUnread)
-        console.log("Team unread count:", teamUnread)
-        console.log("All messages after filtering:", allMessages)
-
-        setInstructorUnreadCount(instructorUnread)
-        setTeamUnreadCount(teamUnread)
-        setInstructorNotifications(instructorMessages)
-        setTeamNotifications(teamMessages)
-        setNotifications(allMessages)
+        setInstructorUnreadCount(instructorUnread);
+        setTeamUnreadCount(teamUnread);
+        setInstructorNotifications(instructorMessages);
+        setTeamNotifications(teamMessages);
+        setNotifications(allMessages);
       },
       (error) => {
-        console.error("Error in onSnapshot Query:", error)
+        console.error("Error in onSnapshot Query:", error);
       },
-    )
+    );
 
-    return () => unsubscribeQuery()
-  }, [userRole, userId, instructorIds])
+    return () => unsubscribeQuery();
+  }, [userRole, userId, instructorIds, isSigningOut]);
 
+  if (loading || isSigningOut) {
+    return <div className="bg-black min-h-screen text-white flex items-center justify-center">Loading...</div>;
+  }
+
+  if (!userId) {
+    return null;
+  }
   // Navigation handlers
   const openIDE = () => router.push("/dashboard/student/ide")
   const goToChat = () => router.push("/dashboard/student/messageStudent")
@@ -389,7 +371,7 @@ export default function StudentDashboard() {
   return (
     <div className="bg-black min-h-screen text-primary">
       <DashboardLayout userType="student">
-        <main className="max-w-6xl mx-auto w-full px-4 py-12 relative">
+        <main className="max-w-6xl mx-auto w-full px-4 py-4 relative">
           {/* Header */}
           {/*<h1 className="text-3xl md:text-4xl font-bold mb-6">Student Dashboard</h1>*/}
 

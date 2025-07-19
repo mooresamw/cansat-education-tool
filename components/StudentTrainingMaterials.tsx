@@ -1,169 +1,208 @@
-"use client"
+// StudentTrainingMaterials.tsx
+"use client";
 
+import { useEffect, useMemo, useState, useContext } from "react";
+import { Document, Page } from "react-pdf";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { pdfjs } from "react-pdf";
+import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import Loading from "@/components/Loading";
+import { getUser } from "@/lib/getUser";
+import { Progress } from "@/components/ui/progress";
+import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebaseConfig";
+import { SignOutContext } from "@/components/DashboardLayout";
+import { onAuthStateChanged } from "firebase/auth";
 
-import { useEffect, useMemo, useState } from "react"
-import { Document, Page } from "react-pdf"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react"
-import { pdfjs } from "react-pdf"
-import "react-pdf/dist/esm/Page/TextLayer.css"
-import "react-pdf/dist/esm/Page/AnnotationLayer.css"
-import Loading from "@/components/Loading"
-import { getUser } from "@/lib/getUser"
-import { Progress } from "@/components/ui/progress"
-// Add Firebase imports
-import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore"
-import { db } from "@/lib/firebaseConfig" // Adjust path to your Firebase config
-
-
-
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
-
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFFile {
-  id: string
-  name: string
-  url: string
+  id: string;
+  name: string;
+  url: string;
 }
-
 
 interface CompletedPDF {
-  material_id: string
-  completion_date: string
+  material_id: string;
+  completion_date: string;
 }
 
-
 export default function StudentTrainingMaterials() {
-  const [selectedPdf, setSelectedPdf] = useState<PDFFile | undefined>(undefined)
-  const [numPages, setNumPages] = useState<number | null>(null)
-  const [pageNumber, setPageNumber] = useState(1)
-  const [notes, setNotes] = useState("")
-  const [pdfs, setPdfs] = useState<PDFFile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string>("")
-  const [completedPdfs, setCompletedPdfs] = useState<CompletedPDF[]>([])
-  const [progressPercent, setProgressPercent] = useState(0)
+  const { isSigningOut } = useContext(SignOutContext);
+  const [selectedPdf, setSelectedPdf] = useState<PDFFile | undefined>(undefined);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [notes, setNotes] = useState("");
+  const [pdfs, setPdfs] = useState<PDFFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [completedPdfs, setCompletedPdfs] = useState<CompletedPDF[]>([]);
+  const [progressPercent, setProgressPercent] = useState(0);
 
-
-  // When the page loads, fetch the PDF files and user progress from backend
+  // Set up authentication listener to clear userId on sign-out
   useEffect(() => {
-    const userData = getUser()
-    setUserId(userData.user_id)
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setUserId(null);
+        setNotes(""); // Clear notes to prevent further operations
+      }
+    });
 
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch PDFs and progress
+  useEffect(() => {
+    let isMounted = true;
 
     const fetchData = async () => {
-      try {
-        const pdfResponse = await fetch("http://localhost:8080/get-pdfs")
-        if (!pdfResponse.ok) throw new Error("Failed to fetch PDFs")
-        const pdfData: PDFFile[] = await pdfResponse.json()
-        setPdfs(pdfData)
+      if (!isMounted || isSigningOut || !userId) return;
 
+      try {
+        setLoading(true);
+        const pdfResponse = await fetch("http://localhost:8080/get-pdfs");
+        if (!pdfResponse.ok) throw new Error("Failed to fetch PDFs");
+        const pdfData: PDFFile[] = await pdfResponse.json();
+        if (!isMounted) return;
+        setPdfs(pdfData);
 
         const progressResponse = await fetch(
-          `http://localhost:8080/get-user-progress?user_id=${userData.user_id}&type=training_material`
-        )
-        if (!progressResponse.ok) throw new Error("Failed to fetch user progress")
-        const progressData: CompletedPDF[] = await progressResponse.json()
-        setCompletedPdfs(progressData)
+          `http://localhost:8080/get-user-progress?user_id=${userId}&type=training_material`
+        );
+        if (!progressResponse.ok) throw new Error("Failed to fetch user progress");
+        const progressData: CompletedPDF[] = await progressResponse.json();
+        if (!isMounted) return;
+        setCompletedPdfs(progressData);
 
-
-        const progressPercentage = pdfData.length > 0 ? (progressData.length / pdfData.length) * 100 : 0
-        setProgressPercent(progressPercentage)
-
+        const progressPercentage = pdfData.length > 0 ? (progressData.length / pdfData.length) * 100 : 0;
+        setProgressPercent(progressPercentage);
 
         if (pdfData.length > 0) {
           if (progressData.length === 0) {
-            setSelectedPdf(pdfData[0])
+            setSelectedPdf(pdfData[0]);
           } else {
-            const completedIds = progressData.map((item) => item.material_id)
-            const firstUncompletedPdf = pdfData.find((pdf) => !completedIds.includes(pdf.id))
-            setSelectedPdf(firstUncompletedPdf || pdfData[0])
+            const completedIds = progressData.map((item) => item.material_id);
+            const firstUncompletedPdf = pdfData.find((pdf) => !completedIds.includes(pdf.id));
+            setSelectedPdf(firstUncompletedPdf || pdfData[0]);
           }
         }
-
-
-        setLoading(false)
       } catch (error) {
-        console.log("Error fetching data:", error)
-        setLoading(false)
+        console.error("Error fetching data:", error);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    }
+    };
 
+    if (userId) fetchData();
 
-    fetchData()
-  }, [])
-
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, isSigningOut]);
 
   // Load notes when selected PDF changes
   useEffect(() => {
-    if (!selectedPdf || !userId) return
-
+    let isMounted = true;
 
     const loadNotes = async () => {
+      if (!isMounted || !selectedPdf || !userId || isSigningOut) return;
+
       try {
-        const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
-        const noteDoc = await getDoc(noteDocRef)
-        setNotes(noteDoc.exists() ? noteDoc.data().content || "" : "")
-      } catch (error) {
-        console.error("Error loading notes:", error)
+        const user = auth.currentUser;
+        if (!user) {
+          console.log("No authenticated user; skipping note loading");
+          return;
+        }
+        const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id);
+        const noteDoc = await getDoc(noteDocRef);
+        if (!isMounted) return;
+        setNotes(noteDoc.exists() ? noteDoc.data().content || "" : "");
+      } catch (error: any) {
+        console.error("Error loading notes:", error);
+        if (error.code === "permission-denied") {
+          console.log("Permission denied; likely due to sign-out");
+          if (isMounted) setNotes("");
+        }
       }
-    }
+    };
 
+    loadNotes();
 
-    loadNotes()
-  }, [selectedPdf, userId])
-
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPdf, userId, isSigningOut]);
 
   // Save notes to Firestore
   const saveNotes = async () => {
-    if (!selectedPdf || !userId) return
-
+    if (!selectedPdf || !userId || isSigningOut) return;
 
     try {
-      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("No authenticated user; skipping note saving");
+        return;
+      }
+      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id);
       await setDoc(noteDocRef, {
         content: notes,
         pdfId: selectedPdf.id,
         updatedAt: new Date().toISOString(),
-      })
-    } catch (error) {
-      console.error("Error saving notes:", error)
-      alert("Failed to save notes. Please try again.")
+      });
+    } catch (error: any) {
+      console.error("Error saving notes:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to save notes. Please try again.");
+      }
     }
-  }
-
+  };
 
   // Delete notes from Firestore
   const deleteNotes = async () => {
-    if (!selectedPdf || !userId) return
-
+    if (!selectedPdf || !userId || isSigningOut) return;
 
     try {
-      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
-      await deleteDoc(noteDocRef)
-      setNotes("") // Clear the textarea
-    } catch (error) {
-      console.error("Error deleting notes:", error)
-      alert("Failed to delete notes. Please try again.")
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("No authenticated user; skipping note deletion");
+        return;
+      }
+      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id);
+      await deleteDoc(noteDocRef);
+      setNotes("");
+    } catch (error: any) {
+      console.error("Error deleting notes:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to delete notes. Please try again.");
+      }
     }
-  }
-
+  };
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages)
-    setPageNumber(1)
+    setNumPages(numPages);
+    setPageNumber(1);
   }
 
-
   async function markAsCompleted() {
-    if (!selectedPdf) return
-
+    if (!selectedPdf || !userId || isSigningOut) return;
 
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.log("No authenticated user; skipping mark as completed");
+        return;
+      }
       const response = await fetch("http://localhost:8080/mark-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,55 +215,47 @@ export default function StudentTrainingMaterials() {
           completed: true,
           completion_date: new Date().toISOString(),
         }),
-      })
-
+      });
 
       if (response.ok) {
         const newCompletedPdf = {
           material_id: selectedPdf.id,
           completion_date: new Date().toISOString(),
-        }
+        };
 
+        const updatedCompletedPdfs = [...completedPdfs, newCompletedPdf];
+        setCompletedPdfs(updatedCompletedPdfs);
 
-        const updatedCompletedPdfs = [...completedPdfs, newCompletedPdf]
-        setCompletedPdfs(updatedCompletedPdfs)
+        const newProgressPercent = pdfs.length > 0 ? (updatedCompletedPdfs.length / pdfs.length) * 100 : 0;
+        setProgressPercent(newProgressPercent);
 
-
-        const newProgressPercent = pdfs.length > 0 ? (updatedCompletedPdfs.length / pdfs.length) * 100 : 0
-        setProgressPercent(newProgressPercent)
-
-
-        const completedIds = updatedCompletedPdfs.map((item) => item.material_id)
-        const nextUncompletedPdf = pdfs.find((pdf) => !completedIds.includes(pdf.id))
-
+        const completedIds = updatedCompletedPdfs.map((item) => item.material_id);
+        const nextUncompletedPdf = pdfs.find((pdf) => !completedIds.includes(pdf.id));
 
         if (nextUncompletedPdf) {
-          setSelectedPdf(nextUncompletedPdf)
-          setPageNumber(1)
-          setNumPages(null)
+          setSelectedPdf(nextUncompletedPdf);
+          setPageNumber(1);
+          setNumPages(null);
         }
       }
     } catch (error) {
-      console.error("Error sending completion data", error)
+      console.error("Error sending completion data", error);
     }
   }
 
-
   function changePage(offset: number) {
     setPageNumber((prevPageNumber) => {
-      const newPageNumber = prevPageNumber + offset
+      const newPageNumber = prevPageNumber + offset;
       if (numPages && newPageNumber === numPages) {
-        markAsCompleted()
+        markAsCompleted();
       }
-      return Math.min(Math.max(1, newPageNumber), numPages || 1)
-    })
+      return Math.min(Math.max(1, newPageNumber), numPages || 1);
+    });
   }
-
 
   const isPdfCompleted = (pdfId: string) => {
-    return completedPdfs.some((pdf) => pdf.material_id === pdfId)
-  }
-
+    return completedPdfs.some((pdf) => pdf.material_id === pdfId);
+  };
 
   const pdfOptions = useMemo(
     () => ({
@@ -232,16 +263,13 @@ export default function StudentTrainingMaterials() {
       cMapPacked: true,
     }),
     [],
-  )
+  );
 
-
-  if (loading) return <Loading />
-
+  if (loading || !userId) return <Loading />;
 
   return (
     <div className="flex flex-col space-y-4">
       <h1 className="text-2xl font-bold">Training Materials</h1>
-
 
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
@@ -252,7 +280,6 @@ export default function StudentTrainingMaterials() {
         </div>
         <Progress value={progressPercent} className="h-2" />
       </div>
-
 
       <div className="flex flex-wrap gap-2 mb-4">
         {pdfs.map((pdf, index) => (
@@ -270,7 +297,6 @@ export default function StudentTrainingMaterials() {
           </div>
         ))}
       </div>
-
 
       <div className="flex space-x-4">
         <div className="w-2/3">
@@ -290,11 +316,11 @@ export default function StudentTrainingMaterials() {
                 <Select
                   value={selectedPdf?.id}
                   onValueChange={(value) => {
-                    const newSelectedPdf = pdfs.find((pdf) => pdf.id === value)
+                    const newSelectedPdf = pdfs.find((pdf) => pdf.id === value);
                     if (newSelectedPdf) {
-                      setSelectedPdf(newSelectedPdf)
-                      setPageNumber(1)
-                      setNumPages(null)
+                      setSelectedPdf(newSelectedPdf);
+                      setPageNumber(1);
+                      setNumPages(null);
                     }
                   }}
                 >
@@ -347,15 +373,16 @@ export default function StudentTrainingMaterials() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="h-[600px] mb-2"
+                disabled={isSigningOut || !userId}
               />
               <div className="flex space-x-2">
-                <Button onClick={saveNotes} disabled={!selectedPdf || !notes.trim()}>
+                <Button onClick={saveNotes} disabled={!selectedPdf || !notes.trim() || isSigningOut || !userId}>
                   Save Notes
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={deleteNotes}
-                  disabled={!selectedPdf || !notes}
+                  disabled={!selectedPdf || !notes || isSigningOut || !userId}
                 >
                   Delete Notes
                 </Button>
@@ -365,5 +392,5 @@ export default function StudentTrainingMaterials() {
         </div>
       </div>
     </div>
-  )
+  );
 }

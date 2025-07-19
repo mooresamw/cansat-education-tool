@@ -163,7 +163,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     const allowedRoutes = {
       admin: ["/dashboard"],
       instructor: ["/dashboard/instructor", "/dashboard/student"],
-      student: ["/dashboard/student"],
+      student: ["/dashboard/student", "/dashboard/student/training-materials"],
     };
 
     const isAuthorized =
@@ -339,19 +339,21 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      setIsSigningOut(true);
-      const user = auth.currentUser;
-      let token: string | null = null;
+// DashboardLayout.tsx
+const handleSignOut = async () => {
+  try {
+    setIsSigningOut(true);
+    const user = auth.currentUser;
+    let token: string | null = null;
 
-      if (user) {
-        token = await user.getIdToken();
-      }
+    // Get the token before signing out
+    if (user) {
+      token = await user.getIdToken();
+    }
 
-      await signOut(auth);
-
-      if (token) {
+    // Perform backend logout API call if token exists
+    if (token) {
+      try {
         const logoutResponse = await fetch("http://127.0.0.1:8080/logout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -361,16 +363,26 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         if (!logoutResponse.ok) {
           console.error("Logout logging failed:", await logoutResponse.text());
         }
+      } catch (error) {
+        console.error("Error during logout API call:", error);
       }
-
-      localStorage.removeItem("user");
-      //router.push("/");
-    } catch (error: any) {
-      console.error("Error signing out:", error.message);
-    } finally {
-      setIsSigningOut(false);
     }
-  };
+
+    // Sign out from Firebase
+    await signOut(auth);
+
+    // Clear localStorage
+    localStorage.removeItem("user");
+    localStorage.removeItem("userId");
+
+    // Navigate to login page
+    router.push("/login");
+  } catch (error: any) {
+    console.error("Error signing out:", error.message);
+  } finally {
+    setIsSigningOut(false);
+  }
+};
 
   if (!mounted) {
     return <p className="text-center mt-10">Loading...</p>;
@@ -504,7 +516,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="border-t p-2 space-y-1">
+      <div className="border-t p-2 space-y-16">
         {/* Settings Button */}
         <Button
           variant="ghost"
@@ -646,15 +658,20 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
       <div className="flex h-screen bg-background text-foreground">
         {/* Desktop Sidebar - Open by default on large screens */}
         <div
-          className={`w-64 hidden md:block bg-gradient-to-b border-r border-border shadow-lg transform transition-transform duration-300 ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          className={` w-64 bg-gradient-to-b border-r border-border shadow-lg transform transition-transform duration-300 
+          ${
+            sidebarOpen ? "translate-x-0 hidden md:block" : "-translate-x-full hidden"
           }`}
         >
           <SidebarContent />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div id="main-content" className={`flex-1 flex flex-col
+          ${
+            sidebarOpen ? "" : ""
+          }`}
+        >
           <header className="flex items-center justify-between border-b border-border px-3 py-3 bg-header">
             <div className="flex items-center gap-4">
               {/* Mobile Menu Button */}
