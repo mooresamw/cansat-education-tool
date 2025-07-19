@@ -423,21 +423,6 @@ const { isSigningOut } = useContext(SignOutContext);
               </CardContent>
             </Card>
 
-            {/* Card 4: Direct Messaging */}
-            {/*<Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">*/}
-            {/*  <CardHeader className="flex items-center space-x-3">*/}
-            {/*    <HiMail className="text-3xl text-yellow-400 transition-transform duration-300 hover:scale-110" />*/}
-            {/*    <CardTitle className="text-primary text-xl">Direct Messaging</CardTitle>*/}
-            {/*  </CardHeader>*/}
-            {/*  <CardContent>*/}
-            {/*    <p className="text-gray-400 text-sm mb-4">*/}
-            {/*      Privately message your instructor for feedback or questions.*/}
-            {/*    </p>*/}
-            {/*    <Button onClick={messageInstructor} className="bg-white text-black hover:bg-gray-200">*/}
-            {/*      Message Instructor*/}
-            {/*    </Button>*/}
-            {/*  </CardContent>*/}
-            {/*</Card>*/}
           </div>
 
           {/* Progress Section */}
