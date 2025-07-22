@@ -5,32 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/lib/firebaseConfig";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { ChevronDown, ChevronUp, Download, ArrowLeftCircle } from "lucide-react";
+import { SetStateAction, useEffect, useState} from "react";
+import {useRouter} from "next/navigation";
+import {onAuthStateChanged} from "firebase/auth";
+import {auth, db} from "@/lib/firebaseConfig";
+import {collection, getDocs, query, orderBy} from "firebase/firestore";
+import {ChevronDown, ChevronUp, Download, ArrowLeftCircle} from "lucide-react";
 
 export default function LogsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<any[]>([]);
-  const [logFilter, setLogFilter] = useState({ email: "", startDate: "", role: "", action: "" });
+  const [logFilter, setLogFilter] = useState({email: "", startDate: "", role: "", action: ""});
   const [logsLoading, setLogsLoading] = useState(false);
   const [clockLogs, setClockLogs] = useState<any[]>([]);
   const [filteredClockLogs, setFilteredClockLogs] = useState<any[]>([]);
-  const [clockLogFilter, setClockLogFilter] = useState({ name: "", startDate: "" });
+  const [clockLogFilter, setClockLogFilter] = useState({name: "", startDate: ""});
   const [clockLogsLoading, setClockLogsLoading] = useState(false);
   const [clockLogsError, setClockLogsError] = useState<string | null>(null);
   const [messageLogs, setMessageLogs] = useState<any[]>([]);
   const [filteredMessageLogs, setFilteredMessageLogs] = useState<any[]>([]);
-  const [messageLogFilter, setMessageLogFilter] = useState({ sender: "", content: "" });
+  const [messageLogFilter, setMessageLogFilter] = useState({sender: "", content: ""});
   const [messageLogsLoading, setMessageLogsLoading] = useState(false);
   const [messageLogsError, setMessageLogsError] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState({ activity: 1, chat: 1, clock: 1 });
+  const [currentPage, setCurrentPage] = useState({activity: 1, chat: 1, clock: 1});
   const itemsPerPage = 10;
 
   // Load cached data from localStorage
@@ -68,12 +68,12 @@ export default function LogsPage() {
         localStorage.setItem("activityLogs", JSON.stringify([]));
         return;
       }
-      const logList = [];
+      const logList: SetStateAction<any[]> = [];
       snapshot.forEach((doc) => {
         const userId = doc.id;
         const data = doc.data();
         const entries = data.entries || [];
-        entries.forEach((entry, index) => {
+        entries.forEach((entry: { email: any; role: any; action: any; timestamp: any; edited_by: any; }, index: any) => {
           logList.push({
             id: `${userId}-${index}`, // Unique ID for each entry
             user_id: userId,
