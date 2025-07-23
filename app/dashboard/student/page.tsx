@@ -143,7 +143,7 @@ const { isSigningOut } = useContext(SignOutContext);
       try {
         const memberProgressPromises = userGroup.members.map(async (member: GroupMember) => {
           try {
-            const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${member.user_id}`);
+            const response = await fetch(`https://cansat-education-tool.onrender.com/get-user-progress?user_id=${member.user_id}`);
             let progressData: ProgressItem[] = [];
 
             if (response.ok) {
@@ -191,7 +191,7 @@ const { isSigningOut } = useContext(SignOutContext);
     const fetchProgressData = async () => {
       try {
         setProgressLoading(true);
-        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userId}`);
+        const response = await fetch(`https://cansat-education-tool.onrender.com/get-user-progress?user_id=${userId}`);
         if (response.ok) {
           const data = await response.json();
           setProgressData(data);

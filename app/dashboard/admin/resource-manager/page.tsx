@@ -121,7 +121,7 @@ export default function AdminPdfManager() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://localhost:8080/get-pdfs", {})
+        const response = await fetch("https://cansat-education-tool.onrender.com/get-pdfs", {})
         const data = await response.json()
         setPdfs(data)
       } catch (error) {
@@ -163,7 +163,7 @@ export default function AdminPdfManager() {
     formData.append("userId", userId)
 
     try {
-      const response = await fetch("http://localhost:8080/upload-pdf", {
+      const response = await fetch("https://cansat-education-tool.onrender.com/upload-pdf", {
         method: "POST",
         body: formData,
       })
@@ -207,7 +207,7 @@ export default function AdminPdfManager() {
         // Get the current user's ID token
         const idToken = await auth.currentUser?.getIdToken()
 
-        const response = await fetch("http://localhost:8080/delete-pdf", {
+        const response = await fetch("https://cansat-education-tool.onrender.com/delete-pdf", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
