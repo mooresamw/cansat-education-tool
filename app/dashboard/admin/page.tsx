@@ -155,7 +155,7 @@ export default function AdminDashboard() {
       }
 
       console.log("Step 9: Registering with backend")
-      const response = await fetch("http://localhost:8080/register", {
+      const response = await fetch("https://cansat-education-tool.onrender.com/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

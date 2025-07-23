@@ -215,7 +215,7 @@ const LoginSignupPage = () => {
 
       const idToken = await user.getIdToken();
 
-      const loginResponse = await fetch("http://localhost:8080/login", {
+      const loginResponse = await fetch("https://cansat-education-tool.onrender.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
