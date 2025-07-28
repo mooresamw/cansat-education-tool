@@ -396,8 +396,8 @@ const handleSignOut = async () => {
 
   // Sidebar content component to reuse in both desktop and mobile
   const SidebarContent = ({ onNavClick, isMobile = false }: { onNavClick?: () => void; isMobile?: boolean }) => (
-    <>
-      <div className="p-4 ">
+    <div className="flex flex-col justify-between h-full">
+      <div className="p-4">
         <Link
           href={`/dashboard/${userData.role}`}
           className="text-lg font-bold hover:text-primary transition-colors block mb-4"
@@ -498,25 +498,18 @@ const handleSignOut = async () => {
               Virtual Arduino IDE
             </NavItem>
             <NavItem
-              href="/dashboard/student/messageStudent"
+              href="/dashboard/student/messages"
               icon={<UsersIcon className="h-4 w-4" />}
               onClick={onNavClick}
             >
               Collaboration Tools
-            </NavItem>
-            <NavItem
-              href="/dashboard/student/message"
-              icon={<MessageCircleIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-            >
-              Instructor Communication
             </NavItem>
           </>
         )}
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="border-t p-2 space-y-16">
+      <div className="border-t bottom-0 p-2 space-y-0">
         {/* Settings Button */}
         <Button
           variant="ghost"
@@ -650,7 +643,7 @@ const handleSignOut = async () => {
           </PopoverContent>
         </Popover>
       </div>
-    </>
+    </div>
   );
 
   return (
