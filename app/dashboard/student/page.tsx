@@ -371,7 +371,7 @@ const { isSigningOut } = useContext(SignOutContext);
   return (
     <div className="bg-black min-h-screen text-primary">
       <DashboardLayout userType="student">
-        <main className="max-w-6xl mx-auto w-full px-4 py-4 relative">
+        <main className="max-w-6xl mx-auto w-full px-1 py-4 relative">
           {/* Header */}
           {/*<h1 className="text-3xl md:text-4xl font-bold mb-6">Student Dashboard</h1>*/}
 
