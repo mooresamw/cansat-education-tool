@@ -1,12 +1,13 @@
-"use client"
+// UnifiedChatPage.tsx
+"use client";
 
-import { useEffect, useState, useRef } from "react"
-import { auth, db } from "@/lib/firebaseConfig"
-import { collection, getDocs, query, where, addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore"
-import { FiMessageCircle, FiSend } from "react-icons/fi"
-import { sendMessage, handleReaction, handleEditMessage, getMessages, markMessageAsRead } from "@/lib/firestoreUtil"
-import { DashboardLayout } from "@/components/DashboardLayout"
-import Loading from "@/components/Loading"
+import { useEffect, useState, useRef, useContext } from "react";
+import { auth, db } from "@/lib/firebaseConfig";
+import { collection, getDocs, query, where, addDoc, updateDoc, arrayUnion, doc } from "firebase/firestore";
+import { FiMessageCircle, FiSend } from "react-icons/fi";
+import { sendMessage, handleReaction, handleEditMessage, getMessages, markMessageAsRead } from "@/lib/firestoreUtil";
+import { DashboardLayout, SignOutContext } from "@/components/DashboardLayout";
+import Loading from "@/components/Loading";
 import {
   Dialog,
   DialogContent,
@@ -14,264 +15,329 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Search, Users, GraduationCap, MessageSquare } from "lucide-react"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Users, GraduationCap, MessageSquare } from "lucide-react";
 
-type ChatType = "instructor" | "student" | "group"
+type ChatType = "instructor" | "student" | "group";
 
 interface Chat {
-  id: string
-  name: string
-  email?: string
-  type: ChatType
-  members?: any[]
-  uid?: string
-  instructor_email?: string
+  id: string;
+  name: string;
+  email?: string;
+  type: ChatType;
+  members?: any[];
+  uid?: string;
+  instructor_email?: string;
 }
 
 export default function UnifiedChatPage() {
-  const [user, setUser] = useState<any>(null)
-  const [instructors, setInstructors] = useState<any[]>([])
-  const [students, setStudents] = useState<any[]>([])
-  const [groups, setGroups] = useState<any[]>([])
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
-  const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<any[]>([])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const [editingText, setEditingText] = useState("")
-  const [loading, setLoading] = useState(true)
+  const { isSigningOut } = useContext(SignOutContext);
+  const [user, setUser] = useState<any>(null);
+  const [instructors, setInstructors] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [loading, setLoading] = useState(true);
 
   // Group creation states
-  const [createGroupOpen, setCreateGroupOpen] = useState(false)
-  const [joinGroupOpen, setJoinGroupOpen] = useState(false)
-  const [groupName, setGroupName] = useState("")
-  const [instructorEmail, setInstructorEmail] = useState("")
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [joinGroupOpen, setJoinGroupOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [instructorEmail, setInstructorEmail] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch current user
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
-        const userDoc = await getDocs(query(collection(db, "users"), where("user_id", "==", currentUser.uid)))
-        if (!userDoc.empty) {
-          const userData = userDoc.docs[0].data()
-          setUser({ ...currentUser, ...userData })
-          setLoading(false)
+        try {
+          const userDoc = await getDocs(query(collection(db, "users"), where("user_id", "==", currentUser.uid)));
+          if (!userDoc.empty) {
+            const userData = userDoc.docs[0].data();
+            setUser({ ...currentUser, ...userData });
+            setLoading(false);
+          } else {
+            setUser(null);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUser(null);
+          setLoading(false);
         }
       } else {
-        setUser(null)
+        setUser(null);
+        setLoading(false);
       }
-    })
-    return () => unsubscribe()
-  }, [])
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch instructors
   useEffect(() => {
-    async function fetchInstructors() {
-      if (!user || !user.school_id) return
+    let isMounted = true;
 
-      const instructorsQuery = query(
-        collection(db, "users"),
-        where("role", "==", "instructor"),
-        where("school_id", "==", user.school_id),
-      )
-      const snapshot = await getDocs(instructorsQuery)
-      const instructorsList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        uid: doc.data().user_id,
-        type: "instructor" as ChatType,
-        ...doc.data(),
-      }))
-      setInstructors(instructorsList)
+    async function fetchInstructors() {
+      if (!isMounted || !user || !user.school_id || isSigningOut) return;
+
+      try {
+        const instructorsQuery = query(
+          collection(db, "users"),
+          where("role", "==", "instructor"),
+          where("school_id", "==", user.school_id),
+        );
+        const snapshot = await getDocs(instructorsQuery);
+        if (!isMounted) return;
+        const instructorsList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          uid: doc.data().user_id,
+          type: "instructor" as ChatType,
+          ...doc.data(),
+        }));
+        setInstructors(instructorsList);
+      } catch (error: any) {
+        console.error("Error fetching instructors:", error);
+        if (error.code === "permission-denied") {
+          console.log("Permission denied; likely due to sign-out");
+        }
+      }
     }
-    fetchInstructors()
-  }, [user])
+
+    if (user) fetchInstructors();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isSigningOut]);
 
   // Fetch students and groups
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchStudentsAndGroups() {
-      if (!user || !user.school_id) return
+      if (!isMounted || !user || !user.school_id || isSigningOut) return;
 
-      // Fetch students
-      const studentsQuery = query(
-        collection(db, "users"),
-        where("role", "==", "student"),
-        where("school_id", "==", user.school_id),
-      )
-      const studentsSnapshot = await getDocs(studentsQuery)
-      const studentsList = studentsSnapshot.docs
-        .map((doc) => {
-          const data = doc.data()
-          return {
-            id: doc.id,
-            uid: data.user_id,
-            type: "student" as ChatType,
-            ...data,
-          }
-        })
-        .filter((student) => student.uid !== user.uid)
+      try {
+        // Fetch students
+        const studentsQuery = query(
+          collection(db, "users"),
+          where("role", "==", "student"),
+          where("school_id", "==", user.school_id),
+        );
+        const studentsSnapshot = await getDocs(studentsQuery);
+        if (!isMounted) return;
+        const studentsList = studentsSnapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              uid: data.user_id,
+              type: "student" as ChatType,
+              ...data,
+            };
+          })
+          .filter((student) => student.uid !== user.uid);
 
-      // Fetch groups
-      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id))
-      const groupsSnapshot = await getDocs(groupsQuery)
-      const groupsList = groupsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        type: "group" as ChatType,
-        ...doc.data(),
-      }))
+        // Fetch groups
+        const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
+        const groupsSnapshot = await getDocs(groupsQuery);
+        if (!isMounted) return;
+        const groupsList = groupsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          type: "group" as ChatType,
+          ...doc.data(),
+        }));
 
-      // Mark students who are in groups
-      studentsList.forEach((student) => {
-        student.inGroup = groupsList.some(
-          (group) =>
-            group.members &&
-            group.members.some((member: any) =>
-              typeof member === "string" ? member === student.uid : member.user_id === student.uid,
-            ),
-        )
-      })
+        // Mark students who are in groups
+        studentsList.forEach((student) => {
+          student.inGroup = groupsList.some(
+            (group) =>
+              group.members &&
+              group.members.some((member: any) =>
+                typeof member === "string" ? member === student.uid : member.user_id === student.uid,
+              ),
+          );
+        });
 
-      setStudents(studentsList)
-      setGroups(groupsList)
+        setStudents(studentsList);
+        setGroups(groupsList);
+      } catch (error: any) {
+        console.error("Error fetching students and groups:", error);
+        if (error.code === "permission-denied") {
+          console.log("Permission denied; likely due to sign-out");
+        }
+      }
     }
-    fetchStudentsAndGroups()
-  }, [user])
+
+    if (user) fetchStudentsAndGroups();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isSigningOut]);
 
   // Real-time listener for messages
   useEffect(() => {
-    if (!selectedChat || !user) return
+    let isMounted = true;
 
-    let chatId: string
+    if (!selectedChat || !user || isSigningOut) return;
+
+    let chatId: string;
 
     switch (selectedChat.type) {
       case "instructor":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "student":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "group":
-        chatId = selectedChat.id
-        break
+        chatId = selectedChat.id;
+        break;
       default:
-        return
+        return;
     }
 
     const unsubscribe = getMessages(chatId, (newMessages: any[]) => {
-      setMessages(newMessages)
+      if (!isMounted) return;
+      setMessages(newMessages);
       newMessages.forEach((msg) => {
-        if (msg.sender !== user.uid && !msg.read?.[user.uid]) {
-          markMessageAsRead(chatId, user.uid, msg.messageId)
+        if (msg.sender !== user.uid && !msg.read?.[user.uid] && auth.currentUser) {
+          markMessageAsRead(chatId, user.uid, msg.messageId).catch((error: any) => {
+            console.error("Error marking message as read:", error);
+            if (error.code === "permission-denied") {
+              console.log("Permission denied; likely due to sign-out");
+            }
+          });
         }
-      })
-    })
+      });
+    });
 
-    return () => unsubscribe()
-  }, [selectedChat, user])
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [selectedChat, user, isSigningOut]);
 
   // Send message
   const handleSendMessage = async () => {
-    if (!user || !message.trim() || !selectedChat) {
-      alert("You must be logged in and select a chat to send a message.")
-      return
+    if (!user || !message.trim() || !selectedChat || isSigningOut || !auth.currentUser) {
+      alert("You must be logged in and select a chat to send a message.");
+      return;
     }
 
-    let chatId: string
-    let participants: string[]
+    let chatId: string;
+    let participants: string[];
 
     switch (selectedChat.type) {
       case "instructor":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        participants = [user.uid, selectedChat.uid]
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        participants = [user.uid, selectedChat.uid];
+        break;
       case "student":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        participants = [user.uid, selectedChat.uid]
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        participants = [user.uid, selectedChat.uid];
+        break;
       case "group":
-        chatId = selectedChat.id
-        participants = selectedChat.members?.map((m: any) => (typeof m === "string" ? m : m.user_id)) || []
-        break
+        chatId = selectedChat.id;
+        participants = selectedChat.members?.map((m: any) => (typeof m === "string" ? m : m.user_id)) || [];
+        break;
       default:
-        return
+        return;
     }
 
     try {
-      await sendMessage(chatId, user.uid, message, participants)
-      setMessage("")
-    } catch (error) {
-      console.error("Error sending message:", error)
-      alert("Failed to send message.")
+      await sendMessage(chatId, user.uid, message, participants);
+      setMessage("");
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to send message.");
+      }
     }
-  }
+  };
 
   // Handle reactions
   const handleReactionClick = async (messageId: string, emoji: string) => {
-    if (!user || !selectedChat) return
+    if (!user || !selectedChat || isSigningOut || !auth.currentUser) return;
 
-    let chatId: string
+    let chatId: string;
     switch (selectedChat.type) {
       case "instructor":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "student":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "group":
-        chatId = selectedChat.id
-        break
+        chatId = selectedChat.id;
+        break;
       default:
-        return
+        return;
     }
 
     try {
-      await handleReaction(chatId, user.uid, messageId, emoji)
-    } catch (error) {
-      console.error("Error updating reaction:", error)
-      alert("Failed to update reaction.")
+      await handleReaction(chatId, user.uid, messageId, emoji);
+    } catch (error: any) {
+      console.error("Error updating reaction:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to update reaction.");
+      }
     }
-  }
+  };
 
   // Handle message editing
   const handleEditMessageClick = async (messageId: string, newText: string) => {
-    if (!user || !selectedChat) return
+    if (!user || !selectedChat || isSigningOut || !auth.currentUser) return;
 
-    let chatId: string
+    let chatId: string;
     switch (selectedChat.type) {
       case "instructor":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "student":
-        chatId = [user.uid, selectedChat.uid].sort().join("_")
-        break
+        chatId = [user.uid, selectedChat.uid].sort().join("_");
+        break;
       case "group":
-        chatId = selectedChat.id
-        break
+        chatId = selectedChat.id;
+        break;
       default:
-        return
+        return;
     }
 
     try {
-      await handleEditMessage(chatId, user.uid, messageId, newText)
-      setEditingMessageId(null)
-      setEditingText("")
-    } catch (error) {
-      console.error("Error editing message:", error)
-      alert("Failed to edit message.")
+      await handleEditMessage(chatId, user.uid, messageId, newText);
+      setEditingMessageId(null);
+      setEditingText("");
+    } catch (error: any) {
+      console.error("Error editing message:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to edit message.");
+      }
     }
-  }
+  };
 
   // Group management functions
   const handleCreateGroup = async () => {
-    if (!groupName.trim() || !instructorEmail.trim() || selectedMembers.length === 0) {
-      alert("Please fill all fields and select at least one member")
-      return
+    if (!groupName.trim() || !instructorEmail.trim() || selectedMembers.length === 0 || isSigningOut || !auth.currentUser) {
+      alert("Please fill all fields and select at least one member");
+      return;
     }
 
     try {
@@ -279,30 +345,30 @@ export default function UnifiedChatPage() {
         group.members?.some((member: any) =>
           typeof member === "string" ? member === user.uid : member.user_id === user.uid,
         ),
-      )
+      );
 
       if (userInGroup) {
-        alert("You are already in a group. You can only belong to one group at a time.")
-        return
+        alert("You are already in a group. You can only belong to one group at a time.");
+        return;
       }
 
       const selectedMembersInGroups = students
         .filter((student) => selectedMembers.includes(student.uid) && student.inGroup)
-        .map((student) => student.name)
+        .map((student) => student.name);
 
       if (selectedMembersInGroups.length > 0) {
-        alert(`The following students are already in groups: ${selectedMembersInGroups.join(", ")}`)
-        return
+        alert(`The following students are already in groups: ${selectedMembersInGroups.join(", ")}`);
+        return;
       }
 
-      const currentTimestamp = new Date()
+      const currentTimestamp = new Date();
       const members = [
         ...selectedMembers.map((memberId: string) => ({
           user_id: memberId,
           joined_at: currentTimestamp,
         })),
         { user_id: user.uid, joined_at: currentTimestamp },
-      ]
+      ];
 
       await addDoc(collection(db, "groups"), {
         name: groupName,
@@ -311,111 +377,127 @@ export default function UnifiedChatPage() {
         school_id: user.school_id,
         created_at: currentTimestamp,
         created_by: user.uid,
-      })
+      });
 
-      setGroupName("")
-      setInstructorEmail("")
-      setSelectedMembers([])
-      setCreateGroupOpen(false)
+      setGroupName("");
+      setInstructorEmail("");
+      setSelectedMembers([]);
+      setCreateGroupOpen(false);
 
-      // Refresh data
-      await refreshData()
-      alert("Group created successfully!")
-    } catch (error) {
-      console.error("Error creating group:", error)
-      alert("Failed to create group.")
+      await refreshData();
+      alert("Group created successfully!");
+    } catch (error: any) {
+      console.error("Error creating group:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to create group.");
+      }
     }
-  }
+  };
 
   const handleJoinGroup = async (groupId: string) => {
+    if (isSigningOut || !auth.currentUser) return;
+
     try {
       const userInGroup = groups.some((group) =>
         group.members?.some((member: any) =>
           typeof member === "string" ? member === user.uid : member.user_id === user.uid,
         ),
-      )
+      );
 
       if (userInGroup) {
-        alert("You are already in a group. You can only belong to one group at a time.")
-        return
+        alert("You are already in a group. You can only belong to one group at a time.");
+        return;
       }
 
-      const groupRef = doc(db, "groups", groupId)
-      const currentTimestamp = new Date()
+      const groupRef = doc(db, "groups", groupId);
+      const currentTimestamp = new Date();
       await updateDoc(groupRef, {
         members: arrayUnion({
           user_id: user.uid,
           name: user.name,
           joined_at: currentTimestamp,
         }),
-      })
+      });
 
-      await refreshData()
-      setJoinGroupOpen(false)
-      alert("You have joined the group successfully!")
-    } catch (error) {
-      console.error("Error joining group:", error)
-      alert("Failed to join group.")
+      await refreshData();
+      setJoinGroupOpen(false);
+      alert("You have joined the group successfully!");
+    } catch (error: any) {
+      console.error("Error joining group:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      } else {
+        alert("Failed to join group.");
+      }
     }
-  }
+  };
 
   const refreshData = async () => {
-    if (!user || !user.school_id) return
+    if (!user || !user.school_id || isSigningOut || !auth.currentUser) return;
 
-    // Refresh groups
-    const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id))
-    const groupsSnapshot = await getDocs(groupsQuery)
-    const groupsList = groupsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      type: "group" as ChatType,
-      ...doc.data(),
-    }))
-    setGroups(groupsList)
+    try {
+      // Refresh groups
+      const groupsQuery = query(collection(db, "groups"), where("school_id", "==", user.school_id));
+      const groupsSnapshot = await getDocs(groupsQuery);
+      const groupsList = groupsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        type: "group" as ChatType,
+        ...doc.data(),
+      }));
 
-    // Refresh students
-    const studentsQuery = query(
-      collection(db, "users"),
-      where("role", "==", "student"),
-      where("school_id", "==", user.school_id),
-    )
-    const studentsSnapshot = await getDocs(studentsQuery)
-    const studentsList = studentsSnapshot.docs
-      .map((doc) => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          uid: data.user_id,
-          type: "student" as ChatType,
-          ...data,
-        }
-      })
-      .filter((student) => student.uid !== user.uid)
+      // Refresh students
+      const studentsQuery = query(
+        collection(db, "users"),
+        where("role", "==", "student"),
+        where("school_id", "==", user.school_id),
+      );
+      const studentsSnapshot = await getDocs(studentsQuery);
+      const studentsList = studentsSnapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            uid: data.user_id,
+            type: "student" as ChatType,
+            ...data,
+          };
+        })
+        .filter((student) => student.uid !== user.uid);
 
-    studentsList.forEach((student) => {
-      student.inGroup = groupsList.some(
-        (group) =>
-          group.members &&
-          group.members.some((member: any) =>
-            typeof member === "string" ? member === student.uid : member.user_id === student.uid,
-          ),
-      )
-    })
+      studentsList.forEach((student) => {
+        student.inGroup = groupsList.some(
+          (group) =>
+            group.members &&
+            group.members.some((member: any) =>
+              typeof member === "string" ? member === student.uid : member.user_id === student.uid,
+            ),
+        );
+      });
 
-    setStudents(studentsList)
-  }
+      setStudents(studentsList);
+      setGroups(groupsList);
+    } catch (error: any) {
+      console.error("Error refreshing data:", error);
+      if (error.code === "permission-denied") {
+        console.log("Permission denied; likely due to sign-out");
+      }
+    }
+  };
 
   const toggleMemberSelection = (studentId: string) => {
     setSelectedMembers((prev) =>
       prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId],
-    )
-  }
+    );
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages])
+  }, [messages]);
 
   // Helper functions
   const formatTimestamp = (timestamp: any) => {
@@ -424,68 +506,70 @@ export default function UnifiedChatPage() {
           hour: "2-digit",
           minute: "2-digit",
         })
-      : "Just now"
-  }
+      : "Just now";
+  };
 
   const formatDateSeparator = (timestamp: any) => {
-    const date = new Date(timestamp)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(today.getDate() - 1)
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
 
-    const isToday = date.toDateString() === today.toDateString()
-    const isYesterday = date.toDateString() === yesterday.toDateString()
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
 
-    if (isToday) return "Today"
-    if (isYesterday) return "Yesterday"
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
     return date.toLocaleDateString([], {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const getChatIcon = (chat: Chat) => {
     switch (chat.type) {
       case "instructor":
-        return <GraduationCap className="h-5 w-5 text-gray-400" />
+        return <GraduationCap className="h-5 w-5 text-gray-400" />;
       case "group":
-        return <Users className="h-5 w-5 text-gray-400" />
+        return <Users className="h-5 w-5 text-gray-400" />;
       default:
-        return <MessageSquare className="h-5 w-5 text-gray-400" />
+        return <MessageSquare className="h-5 w-5 text-gray-400" />;
     }
-  }
+  };
 
   const getChatSubtitle = (chat: Chat) => {
     switch (chat.type) {
       case "instructor":
-        return chat.email || "Instructor"
+        return chat.email || "Instructor";
       case "group":
-        return `${chat.members?.length || 0} members`
+        return `${chat.members?.length || 0} members`;
       case "student":
-        return chat.email || "Student"
+        return chat.email || "Student";
       default:
-        return ""
+        return "";
     }
-  }
+  };
 
-  if (loading) return <Loading />
+  if (loading || isSigningOut || !user) {
+    return <Loading />;
+  }
 
   // Get user's groups for filtering direct messages
   const userGroups = groups.filter((group) =>
     group.members?.some((member: any) =>
       typeof member === "string" ? member === user.uid : member.user_id === user.uid,
     ),
-  )
+  );
 
   const groupMemberIds = userGroups
     .flatMap(
       (group) => group.members?.map((member: any) => (typeof member === "string" ? member : member.user_id)) || [],
     )
-    .filter((id: string) => id !== user.uid)
+    .filter((id: string) => id !== user.uid);
 
-  const availableStudents = students.filter((student) => groupMemberIds.includes(student.uid))
+  const availableStudents = students.filter((student) => groupMemberIds.includes(student.uid));
 
   return (
     <DashboardLayout userType={user?.role || "student"}>
@@ -602,6 +686,7 @@ export default function UnifiedChatPage() {
                 size="sm"
                 onClick={() => setCreateGroupOpen(true)}
                 className="flex items-center gap-2"
+                disabled={isSigningOut}
               >
                 <Plus size={16} />
                 Create Group
@@ -611,6 +696,7 @@ export default function UnifiedChatPage() {
                 size="sm"
                 onClick={() => setJoinGroupOpen(true)}
                 className="flex items-center gap-2"
+                disabled={isSigningOut}
               >
                 <Users size={16} />
                 Join Group
@@ -629,8 +715,8 @@ export default function UnifiedChatPage() {
                       selectedChat.type === "instructor"
                         ? "bg-blue-500"
                         : selectedChat.type === "group"
-                          ? "bg-purple-500"
-                          : "bg-green-500"
+                        ? "bg-purple-500"
+                        : "bg-green-500"
                     }`}
                   >
                     {selectedChat.name?.[0]?.toUpperCase() ||
@@ -655,23 +741,23 @@ export default function UnifiedChatPage() {
                     </div>
                   ) : (
                     messages.map((msg, index) => {
-                      const isSender = msg.sender === user.uid
-                      const timestamp = formatTimestamp(msg.timestamp)
+                      const isSender = msg.sender === user.uid;
+                      const timestamp = formatTimestamp(msg.timestamp);
 
                       // Get sender data for group chats
-                      let senderData = null
+                      let senderData = null;
                       if (selectedChat.type === "group" && !isSender) {
                         senderData = students.find((s) => s.uid === msg.sender) ||
-                          instructors.find((i) => i.uid === msg.sender) || { name: "Unknown User" }
+                          instructors.find((i) => i.uid === msg.sender) || { name: "Unknown User" };
                       }
 
                       // Date separator logic
-                      const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : ""
+                      const currentDate = msg.timestamp ? new Date(msg.timestamp).toDateString() : "";
                       const prevDate =
                         index > 0 && messages[index - 1].timestamp
                           ? new Date(messages[index - 1].timestamp).toDateString()
-                          : null
-                      const showDateSeparator = index === 0 || currentDate !== prevDate
+                          : null;
+                      const showDateSeparator = index === 0 || currentDate !== prevDate;
 
                       return (
                         <div key={msg.messageId} className="space-y-2">
@@ -691,8 +777,8 @@ export default function UnifiedChatPage() {
                                     selectedChat.type === "instructor"
                                       ? "bg-blue-500"
                                       : selectedChat.type === "group"
-                                        ? "bg-purple-500"
-                                        : "bg-green-500"
+                                      ? "bg-purple-500"
+                                      : "bg-green-500"
                                   }`}
                                 >
                                   {selectedChat.type === "group"
@@ -725,12 +811,14 @@ export default function UnifiedChatPage() {
                                     <button
                                       onClick={() => handleEditMessageClick(msg.messageId, editingText)}
                                       className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                      disabled={isSigningOut}
                                     >
                                       Save
                                     </button>
                                     <button
                                       onClick={() => setEditingMessageId(null)}
                                       className="px-3 py-1.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                      disabled={isSigningOut}
                                     >
                                       Cancel
                                     </button>
@@ -748,10 +836,11 @@ export default function UnifiedChatPage() {
                                   {isSender && (
                                     <button
                                       onClick={() => {
-                                        setEditingMessageId(msg.messageId)
-                                        setEditingText(msg.message)
+                                        setEditingMessageId(msg.messageId);
+                                        setEditingText(msg.message);
                                       }}
                                       className="mt-1 text-xs text-blue-200 hover:text-blue-100 transition-colors"
+                                      disabled={isSigningOut}
                                     >
                                       Edit
                                     </button>
@@ -763,18 +852,21 @@ export default function UnifiedChatPage() {
                                 <button
                                   onClick={() => handleReactionClick(msg.messageId, "👍")}
                                   className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                  disabled={isSigningOut}
                                 >
                                   👍
                                 </button>
                                 <button
                                   onClick={() => handleReactionClick(msg.messageId, "❤️")}
                                   className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                  disabled={isSigningOut}
                                 >
                                   ❤️
                                 </button>
                                 <button
                                   onClick={() => handleReactionClick(msg.messageId, "😆")}
                                   className="text-sm text-gray-600 hover:text-gray-900 transform hover:scale-105 transition-transform"
+                                  disabled={isSigningOut}
                                 >
                                   😆
                                 </button>
@@ -800,7 +892,7 @@ export default function UnifiedChatPage() {
                             )}
                           </div>
                         </div>
-                      )
+                      );
                     })
                   )}
                   <div ref={messagesEndRef} />
@@ -817,14 +909,16 @@ export default function UnifiedChatPage() {
                       className="w-full p-3 pr-16 resize-none bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
                       onKeyPress={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSendMessage()
+                          e.preventDefault();
+                          handleSendMessage();
                         }
                       }}
+                      disabled={isSigningOut}
                     />
                     <button
                       onClick={handleSendMessage}
                       className="absolute bottom-6 right-3 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-sm transition-colors"
+                      disabled={isSigningOut}
                     >
                       <FiSend className="h-5 w-5" />
                     </button>
@@ -862,6 +956,7 @@ export default function UnifiedChatPage() {
                 onChange={(e) => setGroupName(e.target.value)}
                 className="col-span-3"
                 placeholder="Enter group name"
+                disabled={isSigningOut}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -875,6 +970,7 @@ export default function UnifiedChatPage() {
                 className="col-span-3"
                 placeholder="Enter instructor email"
                 type="email"
+                disabled={isSigningOut}
               />
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
@@ -887,6 +983,7 @@ export default function UnifiedChatPage() {
                     className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    disabled={isSigningOut}
                   />
                 </div>
                 {students.length === 0 ? (
@@ -903,6 +1000,7 @@ export default function UnifiedChatPage() {
                             id={`student-${student.uid}`}
                             checked={selectedMembers.includes(student.uid)}
                             onCheckedChange={() => toggleMemberSelection(student.uid)}
+                            disabled={isSigningOut}
                           />
                           <Label htmlFor={`student-${student.uid}`} className="flex items-center gap-2 cursor-pointer">
                             <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs">
@@ -921,10 +1019,12 @@ export default function UnifiedChatPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateGroupOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateGroupOpen(false)} disabled={isSigningOut}>
               Cancel
             </Button>
-            <Button onClick={handleCreateGroup}>Create Group</Button>
+            <Button onClick={handleCreateGroup} disabled={isSigningOut}>
+              Create Group
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -948,7 +1048,7 @@ export default function UnifiedChatPage() {
                 {groups.map((group) => {
                   const isMember = group.members?.some((member: any) =>
                     typeof member === "string" ? member === user.uid : member.user_id === user.uid,
-                  )
+                  );
                   return (
                     <div key={group.id} className="border rounded-lg p-4 bg-card">
                       <div className="flex justify-between items-start">
@@ -959,7 +1059,11 @@ export default function UnifiedChatPage() {
                         {isMember ? (
                           <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Joined</span>
                         ) : (
-                          <Button size="sm" onClick={() => handleJoinGroup(group.id)} disabled={userGroups.length > 0}>
+                          <Button
+                            size="sm"
+                            onClick={() => handleJoinGroup(group.id)}
+                            disabled={userGroups.length > 0 || isSigningOut}
+                          >
                             Join
                           </Button>
                         )}
@@ -968,10 +1072,10 @@ export default function UnifiedChatPage() {
                         <p className="text-xs text-muted-foreground mb-1">Members:</p>
                         <div className="flex flex-wrap gap-1">
                           {group.members?.map((member: any) => {
-                            const memberId = typeof member === "string" ? member : member.user_id
+                            const memberId = typeof member === "string" ? member : member.user_id;
                             const memberData =
-                              students.find((s) => s.uid === memberId) || (memberId === user.uid ? user : null)
-                            if (!memberData) return null
+                              students.find((s) => s.uid === memberId) || (memberId === user.uid ? user : null);
+                            if (!memberData) return null;
                             return (
                               <div
                                 key={memberId}
@@ -982,23 +1086,23 @@ export default function UnifiedChatPage() {
                                 </div>
                                 <span>{memberData.name || "Unknown"}</span>
                               </div>
-                            )
+                            );
                           })}
                         </div>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setJoinGroupOpen(false)}>
+            <Button variant="outline" onClick={() => setJoinGroupOpen(false)} disabled={isSigningOut}>
               Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
-  )
+  );
 }
