@@ -127,7 +127,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-16 max-w-7xl mx-auto">
             {[
               {
                 day: "01",
@@ -161,7 +161,7 @@ export default function Home() {
               },
             ].map((item, index) => (
               <div key={index} className="group text-center">
-                <div className="relative mb-2 overflow-hidden rounded-lg aspect-square mx-auto" style={{ width: "250px", height: "250px" }}>
+                <div className="relative mb-2 overflow-hidden rounded-lg aspect-square mx-auto p-4" style={{ width: "250px", height: "250px" }}>
                   <Image
                     src={item.image || "/placeholder.svg"}
                     alt={item.title}
