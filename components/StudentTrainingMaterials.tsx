@@ -360,7 +360,7 @@ void loop() {
                     </Select>
                   </div>
 
-                  <div className="border rounded-lg overflow-auto h-[450px] w-[800px]">
+                  <div className="border rounded-lg overflow-auto h-[450px] w-[700px]">
                     {selectedPdf && (
                       <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess} options={pdfOptions}>
                         <Page pageNumber={pageNumber} width={700} />
