@@ -198,20 +198,20 @@ const LoginSignupPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        setNotification(
-          "Please verify your email before logging in. Check your inbox or click below to resend the verification email."
-        );
-        setVerificationSent(true);
-        await signOut(auth);
-        const idToken = await user.getIdToken();
-        await fetch("https://cansat-education-tool.onrender.com/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        return;
-      }
+      // if (!user.emailVerified) {
+      //   setNotification(
+      //     "Please verify your email before logging in. Check your inbox or click below to resend the verification email."
+      //   );
+      //   setVerificationSent(true);
+      //   await signOut(auth);
+      //   const idToken = await user.getIdToken();
+      //   await fetch("https://cansat-education-tool.onrender.com/logout", {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({ idToken }),
+      //   });
+      //   return;
+      // }
 
       const idToken = await user.getIdToken();
 

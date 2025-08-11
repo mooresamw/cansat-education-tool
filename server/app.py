@@ -197,12 +197,11 @@ def register():
             })
 
         return jsonify({
-            "message": "User registered successfully. Please check your email to verify your account.",
+            "message": "User registered successfully.",
             "uid": user_id,
             "email": email,
             "name": name,
-            "role": role,
-            "verified": verified
+            "role": role
         }), 200
     except Exception as e:
         print(f"Register error: {str(e)}")
