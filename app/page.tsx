@@ -41,8 +41,8 @@ export default function Home() {
                 >
                   Contact
                 </button>
-                <Link href="/login">
-                  <button className="bg-black text-white px-6 py-2 rounded-sm hover:bg-gray-800 transition-colors">
+                <Link href="/login" className="">
+                  <button className="bg-black text-white px-6 py-2 hover:bg-gray-800 transition-colors">
                     Login
                   </button>
                 </Link>
@@ -116,215 +116,224 @@ export default function Home() {
         </div>
       </section>
 
-        {/* About Section */}
-        {/*<section id="about" className="py-20">*/}
-        {/*  <div className="max-w-4xl mx-auto px-4">*/}
-        {/*    <h2 className="text-2xl md:text-3xl font-bold mb-12 text-center">ABOUT US</h2>*/}
 
-        {/*    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">*/}
-        {/*      <div>*/}
-        {/*        <Image*/}
-        {/*            src="/images/satellite.png"*/}
-        {/*            alt="CanSat Program"*/}
-        {/*            width={800}*/}
-        {/*            height={600}*/}
-        {/*            className="w-full h-auto"*/}
-        {/*        />*/}
-        {/*      </div>*/}
-        {/*      <div>*/}
-        {/*        <p className="text-gray-400 mb-8">*/}
-        {/*          We are a Pennsylvania-based educational enterprise named Avakas, derived from the Khmer term for*/}
-        {/*          "space." Our primary objective is to deliver comprehensive training programs that offer insights into*/}
-        {/*          the realm of space and engineering.*/}
-        {/*        </p>*/}
-        {/*        <h3 className="text-xl font-medium mb-4 text-white">What is CanSat?</h3>*/}
-        {/*        <p className="text-gray-400">*/}
-        {/*          A CanSat is a simulation of a real satellite, integrated within the volume and shape of a soft drink*/}
-        {/*          can. CanSats offer a unique opportunity for students to have a first practical experience of a real*/}
-        {/*          space project.*/}
-        {/*        </p>*/}
-        {/*      </div>*/}
-        {/*    </div>*/}
-        {/*  </div>*/}
-        {/*</section>*/}
-
-        {/* Program Section */}
-        <section id="program" className="py-20 bg-gray-950">
-          <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">LEARNING GOALS</h2>
-            <p className="text-gray-400 mb-12 text-center max-w-2xl mx-auto">
-              Our six-day program is designed to provide students with a comprehensive understanding of space
-              engineering
-              and hands-on experience with satellite design.
+{/* Program Section */}
+      <section id="program" className="py-32">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-light mb-6">Five-Day Journey</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mb-8 mx-auto">
+              From space fundamentals to launching your own satellite
             </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  day: "Day 1",
-                  title: "Space Environment",
-                  description:
-                      "Participants will be able to elaborate on and present information about the space environment.",
-                },
-                {
-                  day: "Day 2",
-                  title: "Satellite Research",
-                  description: "Research about famous satellites and its application.",
-                },
-                {
-                  day: "Day 3",
-                  title: "Mission Objectives",
-                  description: "Define their own mission objectives.",
-                },
-                {
-                  day: "Day 4",
-                  title: "Micro-controllers & Sensors",
-                  description:
-                      "Demonstrate understanding in micro-controller (Arduino) & applications of each sensor on CanSat.",
-                },
-                {
-                  day: "Day 5",
-                  title: "Programming & Assembly",
-                  description: "Programming Arduino to work with sensors and assembling their own CanSat.",
-                },
-                {
-                  day: "Day 6",
-                  title: "Presentation & Launch",
-                  description: "Presenting ideas as a group effectively and preparing for the CanSat launch.",
-                },
-              ].map((item, index) => (
-                  <div key={index} className="border border-gray-800 p-6">
-                    <div className="text-gray-500 font-medium mb-2">{item.day}</div>
-                    <h3 className="text-lg font-medium mb-2">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.description}</p>
-                  </div>
-              ))}
-            </div>
           </div>
-        </section>
 
-        {/* Mission Section */}
-        <section className="py-20">
-          <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-2xl md:text-3xl font-bold mb-12 text-center">MISSION AND VISION</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div>
-                <p className="text-gray-400 mb-8">
-                  Our mission is to introduce space engineering education to middle and high school students who are
-                  fascinated by space and interested in pursuing careers in space or engineering as a whole. We aim to
-                  provide them with a solid foundation through our CanSat program.
-                </p>
-                <h3 className="text-xl font-medium mb-4 text-white">Our Proposed Program</h3>
-                <ul className="space-y-4 text-gray-400">
-                  <li>
-                    <span className="text-white">Objective:</span> Offers conceptual and practical skills in space
-                    engineering, problem-solving through coding, and hands-on CanSat assembling.
-                  </li>
-                  <li>
-                    <span className="text-white">Who will teach:</span> Students will be taught and mentored by trained
-                    facilitators who are technology practitioners and academics.
-                  </li>
-                  <li>
-                    <span className="text-white">What we teach:</span> Exploring elementary concepts and the process of
-                    constructing a can-sized satellite through experimental and project-based learning.
-                  </li>
-                </ul>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-8 max-w-7xl mx-auto">
+            {[
+              {
+                day: "01",
+                title: "Space & Satellite Foundations",
+                desc: "Understanding space environment and satellite basics",
+                image: "/images/kid-coding-1.jpeg",
+              },
+              {
+                day: "02",
+                title: "Engineering & Micro-controllers",
+                desc: "Arduino programming and engineering principles",
+                image: "/images/playing-with-light.jpeg",
+              },
+              {
+                day: "03",
+                title: "Sensors, Data & Parachute Design",
+                desc: "Sensor integration and recovery system design",
+                image: "/images/balloon-and-cup.jpeg",
+              },
+              {
+                day: "04",
+                title: "Mission Planning & Assembly",
+                desc: "Define objectives and build your CanSat",
+                image: "/images/assembling.jpeg",
+              },
+              {
+                day: "05",
+                title: "Launch & Presentation",
+                desc: "Present your mission and launch day",
+                image: "/images/balloon-launch.jpeg",
+              },
+            ].map((item, index) => (
+              <div key={index} className="group text-center">
+                <div className="relative mb-2 overflow-hidden rounded-lg aspect-square mx-auto" style={{ width: "250px", height: "250px" }}>
+                  <Image
+                    src={item.image || "/placeholder.svg"}
+                    alt={item.title}
+                    width={200}
+                    height={200}
+                    className="w-full object-bottom object-cover hover:scale-105 translate-y-10 transition-transform duration-300"
+                  />
+                  <div className="absolute top-4 left-4 bg-black/80 text-white px-3 py-1 rounded text-sm font-medium">
+                    Day {item.day}
+                  </div>
+                </div>
+                <h3 className="text-lg font-medium mb-0.5">{item.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed mb-2">{item.desc}</p>
               </div>
-              <div>
-                <Image
-                    src="/images/satellite2.png"
-                    alt="Space Education"
-                    width={600}
-                    height={400}
-                    className="object-contain"
-                />
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* Mission Section */}
+      <section className="py-32 bg-black text-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+            <div className="text-center md:text-left">
+              <h2 className="text-4xl md:text-5xl font-light mb-8">Our Mission</h2>
+              <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                Introducing space engineering education to middle and high school students fascinated by space
+                exploration.
+              </p>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Objective</h3>
+                  <p className="text-gray-400">Conceptual and practical skills in space engineering</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Instructors</h3>
+                  <p className="text-gray-400">Trained facilitators and technology practitioners</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold mb-2">Method</h3>
+                  <p className="text-gray-400">Experimental and project-based learning</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* Benefits Section */}
-        <section id="benefits" className="py-20 bg-gray-950">
-          <div className="max-w-4xl mx-auto px-4">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center">PARTNERSHIP BENEFITS</h2>
-            <p className="text-gray-400 mb-12 text-center max-w-2xl mx-auto">
-              Partner with us to bring space education to your school and provide your students with unique
-              opportunities
-              in STEAM education.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                {
-                  title: "Space Education",
-                  description: "Introducing space education in the school curriculum.",
-                },
-                {
-                  title: "STEAM Enrichment",
-                  description:
-                      "Enrich STEAM education program in school particularly on Science, Engineering and Technology subjects.",
-                },
-                {
-                  title: "Space Club",
-                  description: "Initialize the space club at the school with students who have joined the program.",
-                },
-                {
-                  title: "School Reputation",
-                  description:
-                      "Enhance the school reputation by letting the students join space competition in the future.",
-                },
-              ].map((item, index) => (
-                  <div key={index} className="border border-gray-800 p-6">
-                    <h3 className="text-lg font-medium mb-2">{item.title}</h3>
-                    <p className="text-gray-400 text-sm">{item.description}</p>
-                  </div>
-              ))}
+            <div className="relative flex justify-center">
+              <Image
+                src="/images/cansat-parts.jpeg"
+                alt="Space Education Mission"
+                width={600}
+                height={500}
+                className="w-full max-w-md h-auto rounded-lg"
+              />
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* CTA Section */}
-        <section id="contact" className="py-20 border-t border-gray-900">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">READY TO LAUNCH YOUR STUDENTS' FUTURE?</h2>
-            <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
-              Contact us today to bring the Space Education Enrichment Program to your school.
-            </p>
-            <div className="mb-8">
-              <a href="mailto:avakaslab@gmail.com" className="text-white hover:text-gray-300">
-                avakaslab@gmail.com
-              </a>
-            </div>
-            <a
-                href="mailto:avakaslab@gmail.com"
-                className="inline-block px-8 py-3 bg-white text-black rounded-sm hover:bg-gray-200 transition-colors"
-            >
-              Get in Touch
+      {/* Visual Gallery Section */}
+      {/*<section className="py-32 bg-gray-50">*/}
+      {/*  <div className="max-w-6xl mx-auto px-6">*/}
+      {/*    <div className="text-center mb-16">*/}
+      {/*      <h2 className="text-4xl md:text-5xl font-light mb-6">Experience Space Engineering</h2>*/}
+      {/*      <p className="text-xl text-gray-600 max-w-2xl mx-auto">See what students create in our hands-on program</p>*/}
+      {/*    </div>*/}
+
+      {/*    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">*/}
+      {/*      <div className="text-center">*/}
+      {/*        <Image*/}
+      {/*          src="/placeholder.svg?height=400&width=500&text=Student+Building+CanSat"*/}
+      {/*          alt="Students building CanSat"*/}
+      {/*          width={500}*/}
+      {/*          height={400}*/}
+      {/*          className="w-full h-64 object-cover rounded-lg mb-4"*/}
+      {/*        />*/}
+      {/*        <h3 className="text-lg font-medium mb-2">Hands-On Building</h3>*/}
+      {/*        <p className="text-gray-600">Students assembling their CanSat satellites</p>*/}
+      {/*      </div>*/}
+      {/*      <div className="text-center">*/}
+      {/*        <Image*/}
+      {/*          src="/placeholder.svg?height=400&width=500&text=Rocket+Launch+Preparation"*/}
+      {/*          alt="Launch preparation"*/}
+      {/*          width={500}*/}
+      {/*          height={400}*/}
+      {/*          className="w-full h-64 object-cover rounded-lg mb-4"*/}
+      {/*        />*/}
+      {/*        <h3 className="text-lg font-medium mb-2">Launch Preparation</h3>*/}
+      {/*        <p className="text-gray-600">Getting ready for the big launch day</p>*/}
+      {/*      </div>*/}
+      {/*      <div className="text-center">*/}
+      {/*        <Image*/}
+      {/*          src="/placeholder.svg?height=400&width=500&text=Data+Analysis+Results"*/}
+      {/*          alt="Data analysis"*/}
+      {/*          width={500}*/}
+      {/*          height={400}*/}
+      {/*          className="w-full h-64 object-cover rounded-lg mb-4"*/}
+      {/*        />*/}
+      {/*        <h3 className="text-lg font-medium mb-2">Data Analysis</h3>*/}
+      {/*        <p className="text-gray-600">Analyzing mission data and results</p>*/}
+      {/*      </div>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</section>*/}
+
+      {/* Benefits Section */}
+      <section className="py-32">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-light mb-6">Partnership Benefits</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mb-8 mx-auto">Enhance your school's STEM education program</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
+            {[
+              { title: "Space Education", desc: "Integrate space curriculum into your school" },
+              { title: "STEM Enhancement", desc: "Enrich Science, Engineering & Technology subjects" },
+              { title: "Space Club", desc: "Initialize ongoing space programs with students" },
+              { title: "Future Competitions", desc: "Prepare students for space competitions" },
+            ].map((item, index) => (
+              <div key={index} className="group text-center">
+                <h3 className="text-2xl font-light mb-4 group-hover:text-gray-600 transition-colors">{item.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-32 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-4xl md:text-5xl font-light mb-8">Ready to Launch?</h2>
+          <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
+            Contact us to bring space education to your school
+          </p>
+          <div className="mb-8">
+            <a href="mailto:avakaslab@gmail.com" className="text-2xl font-light hover:text-gray-600 transition-colors">
+              avakaslab@gmail.com
             </a>
           </div>
-        </section>
+          <a
+            href="mailto:avakaslab@gmail.com"
+            className="inline-block px-4 py-4 bg-black text-white hover:bg-gray-800 transition-all duration-300 text-lg"
+          >
+            Get in Touch
+          </a>
+        </div>
+      </section>
+
 
         {/* Footer */}
-        <footer className="py-8 border-t border-gray-900">
-          <div className="max-w-4xl mx-auto px-4">
+        <footer className="py-12 border-t border-gray-200">
+          <div className="max-w-6xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex space-x-6 mb-4 md:mb-0">
-                <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
+              <div className="flex space-x-8 mb-4 md:mb-0">
+                <button
+                  onClick={() => scrollToSection("about")}
+                  className="text-gray-500 hover:text-black transition-colors"
+                >
                   About
-                </a>
-                <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
+                </button>
+                <button
+                  onClick={() => scrollToSection("contact")}
+                  className="text-gray-500 hover:text-black transition-colors"
+                >
                   Contact
-                </a>
-                <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
+                </button>
+                <a href="#" className="text-gray-500 hover:text-black transition-colors">
                   Privacy
                 </a>
-                <a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">
-                  Terms
-                </a>
               </div>
-              <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Avakas Lab. All rights
-                reserved.</p>
+              <p className="text-gray-500">© {new Date().getFullYear()} Avakas Lab. All rights reserved.</p>
             </div>
           </div>
         </footer>
