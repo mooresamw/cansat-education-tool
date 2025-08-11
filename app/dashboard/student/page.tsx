@@ -352,7 +352,7 @@ const { isSigningOut } = useContext(SignOutContext);
   }
 
   // Calculate progress statistics
-  const totalMaterials: number = 39
+  const totalMaterials: number = 16
   const completedMaterials = progressData.filter((item) => item.completed).length
   const progressPercentage = totalMaterials > 0 ? Math.round((completedMaterials / totalMaterials) * 100) : 0
   const recentCompletions = progressData
@@ -509,12 +509,12 @@ const { isSigningOut } = useContext(SignOutContext);
                     )}
 
                     {/* View All Progress Button */}
-                    <div className="pt-4">
-                      <Link href="/dashboard/student/progress">
-                        <Button variant="outline" className="w-full bg-transparent">
-                          View Detailed Progress
-                        </Button>
-                      </Link>
+                    <div className="">
+                      {/*<Link href="/dashboard/student/progress">*/}
+                      {/*  <Button variant="outline" className="w-full bg-transparent">*/}
+                      {/*    View Detailed Progress*/}
+                      {/*  </Button>*/}
+                      {/*</Link>*/}
                     </div>
                   </div>
                 )}

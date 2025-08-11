@@ -48,17 +48,11 @@ export default function StudentTrainingMaterials() {
   // Sample Arduino code for the Monaco Editor
   const sampleArduinoCode = `// Basic CanSat Sensor Reading Example
 void setup() {
-  Serial.begin(9600); // Initialize serial communication
-  pinMode(A0, INPUT); // Set analog pin A0 as input for sensor
+
 }
 
 void loop() {
-  int sensorValue = analogRead(A0); // Read sensor value
-  float voltage = sensorValue * (5.0 / 1023.0); // Convert to voltage
-  Serial.print("Sensor Voltage: ");
-  Serial.print(voltage);
-  Serial.println("V");
-  delay(1000); // Wait for 1 second
+
 }
 `
 
@@ -366,10 +360,10 @@ void loop() {
                     </Select>
                   </div>
 
-                  <div className="border rounded-lg overflow-auto h-[400px] w-[900px]">
+                  <div className="border rounded-lg overflow-auto h-[450px] w-[800px]">
                     {selectedPdf && (
                       <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess} options={pdfOptions}>
-                        <Page pageNumber={pageNumber} width={750} />
+                        <Page pageNumber={pageNumber} width={700} />
                       </Document>
                     )}
                   </div>
