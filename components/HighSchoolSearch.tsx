@@ -125,7 +125,7 @@ const HighSchoolSearch = ({ onSelect, Style }) => {
             {suggestions.map((suggestion, index) => (
               <li
                 key={index}
-                className="p-1 hover:bg-gray-100 cursor-pointer"
+                className="p-1 hover:bg-gray-100 cursor-pointer text-black"
                 onClick={() => handleSelect(suggestion)}
               >
                 {suggestion.placePrediction.text.text}
