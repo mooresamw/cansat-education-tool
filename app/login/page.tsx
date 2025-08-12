@@ -172,9 +172,10 @@ const LoginSignupPage = () => {
         localStorage.setItem("rememberMe", "false");
       }
 
-      setNotification(
-        "Account created successfully. Please check your email to verify your account. Didn't receive it? Use the resend option below after 5 minutes."
-      );
+      // setNotification(
+      //   "Account created successfully. Please check your email to verify your account. Didn't receive it? Use the resend option below after 5 minutes."
+      // );
+      setNotification("Account created successfully. Please log in.");
 
       setEmail("");
       setPassword("");
