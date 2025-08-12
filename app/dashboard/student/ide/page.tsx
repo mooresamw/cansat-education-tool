@@ -10,17 +10,27 @@ import {CodingProblem} from "@/lib/CodingProblem";
 export default function Home() {
     const[problems, setProblems] = useState<CodingProblem[]>([])
     const [loading, setLoading] = useState(true)
+
     const fetchCodingProblems = async () => {
       try {
         const problemsCollection = collection(db, "codingProblems")
-          console.log(problemsCollection)
+          //console.log(problemsCollection)
         const problemsSnapshot = await getDoc(doc(problemsCollection, "arduino"))
-          console.log(problemsSnapshot)
+          //console.log(problemsSnapshot)
         if (problemsSnapshot.exists()) {
-          const problemsData = problemsSnapshot.data().problems
-            console.log(problemsData)
-          setProblems(problemsData)
-            setLoading(false)
+          const problemsData = problemsSnapshot.data().problems;
+
+          // Difficulty order mapping
+          const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
+
+          // Sort by difficulty
+          problemsData.sort((a, b) => {
+            return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          });
+
+          //console.log(problemsData);
+          setProblems(problemsData);
+          setLoading(false);
         }
       } catch (error) {
         console.log("Error fetching coding problems:", error)

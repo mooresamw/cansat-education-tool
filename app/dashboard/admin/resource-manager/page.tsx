@@ -141,7 +141,16 @@ export default function AdminPdfManager() {
         if (problemsSnapshot.exists()) {
           const problemsData = problemsSnapshot.data().problems || []
           // Don't convert the data in the state as it needs to be in the original format
-          setCodingProblems(problemsData)
+          // Difficulty order mapping
+          const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
+
+          // Sort by difficulty
+          problemsData.sort((a: any, b: any) => {
+            return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
+          });
+
+          console.log(problemsData);
+          setCodingProblems(problemsData);
         }
       } catch (error) {
         console.log("Error fetching coding problems:", error)
