@@ -18,98 +18,59 @@ The **CanSat Education Tool** is a web-based platform designed to provide studen
 ## Installation & Setup
 ### Prerequisites
 - **Node.js & npm** (for frontend development)  
-- **Python & Flask** (for backend development)  
+- **Python3** (for backend development)  
 - **Firebase Account** (for authentication and database)  
-- **Docker** (for containerized deployment)  
-- **AWS CLI** (for backend deployment)  
+
+#### Nice to haves
 - **Firebase CLI** (for Firestore and Storage)  
 - **Vercel CLI** (for frontend deployment)  
 
-### Clone the Repository
+### 1. Clone the Repository
 ```sh
-$ git clone https://github.com/your-repo/cansat-education-tool.git
+$ git clone https://github.com/mooresamw/cansat-education-tool.git
 $ cd cansat-education-tool
 ```
 
-### Install Dependencies
-#### Frontend
+### 2. Install Dependencies
+#### a. Frontend
+Make sure you are in the `cansat-education-tool` directory and run:
 ```sh
-$ cd client
 $ npm install
-$ npm run dev
 ```
-#### Backend
+#### b. Backend
+Tip: You might want to open a second terminal window in your IDE
+
+Make sure you are in the `cansat-education-tool` directory and run:
 ```sh
 $ cd server
 $ pip install -r requirements.txt
-$ python app.py
+$ python app.py ( to run backend server )
 ```
 
 ### Environment Variables
-Create a `.env` file in the root directory and set the following:
+Create a `.env` file (a file called `.env`) in the `cansat-education-tool` directory and set the following:
 ```
-FIREBASE_API_KEY=your_firebase_api_key
-DATABASE_URL=your_database_url
-SECRET_KEY=your_secret_key
+NEXT_PUBLIC_GOOGLE_API_KEY=<your_key>
+FIREBASE_KEY=<your_key>
+AUTH_DOMAIN=<your_key>
+PROJECT_ID=<your_key>
+STORAGE_BUCKET=<your_key>
+MESSAGE_SENDER_ID=<your_key>
+APP_ID=<your_key>
+MEASUREMENT_ID=<your_key>
 ```
 
 ### Running the Application
-- **Frontend**: Runs on `http://localhost:3000`
-- **Backend**: Runs on `http://localhost:8080`
+1. **Frontend**: Runs on `http://localhost:3000`
+```sh
+$ npm run dev ( for dev server )
+```
+2. **Backend**: Runs on `http://localhost:8080` 
 
-# Deployment Instructions
-1. Backend Deployment with Docker and AWS
-   - Configure Firebase
-    ```sh
-    firebase login
-    ```
-   - Setup Firestore and Storage in the console
-   - Setup Environment Variables in .env file
-   ```sh
-    FIREBASE_CREDENTIALS=<your firebase service account JSON>
-    DATABASE_URL=<your Firestore database URL>
-   ```
-   - Build and Run Backend with Docker
-   ```sh
-    cd server
-    docker build -t cansat-backend .
-    docker run -p 5000:5000 --env-file .env cansat-backend
-   ```
-   - Deploy backend to AWS
-     * Configure AWS
-    ```sh
-      aws configure
-   ```
-     * Push Docker image to AWS Elastic Container Registry (ECR):
-   ```sh
-      aws ecr create-repository --repository-name cansat-backend
-    docker tag cansat-backend <aws_account_id>.dkr.ecr.<region>.amazonaws.com/cansat-backend
-    docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/cansat-backend
-   ```
-       
-2. Deploy Frontend to Vercel
-   - Install Dependencies
-   ```sh
-    npm install
-   ```
-   - Setup Environment Variables in .env file
-   ```sh
-    NEXT_PUBLIC_FIREBASE_API_KEY=<your firebase API key>
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<your firebase auth domain>
-    NEXT_PUBLIC_BACKEND_URL=<your AWS backend URL>
-   ```
-   - Deploy to Vercel
-     * Log into Vercel
-    ```sh
-    vercel login
-   ```
-     * Deploy the Frontend
-   ```sh
-    vercel
-   ```
-
-3. Firebase Storage for Training Materials
-   - Upload Materials
+Make sure you are in the `server` directory
+```sh
+$ python3 app.py
+```
 
 ## License
 This project is licensed under the **MIT License**.
