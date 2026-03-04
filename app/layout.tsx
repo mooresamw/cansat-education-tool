@@ -1,24 +1,26 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "sonner"
-import { ThemeProvider } from "next-themes"
+import type { Metadata, Viewport } from 'next'
+import { Inter, Space_Grotesk } from 'next/font/google'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
 })
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
 })
 
 export const metadata: Metadata = {
-  title: "CanSat Educational Tool",
+  title: 'Avakas | Space Education for the Next Generation',
   description:
-    "The CanSat Educational Tool is a web-based platform designed to provide students with hands-on learning experiences in satellite and space engineering. The platform offers resources like training materials, real-time communication tools, and a virtual Arduino IDE to help students improve technical skills and familiarize themselves with engineering practices in a simulated CanSat environment.",
+    'Hands-on satellite design education for middle and high school students. Build real CanSat satellites in our 5-day immersive program.',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
 }
 
 export default function RootLayout({
@@ -27,12 +29,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning={true}>
-        <ThemeProvider attribute="class">
-          {children}
-        </ThemeProvider>
-        <Toaster position="bottom-right" />
+    <html lang="en">
+      <body
+        className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}
+      >
+        {children}
       </body>
     </html>
   )

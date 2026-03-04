@@ -96,7 +96,8 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     setOutput("")
     setError("")
     try {
-      const response = await fetch("https://cansat-education-tool.onrender.com/run", {
+      //const response = await fetch("https://cansat-education-tool.onrender.com/run", {
+      const response = await fetch("http://localhost:8080/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),

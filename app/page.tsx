@@ -51,33 +51,48 @@ export default function Home() {
           </div>
         </nav>
 
-        {/* Hero Section */}
-        <section
-            className="h-screen flex flex-col justify-center items-center relative bg-gradient-to-b from-gray-50 to-white">
-          <div className="text-center max-w-4xl mx-auto px-6">
-            <h1 className="mb-8 text-3xl">Space Education</h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 font-light">
-              Hands-on satellite design for the next generation
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                  onClick={() => scrollToSection("program")}
-                  className="px-8 py-3 bg-black text-white hover:bg-gray-800 transition-all duration-300"
-              >
-                Explore Program
-              </button>
-              <button
-                  onClick={() => scrollToSection("contact")}
-                  className="px-8 py-3 border border-gray-300 text-gray-700 hover:border-black hover:text-black transition-all duration-300"
-              >
-                Get Started
-              </button>
-            </div>
-          </div>
-          <button onClick={() => scrollToSection("about")} className="absolute bottom-8 animate-bounce">
-            <ChevronDown className="w-6 h-6 text-gray-400"/>
-          </button>
-        </section>
+{/* Hero Section */}
+<section className="h-screen flex flex-col justify-center items-center relative overflow-hidden">
+  {/* Blurred background image */}
+  <div
+    className="absolute inset-0"
+    style={{
+      backgroundImage: "url('/images/main-background.png')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      filter: "blur(8px)",
+    }}
+  ></div>
+
+  {/* Content */}
+  <div className="relative text-center max-w-4xl mr-auto px-6">
+    <h1 className="mb-8 text-3xl text-white">Space Education</h1>
+    <p className="text-xl md:text-2xl text-gray-200 mb-12 font-light">
+      Hands-on satellite design for the next generation
+    </p>
+    <div className="flex flex-col sm:flex-row justify-center gap-4">
+      <button
+        onClick={() => scrollToSection("program")}
+        className="px-8 py-3 bg-black text-white hover:bg-gray-800 transition-all duration-300"
+      >
+        Explore Program
+      </button>
+      <button
+        onClick={() => scrollToSection("contact")}
+        className="px-8 py-3 border border-gray-300 text-gray-300 hover:border-white hover:text-white transition-all duration-300"
+      >
+        Get Started
+      </button>
+    </div>
+  </div>
+
+  {/* Scroll down button */}
+  <button onClick={() => scrollToSection("about")} className="absolute bottom-8 animate-bounce">
+    <ChevronDown className="w-6 h-6 text-gray-500 hover:text-white transition-all duration-300" />
+  </button>
+</section>
+
 
         {/* About Section */}
       <section id="about" className="py-32">

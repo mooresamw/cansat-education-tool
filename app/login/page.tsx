@@ -140,7 +140,7 @@ const LoginSignupPage = () => {
       await sendEmailVerification(user);
       setVerificationSent(true);
 
-      const response = await fetch("https://cansat-education-tool.onrender.com/register", {
+      const response = await fetch("http://localhost:8080/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -216,7 +216,7 @@ const LoginSignupPage = () => {
 
       const idToken = await user.getIdToken();
 
-      const loginResponse = await fetch("https://cansat-education-tool.onrender.com/login", {
+      const loginResponse = await fetch("http://localhost:8080/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),
