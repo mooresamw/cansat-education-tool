@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
+      <body suppressHydrationWarning
         className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}
       >
         {children}
