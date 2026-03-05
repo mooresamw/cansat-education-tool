@@ -44,7 +44,7 @@ export function StudentProgressTable() {
     const userData = getUser()
     const fetchStudentProgress = async () => {
       try {
-        const response = await fetch(`https://cansat-education-tool.onrender.com/student-progress?user_id=${userData.user_id}`)
+        const response = await fetch(/*`https://cansat-education-tool.onrender.com*/`https://localhost:8080/student-progress?user_id=${userData.user_id}`)
         if (!response.ok) {
           throw new Error("Failed to fetch student progress")
         }
@@ -52,7 +52,7 @@ export function StudentProgressTable() {
 
         // Fetch user details for each student
         const userDetailsPromises = progressData.map(async (student: any) => {
-          const userResponse = await fetch(`https://cansat-education-tool.onrender.com/users/${student.user_id}`)
+          const userResponse = await fetch(/*`https://cansat-education-tool.onrender.com*/`https://localhost:8080/users/${student.user_id}`)
           if (!userResponse.ok) {
             throw new Error(`Failed to fetch user data for user_id: ${student.user_id}`)
           }

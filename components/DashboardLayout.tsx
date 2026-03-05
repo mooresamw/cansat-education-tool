@@ -245,7 +245,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         if (user && isMounted) {
           const token = await user.getIdToken();
           console.log("Fetching avatar seed from backend");
-          const response = await fetch("https://cansat-education-tool.onrender.com/user/avatar", {
+          const response = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/user/avatar", {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -293,7 +293,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const saveAvatarSeedToBackend = async (newSeed: number, token: string) => {
     try {
       console.log("Saving avatar seed to backend:", newSeed);
-      const response = await fetch("https://cansat-education-tool.onrender.com/user/avatar", {
+      const response = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/user/avatar", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -354,7 +354,7 @@ const handleSignOut = async () => {
     // Perform backend logout API call if token exists
     if (token) {
       try {
-        const logoutResponse = await fetch("https://cansat-education-tool.onrender.com/logout", {
+        const logoutResponse = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/logout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
