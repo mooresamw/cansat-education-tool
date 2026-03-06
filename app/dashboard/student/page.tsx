@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { checkUserRole } from "@/lib/checkAuth"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -14,18 +13,21 @@ import { db, auth, getInstructors } from "@/lib/firebaseConfig"
 import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore"
 import { onAuthStateChanged } from "firebase/auth"
 import {
-  HiBookOpen,
-  HiChip,
-  HiChatAlt,
-  HiMail,
-  HiTrendingUp,
-  HiCheckCircle,
-  HiClock,
-  HiUsers,
-  HiUser,
-} from "react-icons/hi"
+  BookOpen,
+  Cpu,
+  MessageSquare,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  Users,
+  ArrowRight,
+  Sparkles,
+  Target,
+  Layers,
+  X,
+} from "lucide-react"
 import { markMessageAsRead } from "@/lib/firestoreUtil"
-import { SignOutContext } from "@/components/DashboardLayout";
+import { SignOutContext } from "@/components/DashboardLayout"
 
 interface ProgressItem {
   accessed_at: string
@@ -37,7 +39,7 @@ interface ProgressItem {
 }
 
 interface GroupMember {
-  name: string;
+  name: string
   user_id: string
   joined_at: any
 }
@@ -60,101 +62,219 @@ interface MemberProgress {
   totalCompleted: number
 }
 
-export default function StudentDashboard() {
-const { isSigningOut } = useContext(SignOutContext);
-  const userRole = checkUserRole(["admin", "instructor", "student"]);
-  const [instructorUnreadCount, setInstructorUnreadCount] = useState(0);
-  const [teamUnreadCount, setTeamUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [instructorNotifications, setInstructorNotifications] = useState<any[]>([]);
-  const [teamNotifications, setTeamNotifications] = useState<any[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [instructorIds, setInstructorIds] = useState<string[]>([]);
-  const [progressData, setProgressData] = useState<ProgressItem[]>([]);
-  const [progressLoading, setProgressLoading] = useState(true);
-  const [userGroup, setUserGroup] = useState<Group | null>(null);
-  const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([]);
-  const [groupLoading, setGroupLoading] = useState(true);
-  const router = useRouter();
+// Quick action card component
+function QuickActionCard({
+  icon: Icon,
+  title,
+  description,
+  buttonText,
+  onClick,
+  href,
+  accentColor,
+}: {
+  icon: React.ElementType
+  title: string
+  description: string
+  buttonText: string
+  onClick?: () => void
+  href?: string
+  accentColor: string
+}) {
+  const content = (
+    <Card className="group relative overflow-hidden bg-card border border-border rounded-2xl card-hover h-full">
+      <div className={`absolute inset-0 bg-gradient-to-br ${accentColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+      <CardHeader className="relative pb-2">
+        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${accentColor} mb-4`}>
+          <Icon className="h-6 w-6 text-foreground" />
+        </div>
+        <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="relative pt-0">
+        <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{description}</p>
+        <Button
+          onClick={onClick}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+        >
+          {buttonText}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
+  )
 
-// Fetch instructor IDs
+  if (href) {
+    return <Link href={href} className="block h-full">{content}</Link>
+  }
+  return content
+}
+
+// Stat card component
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accentColor,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string | number
+  accentColor: string
+}) {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
+      <div className={`flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br ${accentColor}`}>
+        <Icon className="h-5 w-5 text-foreground" />
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-2xl font-bold text-foreground">{value}</p>
+      </div>
+    </div>
+  )
+}
+
+// Team member card component
+function TeamMemberCard({
+  member,
+  isCurrentUser,
+}: {
+  member: MemberProgress
+  isCurrentUser: boolean
+}) {
+  return (
+    <div className="p-4 rounded-xl bg-secondary/30 border border-border hover:bg-secondary/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+          {member.name?.charAt(0).toUpperCase() || "U"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-foreground truncate">{member.name}</p>
+            {isCurrentUser && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary border-primary/20">
+                You
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{member.totalCompleted} completed</p>
+        </div>
+      </div>
+
+      {member.recentProgress ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground font-medium">Latest completion</p>
+          <div className="p-3 rounded-lg bg-card border border-border">
+            <p className="text-sm font-medium text-foreground mb-1 truncate">
+              {member.recentProgress.title.replace("pdfs/", "").replace(".pdf", "")}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {new Date(member.recentProgress.completion_date).toLocaleDateString()}
+              </span>
+              <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 text-xs">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Done
+              </Badge>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">No completions yet</p>
+      )}
+    </div>
+  )
+}
+
+export default function StudentDashboard() {
+  const { isSigningOut } = useContext(SignOutContext)
+  const userRole = checkUserRole(["admin", "instructor", "student"])
+  const [instructorUnreadCount, setInstructorUnreadCount] = useState(0)
+  const [teamUnreadCount, setTeamUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [instructorNotifications, setInstructorNotifications] = useState<any[]>([])
+  const [teamNotifications, setTeamNotifications] = useState<any[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [instructorIds, setInstructorIds] = useState<string[]>([])
+  const [progressData, setProgressData] = useState<ProgressItem[]>([])
+  const [progressLoading, setProgressLoading] = useState(true)
+  const [userGroup, setUserGroup] = useState<Group | null>(null)
+  const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([])
+  const [groupLoading, setGroupLoading] = useState(true)
+  const router = useRouter()
+
+  // Fetch instructor IDs
   useEffect(() => {
-    if (isSigningOut) return;
+    if (isSigningOut) return
 
     const fetchInstructors = async () => {
       try {
-        const instructors = await getInstructors();
-        const ids = instructors.map((instructor: any) => instructor.uid);
-        setInstructorIds(ids);
-        console.log("Instructor IDs:", ids);
+        const instructors = await getInstructors()
+        const ids = instructors.map((instructor: any) => instructor.uid)
+        setInstructorIds(ids)
       } catch (error) {
-        console.error("Error fetching instructors:", error);
+        console.error("Error fetching instructors:", error)
       }
-    };
-    fetchInstructors();
-  }, [isSigningOut]);
+    }
+    fetchInstructors()
+  }, [isSigningOut])
 
-// Fetch user's group
+  // Fetch user's group
   useEffect(() => {
-    if (!userId || isSigningOut) return;
+    if (!userId || isSigningOut) return
 
     const fetchUserGroup = async () => {
       try {
-        setGroupLoading(true);
-        const groupsRef = collection(db, "groups");
-        const q = query(groupsRef, where("members", "array-contains", { user_id: userId }));
-
-        const groupsSnapshot = await getDocs(collection(db, "groups"));
-        let userGroupData: Group | null = null;
+        setGroupLoading(true)
+        const groupsSnapshot = await getDocs(collection(db, "groups"))
+        let userGroupData: Group | null = null
 
         groupsSnapshot.forEach((doc) => {
-          const groupData = doc.data() as Omit<Group, "id">;
-          const isMember = groupData.members.some((member: GroupMember) => member.user_id === userId);
+          const groupData = doc.data() as Omit<Group, "id">
+          const isMember = groupData.members.some((member: GroupMember) => member.user_id === userId)
 
           if (isMember) {
             userGroupData = {
               id: doc.id,
               ...groupData,
-            };
+            }
           }
-        });
+        })
 
         if (userGroupData) {
-          setUserGroup(userGroupData);
-          console.log("User's group:", userGroupData);
+          setUserGroup(userGroupData)
         }
       } catch (error) {
-        console.error("Error fetching user group:", error);
+        console.error("Error fetching user group:", error)
       } finally {
-        setGroupLoading(false);
+        setGroupLoading(false)
       }
-    };
+    }
 
-    fetchUserGroup();
-  }, [userId, isSigningOut]);
+    fetchUserGroup()
+  }, [userId, isSigningOut])
 
-// Fetch progress for all group members
+  // Fetch progress for all group members
   useEffect(() => {
-    if (!userGroup || !userGroup.members || isSigningOut) return;
+    if (!userGroup || !userGroup.members || isSigningOut) return
 
     const fetchGroupMemberProgress = async () => {
       try {
         const memberProgressPromises = userGroup.members.map(async (member: GroupMember) => {
           try {
-            const response = await fetch(/*`https://cansat-education-tool.onrender.com*/`https://localhost:8080/get-user-progress?user_id=${member.user_id}`);
-            let progressData: ProgressItem[] = [];
+            const response = await fetch(`https://localhost:8080/get-user-progress?user_id=${member.user_id}`)
+            let progressData: ProgressItem[] = []
 
             if (response.ok) {
-              progressData = await response.json();
+              progressData = await response.json()
             }
 
             const recentProgress = progressData
               .filter((item) => item.completed)
-              .sort((a, b) => new Date(b.completion_date).getTime() - new Date(a.completion_date).getTime())[0];
+              .sort((a, b) => new Date(b.completion_date).getTime() - new Date(a.completion_date).getTime())[0]
 
-            const totalCompleted = progressData.filter((item) => item.completed).length;
+            const totalCompleted = progressData.filter((item) => item.completed).length
 
             return {
               user_id: member.user_id,
@@ -162,109 +282,104 @@ const { isSigningOut } = useContext(SignOutContext);
               email: `user${member.user_id.slice(-4)}@example.com`,
               recentProgress,
               totalCompleted,
-            };
+            }
           } catch (error) {
-            console.error(`Error fetching progress for member ${member.user_id}:`, error);
+            console.error(`Error fetching progress for member ${member.user_id}:`, error)
             return {
               user_id: member.user_id,
-              name: `User ${member.user_id.slice(-4)}`,
+              name: member.name,
               totalCompleted: 0,
-            };
+            }
           }
-        });
+        })
 
-        const memberProgressResults = await Promise.all(memberProgressPromises);
-        setGroupMemberProgress(memberProgressResults);
-        console.log("Group member progress:", memberProgressResults);
+        const memberProgressResults = await Promise.all(memberProgressPromises)
+        setGroupMemberProgress(memberProgressResults)
       } catch (error) {
-        console.error("Error fetching group member progress:", error);
+        console.error("Error fetching group member progress:", error)
       }
-    };
+    }
 
-    fetchGroupMemberProgress();
-  }, [userGroup, isSigningOut]);
+    fetchGroupMemberProgress()
+  }, [userGroup, isSigningOut])
 
-// Fetch student progress data
+  // Fetch student progress data
   useEffect(() => {
-    if (!userId || isSigningOut) return;
+    if (!userId || isSigningOut) return
 
     const fetchProgressData = async () => {
       try {
-        setProgressLoading(true);
-        const response = await fetch(/*`https://cansat-education-tool.onrender.com*/`http://localhost:8080/get-user-progress?user_id=${userId}`);
+        setProgressLoading(true)
+        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userId}`)
         if (response.ok) {
-          const data = await response.json();
-          setProgressData(data);
+          const data = await response.json()
+          setProgressData(data)
         } else {
-          console.error("Failed to fetch progress data");
+          console.error("Failed to fetch progress data")
         }
       } catch (error) {
-        console.error("Error fetching progress data:", error);
+        console.error("Error fetching progress data:", error)
       } finally {
-        setProgressLoading(false);
+        setProgressLoading(false)
       }
-    };
+    }
 
-    fetchProgressData();
-  }, [userId, isSigningOut]);
+    fetchProgressData()
+  }, [userId, isSigningOut])
 
-// Authentication state listener
+  // Authentication state listener
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(
       auth,
       (user) => {
         if (user) {
-          const uid = user.uid;
-          setUserId(uid);
-          setLoading(false);
-          console.log("User authenticated, UID:", uid);
-          localStorage.setItem("userId", uid);
+          const uid = user.uid
+          setUserId(uid)
+          setLoading(false)
+          localStorage.setItem("userId", uid)
         } else if (!isSigningOut) {
-          // Only navigate if not already signing out
-          console.log("No user is authenticated");
-          setUserId(null);
-          setLoading(false);
-          router.push("/login");
+          setUserId(null)
+          setLoading(false)
+          router.push("/login")
         }
       },
       (error) => {
-        console.error("Error in onAuthStateChanged:", error);
-        setLoading(false);
-      },
-    );
+        console.error("Error in onAuthStateChanged:", error)
+        setLoading(false)
+      }
+    )
 
-    return () => unsubscribeAuth();
-  }, [router, isSigningOut]);
+    return () => unsubscribeAuth()
+  }, [router, isSigningOut])
 
-// Real-time notifications listener
+  // Real-time notifications listener
   useEffect(() => {
     if (!userRole || userRole !== "student" || !userId || instructorIds.length === 0 || isSigningOut) {
-      console.log("Skipping notifications listener due to invalid state");
-      return;
+      return
     }
 
-    const messagesRef = collection(db, "messages");
-    const q = query(messagesRef, where("participants", "array-contains", userId));
+    const messagesRef = collection(db, "messages")
+    const q = query(messagesRef, where("participants", "array-contains", userId))
 
     const unsubscribeQuery = onSnapshot(
       q,
       (snapshot) => {
-        let instructorUnread = 0;
-        let teamUnread = 0;
-        const instructorMessages: any[] = [];
-        const teamMessages: any[] = [];
-        const allMessages: any[] = [];
+        let instructorUnread = 0
+        let teamUnread = 0
+        const instructorMessages: any[] = []
+        const teamMessages: any[] = []
+        const allMessages: any[] = []
 
         snapshot.forEach((doc) => {
-          const data = doc.data();
-          const conversationId = doc.id;
-          const messages = data.messages || [];
-          const otherParticipants = data.participants.filter((id: string) => id !== userId);
-          const involvesInstructor = otherParticipants.some((id: string) => instructorIds.includes(id));
+          const data = doc.data()
+          const conversationId = doc.id
+          const messages = data.messages || []
+          const otherParticipants = data.participants.filter((id: string) => id !== userId)
+          const involvesInstructor = otherParticipants.some((id: string) => instructorIds.includes(id))
 
           messages.forEach((msg: any) => {
-            const readStatus = msg.read || {};
-            const isUnread = msg.sender !== userId && readStatus[userId] !== true;
+            const readStatus = msg.read || {}
+            const isUnread = msg.sender !== userId && readStatus[userId] !== true
 
             if (isUnread) {
               const messageData = {
@@ -275,46 +390,53 @@ const { isSigningOut } = useContext(SignOutContext);
                 participants: data.participants,
                 conversationId: conversationId,
                 involvesInstructor,
-              };
+              }
 
-              allMessages.push(messageData);
+              allMessages.push(messageData)
 
               if (involvesInstructor) {
-                instructorUnread++;
-                instructorMessages.push(messageData);
+                instructorUnread++
+                instructorMessages.push(messageData)
               } else {
-                teamUnread++;
-                teamMessages.push(messageData);
+                teamUnread++
+                teamMessages.push(messageData)
               }
             }
-          });
-        });
+          })
+        })
 
-        setInstructorUnreadCount(instructorUnread);
-        setTeamUnreadCount(teamUnread);
-        setInstructorNotifications(instructorMessages);
-        setTeamNotifications(teamMessages);
-        setNotifications(allMessages);
+        setInstructorUnreadCount(instructorUnread)
+        setTeamUnreadCount(teamUnread)
+        setInstructorNotifications(instructorMessages)
+        setTeamNotifications(teamMessages)
+        setNotifications(allMessages)
       },
       (error) => {
-        console.error("Error in onSnapshot Query:", error);
-      },
-    );
+        console.error("Error in onSnapshot Query:", error)
+      }
+    )
 
-    return () => unsubscribeQuery();
-  }, [userRole, userId, instructorIds, isSigningOut]);
+    return () => unsubscribeQuery()
+  }, [userRole, userId, instructorIds, isSigningOut])
 
   if (loading || isSigningOut) {
-    return <div className="bg-black min-h-screen text-white flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="bg-background min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!userId) {
-    return null;
+    return null
   }
+
   // Navigation handlers
   const openIDE = () => router.push("/dashboard/student/ide")
   const goToChat = () => router.push("/dashboard/student/messages")
-  const messageInstructor = () => router.push("/dashboard/student/message")
 
   // Notification toggle
   const handleBellClick = () => setShowNotifications((prev) => !prev)
@@ -334,7 +456,6 @@ const { isSigningOut } = useContext(SignOutContext);
       }
 
       await markMessageAsRead(userId, conversationId, messageId)
-      console.log(`Marked message ${messageId} as read for user ${userId}`)
     } catch (error) {
       console.error("Error marking message as read:", error)
     }
@@ -343,7 +464,7 @@ const { isSigningOut } = useContext(SignOutContext);
   // Character limit for notification preview
   const MESSAGE_PREVIEW_LIMIT = 25
 
-  // Function to truncate message if it exceeds the limit
+  // Function to truncate message
   const truncateMessage = (message: string) => {
     if (message.length > MESSAGE_PREVIEW_LIMIT) {
       return message.slice(0, MESSAGE_PREVIEW_LIMIT) + "..."
@@ -360,146 +481,154 @@ const { isSigningOut } = useContext(SignOutContext);
     .sort((a, b) => new Date(b.completion_date).getTime() - new Date(a.completion_date).getTime())
     .slice(0, 3)
 
-  if (loading) {
-    return <div className="bg-black min-h-screen text-white flex items-center justify-center">Loading...</div>
-  }
-
-  if (!userId) {
-    return null
-  }
-
   return (
-    <div className="bg-black min-h-screen text-primary">
+    <div className="bg-background min-h-screen">
       <DashboardLayout userType="student">
-        <main className="max-w-6xl mx-auto w-full px-1 py-4 relative">
-          {/* Header */}
-          {/*<h1 className="text-3xl md:text-4xl font-bold mb-6">Student Dashboard</h1>*/}
-
-          {/* Card Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Card 1: Access Resources */}
-            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-              <CardHeader className="flex items-center space-x-3">
-                <HiBookOpen className="text-3xl text-blue-500 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-primary text-xl">Access Resources</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm mb-4">
-                  Explore training materials and resources to help you build your CanSat project.
-                </p>
-                <Link href="/dashboard/student/training-materials">
-                  <Button className="bg-white text-black hover:bg-gray-200">View Training Materials</Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Card 2: Virtual Arduino IDE */}
-            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-              <CardHeader className="flex items-center space-x-3">
-                <HiChip className="text-3xl text-green-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-primary text-xl">Virtual Arduino IDE</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm mb-4">
-                  Code and test your CanSat firmware directly in your browser.
-                </p>
-                <Button onClick={openIDE} className="bg-white text-black hover:bg-gray-200">
-                  Open IDE
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Card 3: Collaboration Tools */}
-            <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-              <CardHeader className="flex items-center space-x-3">
-                <HiChatAlt className="text-3xl text-purple-400 transition-transform duration-300 hover:scale-110" />
-                <CardTitle className="text-primary text-xl">Collaboration Tools</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm mb-4">Chat and collaborate with teammates and instructors in real time.</p>
-                <Button onClick={goToChat} className="bg-white text-black hover:bg-gray-200">
-                  Join Chat
-                </Button>
-              </CardContent>
-            </Card>
-
+        <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium text-primary">Dashboard</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Welcome back</h1>
+            <p className="text-muted-foreground">Continue your CanSat journey where you left off.</p>
           </div>
 
-          {/* Progress Section */}
-          <div className="mb-8">
-            <Card className="bg-card border border-border rounded-md">
-              <CardHeader className="flex flex-row items-center space-x-3">
-                <HiTrendingUp className="text-3xl text-orange-500" />
-                <CardTitle className="text-primary text-2xl">Learning Progress</CardTitle>
+          {/* Quick Actions Grid */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-muted-foreground" />
+              Quick Actions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <QuickActionCard
+                icon={BookOpen}
+                title="Access Resources"
+                description="Explore training materials and resources to help you build your CanSat project."
+                buttonText="View Materials"
+                href="/dashboard/student/training-materials"
+                accentColor="from-blue-500/10 to-blue-600/5"
+              />
+              <QuickActionCard
+                icon={Cpu}
+                title="Virtual Arduino IDE"
+                description="Code and test your CanSat firmware directly in your browser."
+                buttonText="Open IDE"
+                onClick={openIDE}
+                accentColor="from-emerald-500/10 to-emerald-600/5"
+              />
+              <QuickActionCard
+                icon={MessageSquare}
+                title="Collaboration"
+                description="Chat and collaborate with teammates and instructors in real time."
+                buttonText="Join Chat"
+                onClick={goToChat}
+                accentColor="from-violet-500/10 to-violet-600/5"
+              />
+            </div>
+          </section>
+
+          {/* Learning Progress Section */}
+          <section className="mb-8">
+            <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+              <CardHeader className="border-b border-border bg-secondary/30 py-5">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10">
+                      <TrendingUp className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-semibold text-foreground">Learning Progress</CardTitle>
+                      <p className="text-sm text-muted-foreground">Track your course completion</p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`text-sm px-3 py-1 ${
+                      progressPercentage >= 75
+                        ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+                        : progressPercentage >= 50
+                          ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"
+                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                    }`}
+                  >
+                    {progressPercentage >= 75 ? "Excellent" : progressPercentage >= 50 ? "Good Progress" : "Getting Started"}
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {progressLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-gray-400">Loading progress data...</div>
+                  <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                      <p className="text-muted-foreground text-sm">Loading progress...</p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {/* Progress Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-background rounded-lg p-4 border border-border">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <HiBookOpen className="text-blue-500" />
-                          <span className="text-sm text-gray-400">Total Materials</span>
-                        </div>
-                        <div className="text-2xl font-bold text-primary">{totalMaterials}</div>
-                      </div>
-
-                      <div className="bg-background rounded-lg p-4 border border-border">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <HiCheckCircle className="text-green-500" />
-                          <span className="text-sm text-gray-400">Completed</span>
-                        </div>
-                        <div className="text-2xl font-bold text-primary">{completedMaterials}</div>
-                      </div>
-
-                      <div className="bg-background rounded-lg p-4 border border-border">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <HiTrendingUp className="text-orange-500" />
-                          <span className="text-sm text-gray-400">Progress</span>
-                        </div>
-                        <div className="text-2xl font-bold text-primary">{progressPercentage}%</div>
-                      </div>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <StatCard
+                        icon={Layers}
+                        label="Total Materials"
+                        value={totalMaterials}
+                        accentColor="from-blue-500/20 to-blue-600/10"
+                      />
+                      <StatCard
+                        icon={CheckCircle2}
+                        label="Completed"
+                        value={completedMaterials}
+                        accentColor="from-green-500/20 to-green-600/10"
+                      />
+                      <StatCard
+                        icon={Target}
+                        label="Progress"
+                        value={`${progressPercentage}%`}
+                        accentColor="from-orange-500/20 to-orange-600/10"
+                      />
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Overall Progress</span>
-                        <span className="text-primary">
-                          {completedMaterials}/{totalMaterials} completed
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground font-medium">Overall Progress</span>
+                        <span className="text-foreground font-semibold">
+                          {completedMaterials} of {totalMaterials} completed
                         </span>
                       </div>
-                      <Progress value={progressPercentage} className="h-2" />
+                      <div className="relative">
+                        <Progress value={progressPercentage} className="h-3 rounded-full" />
+                      </div>
                     </div>
 
                     {/* Recent Completions */}
                     {recentCompletions.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-lg font-semibold text-primary flex items-center space-x-2">
-                          <HiClock className="text-green-500" />
-                          <span>Recent Completions</span>
+                      <div className="space-y-4">
+                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          Recent Completions
                         </h3>
-                        <div className="space-y-2">
+                        <div className="grid gap-3">
                           {recentCompletions.map((item, index) => (
                             <div
                               key={index}
-                              className="flex items-center justify-between p-3 bg-background rounded-lg border border-border"
+                              className="flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-border hover:bg-secondary/50 transition-colors"
                             >
-                              <div className="flex-1">
-                                <div className="text-sm font-medium text-primary">
-                                  {item.title.replace("pdfs/", "").replace(".pdf", "")}
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/10">
+                                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
                                 </div>
-                                <div className="text-xs text-gray-400">
-                                  Completed on {new Date(item.completion_date).toLocaleDateString()}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-foreground truncate">
+                                    {item.title.replace("pdfs/", "").replace(".pdf", "")}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Completed {new Date(item.completion_date).toLocaleDateString()}
+                                  </p>
                                 </div>
                               </div>
-                              <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
-                                <HiCheckCircle className="w-3 h-3 mr-1" />
+                              <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 shrink-0">
                                 Complete
                               </Badge>
                             </div>
@@ -507,127 +636,106 @@ const { isSigningOut } = useContext(SignOutContext);
                         </div>
                       </div>
                     )}
-
-                    {/* View All Progress Button */}
-                    <div className="">
-                      {/*<Link href="/dashboard/student/progress">*/}
-                      {/*  <Button variant="outline" className="w-full bg-transparent">*/}
-                      {/*    View Detailed Progress*/}
-                      {/*  </Button>*/}
-                      {/*</Link>*/}
-                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </div>
+          </section>
 
           {/* Group Highlights Section */}
           {userGroup && (
-            <div className="mb-8">
-              <Card className="bg-card border border-border rounded-md">
-                <CardHeader className="flex flex-row items-center space-x-3">
-                  <HiUsers className="text-3xl text-purple-500" />
-                  <div>
-                    <CardTitle className="text-primary text-2xl">Group Highlights</CardTitle>
-                    <p className="text-sm text-gray-400 mt-1">{userGroup.name}</p>
+            <section className="mb-8">
+              <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+                <CardHeader className="border-b border-border bg-secondary/30 py-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/10">
+                      <Users className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-semibold text-foreground">Team Progress</CardTitle>
+                      <p className="text-sm text-muted-foreground">{userGroup.name}</p>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   {groupLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-gray-400">Loading group data...</div>
+                    <div className="flex items-center justify-center py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                        <p className="text-muted-foreground text-sm">Loading team data...</p>
+                      </div>
+                    </div>
+                  ) : groupMemberProgress.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {groupMemberProgress.map((member) => (
+                        <TeamMemberCard
+                          key={member.user_id}
+                          member={member}
+                          isCurrentUser={member.user_id === userId}
+                        />
+                      ))}
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {groupMemberProgress.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {groupMemberProgress.map((member, index) => (
-                            <div key={member.user_id} className="bg-background rounded-lg p-4 border border-border">
-                              <div className="flex items-center space-x-3 mb-3">
-                                {/*<Avatar className="h-10 w-10">*/}
-                                {/*  <AvatarFallback>*/}
-                                {/*    <HiUser className="h-5 w-5" />*/}
-                                {/*  </AvatarFallback>*/}
-                                {/*</Avatar>*/}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-med font-bold text-primary truncate">{member.name}</p>
-                                  <p className="text-xs text-gray-400 truncate">
-                                    {member.totalCompleted} materials completed
-                                  </p>
-                                </div>
-                                {member.user_id === userId && (
-                                  <Badge variant="outline" className="text-xs">
-                                    You
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {member.recentProgress ? (
-                                <div className="space-y-2">
-                                  <div className="text-xs text-gray-400">Most Recent:</div>
-                                  <div className="bg-card rounded p-2 border border-border">
-                                    <div className="text-sm font-medium text-primary mb-1">
-                                      {member.recentProgress.title.replace("pdfs/", "").replace(".pdf", "")}
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <div className="text-xs text-gray-400">
-                                        {new Date(member.recentProgress.completion_date).toLocaleDateString()}
-                                      </div>
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-green-500/20 text-green-400 border-green-500/30 text-xs"
-                                      >
-                                        <HiCheckCircle className="w-3 h-3 mr-1" />
-                                        Complete
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-xs text-gray-500 italic">No completed materials yet</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <HiUsers className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                          <p className="text-gray-400">No group members found</p>
-                        </div>
-                      )}
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <p className="text-muted-foreground text-center">No team members found</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
-            </div>
+            </section>
           )}
 
           {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="fixed top-14 right-16 bg-background border border-border shadow-lg rounded-md p-4 w-72 z-10">
-              <h3 className="font-bold text-lg text-primary">Unread Messages</h3>
-              {notifications.length > 0 ? (
-                <ul className="mt-2 space-y-2">
-                  {notifications.map((notification, index) => (
-                    <li key={index} className="p-2 bg-card rounded">
-                      <p className="text-sm text-primary">{truncateMessage(notification.message)}</p>
-                      <p className="text-xs text-gray-400">
-                        From: {notification.sender} ({notification.involvesInstructor ? "Instructor" : "Team"})
-                      </p>
-                      <p className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleString()}</p>
-                      <button
-                        onClick={() => handleMarkAsRead(notification)}
-                        className="mt-2 text-sm text-white bg-green-500 hover:bg-green-600 rounded px-2 py-1"
-                      >
-                        Mark as Read
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-400 mt-2">No unread messages</p>
-              )}
+            <div className="fixed top-16 right-4 sm:right-8 z-50 w-80 max-w-[calc(100vw-2rem)]">
+              <Card className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+                <CardHeader className="border-b border-border bg-secondary/30 py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold text-foreground">Unread Messages</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setShowNotifications(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 max-h-80 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    <div className="divide-y divide-border">
+                      {notifications.map((notification, index) => (
+                        <div key={index} className="p-4 hover:bg-secondary/30 transition-colors">
+                          <p className="text-sm text-foreground font-medium mb-1">
+                            {truncateMessage(notification.message)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            From: {notification.sender} ({notification.involvesInstructor ? "Instructor" : "Team"})
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(notification.timestamp).toLocaleString()}
+                            </span>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                              onClick={() => handleMarkAsRead(notification)}
+                            >
+                              Mark Read
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center">
+                      <p className="text-sm text-muted-foreground">No unread messages</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
         </main>
