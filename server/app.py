@@ -20,7 +20,7 @@ db = firestore.client()
 app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000", "https://cansat-education-tool.onrender.com", "https://www.avakas.org", "https://v0-cansat-education-tool.vercel.app", "https://vm-v18lnu7twrv86fs84fwa0u.vusercontent.net"],
+        "origins": ["http://localhost:3000", "https://cansat-education-tool.onrender.com", "https://www.avakas.org"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Authorization","Content-Type"]
     }
