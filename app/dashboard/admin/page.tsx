@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { UserList } from "@/components/UserList"
 import { ChatList } from "@/components/ChatList"
 import { useRouter } from "next/navigation"
@@ -18,6 +19,80 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, sendEmailVerificati
 import { auth, db } from "@/lib/firebaseConfig"
 import HighSchoolSearch from "@/components/HighSchoolSearch"
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, getDocs } from "firebase/firestore"
+import {
+  Users,
+  FileText,
+  FolderOpen,
+  ArrowRight,
+  Sparkles,
+  Layers,
+  UserPlus,
+  CheckCircle2,
+  X,
+  AlertCircle,
+  Bell,
+} from "lucide-react"
+
+// Quick action card component
+function QuickActionCard({
+  icon: Icon,
+  title,
+  description,
+  buttonText,
+  onClick,
+  accentColor,
+  isDialog,
+  children,
+}: {
+  icon: React.ElementType
+  title: string
+  description: string
+  buttonText: string
+  onClick?: () => void
+  accentColor: string
+  isDialog?: boolean
+  children?: React.ReactNode
+}) {
+  if (isDialog) {
+    return (
+      <Card className="group relative overflow-hidden bg-card border border-border rounded-2xl card-hover h-full">
+        <div className={`absolute inset-0 bg-gradient-to-br ${accentColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+        <CardHeader className="relative pb-2">
+          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${accentColor} mb-4`}>
+            <Icon className="h-6 w-6 text-foreground" />
+          </div>
+          <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="relative pt-0">
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{description}</p>
+          {children}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="group relative overflow-hidden bg-card border border-border rounded-2xl card-hover h-full">
+      <div className={`absolute inset-0 bg-gradient-to-br ${accentColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+      <CardHeader className="relative pb-2">
+        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${accentColor} mb-4`}>
+          <Icon className="h-6 w-6 text-foreground" />
+        </div>
+        <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="relative pt-0">
+        <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{description}</p>
+        <Button
+          onClick={onClick}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+        >
+          {buttonText}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -34,7 +109,7 @@ export default function AdminDashboard() {
   const [notification, setNotification] = useState<string | null>(null)
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [refreshUserList, setRefreshUserList] = useState(false)
-  const [creatingUser, setCreatingUser] = useState(false) // New state for create user loading
+  const [creatingUser, setCreatingUser] = useState(false)
 
   const handleSchoolSelect = (name: string, placeId: any) => {
     setSelectedSchool({ school_name: name, school_id: placeId })
@@ -126,7 +201,7 @@ export default function AdminDashboard() {
       return
     }
 
-    setCreatingUser(true) // Start loading
+    setCreatingUser(true)
     try {
       console.log("Step 3: Checking if email already exists")
 
@@ -199,7 +274,7 @@ export default function AdminDashboard() {
       setDialogError(errorMessage)
       console.log("Step 13: Error handled")
     } finally {
-      setCreatingUser(false) // Stop loading
+      setCreatingUser(false)
     }
   }
 
@@ -233,67 +308,98 @@ export default function AdminDashboard() {
     }
   }
 
-  if (loading) return <p>Loading...</p>
+  if (loading) {
+    return (
+      <div className="bg-background min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <DashboardLayout userType="admin">
-      <div className="relative">
-        <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-primary">Admin Dashboard</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">System Management</h1>
+          <p className="text-muted-foreground">Manage users, resources, and monitor system activity.</p>
+        </div>
+
+        {/* Success Notification */}
         {notification && (
-          <div className="mb-4 p-4 bg-gray-100 text-black-800 rounded flex justify-between">
-            <span>{notification}</span>
-            <button onClick={() => setNotification(null)} className="text-black-600 underline">
-              Dismiss
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/20">
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <span className="text-green-700 dark:text-green-300">{notification}</span>
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
             </button>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-            <CardHeader className="flex items-center space-x-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-3xl text-blue-500 transition-transform duration-300 hover:scale-110"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <CardTitle className="text-primary text-xl">Account Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 text-sm mb-4">Create and manage user accounts for the platform.</p>
+
+        {/* Quick Actions Grid */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Layers className="h-5 w-5 text-muted-foreground" />
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Account Management Card */}
+            <QuickActionCard
+              icon={Users}
+              title="Account Management"
+              description="Create and manage user accounts for the platform."
+              buttonText="Create New Account"
+              accentColor="from-blue-500/10 to-blue-600/5"
+              isDialog
+            >
               <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-white text-black hover:bg-gray-200">Create New Account</Button>
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Create New Account
+                  </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md rounded-2xl">
                   <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold">Create New User</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleCreateUser}>
                     <div className="grid gap-4 py-4">
-                      {dialogError && <div className="p-2 bg-red-100 text-red-800 rounded text-sm">{dialogError}</div>}
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
+                      {dialogError && (
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                          <span className="text-sm text-destructive">{dialogError}</span>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-sm font-medium">
                           Name
                         </Label>
                         <Input
                           id="name"
                           value={newUser.name}
                           onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                          className="col-span-3"
+                          className="rounded-xl"
+                          placeholder="Enter full name"
                           disabled={creatingUser}
                         />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium">
                           Email
                         </Label>
                         <Input
@@ -301,12 +407,13 @@ export default function AdminDashboard() {
                           type="email"
                           value={newUser.email}
                           onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                          className="col-span-3"
+                          className="rounded-xl"
+                          placeholder="Enter email address"
                           disabled={creatingUser}
                         />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="password" className="text-right">
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-sm font-medium">
                           Password
                         </Label>
                         <Input
@@ -314,18 +421,19 @@ export default function AdminDashboard() {
                           type="password"
                           value={newUser.password}
                           onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                          className="col-span-3"
+                          className="rounded-xl"
+                          placeholder="Enter password"
                           disabled={creatingUser}
                         />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="school" className="text-right">
+                      <div className="space-y-2">
+                        <Label htmlFor="school" className="text-sm font-medium">
                           School
                         </Label>
                         <HighSchoolSearch onSelect={handleSchoolSelect} Style={"Management"} disabled={creatingUser} />
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">
+                      <div className="space-y-2">
+                        <Label htmlFor="role" className="text-sm font-medium">
                           Role
                         </Label>
                         <Select
@@ -333,153 +441,144 @@ export default function AdminDashboard() {
                           onValueChange={(value) => setNewUser({ ...newUser, role: value })}
                           disabled={creatingUser}
                         >
-                          <SelectTrigger className="col-span-3">
+                          <SelectTrigger className="rounded-xl">
                             <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="student">student</SelectItem>
-                            <SelectItem value="instructor">instructor</SelectItem>
-                            <SelectItem value="admin">admin</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="instructor">Instructor</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit" disabled={creatingUser}>
-                        {creatingUser ? "Creating..." : "Create User"}
+                      <Button
+                        type="submit"
+                        disabled={creatingUser}
+                        className="w-full rounded-xl bg-primary hover:bg-primary/90"
+                      >
+                        {creatingUser ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create User"
+                        )}
                       </Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-            <CardHeader className="flex items-center space-x-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-3xl text-green-400 transition-transform duration-300 hover:scale-110"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
-              <CardTitle className="text-primary text-xl">Activity Monitoring</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 text-sm mb-4">Monitor user activity and system logs.</p>
-              <Button
-                onClick={() => router.push("/dashboard/admin/logs")}
-                className="bg-white text-black hover:bg-gray-200"
-              >
-                View Activity Logs
-              </Button>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border border-border rounded-md transform transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-            <CardHeader className="flex items-center space-x-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-3xl text-purple-400 transition-transform duration-300 hover:scale-110"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="M12 18v-6" />
-                <path d="M8 18v-1" />
-                <path d="M16 18v-3" />
-              </svg>
-              <CardTitle className="text-primary text-xl">Resource Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 text-sm mb-4">Upload and manage training materials and resources.</p>
-              <Button
-                onClick={() => router.push("/dashboard/admin/resource-manager")}
-                className="bg-white text-black hover:bg-gray-200"
-              >
-                Upload Training Materials
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </QuickActionCard>
 
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList>
-            <TabsTrigger value="users">User List</TabsTrigger>
-          </TabsList>
-          <TabsContent value="users">
-            <Card className="bg-card border border-border rounded-md">
-              <CardHeader className="flex items-center space-x-3">
-                <CardTitle className="text-primary text-xl">User List</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserList key={refreshUserList ? "refresh" : "static"} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="chats">
-            <Card>
-              <CardHeader>
-                <CardTitle>Chat List</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChatList />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* Activity Monitoring Card */}
+            <QuickActionCard
+              icon={FileText}
+              title="Activity Monitoring"
+              description="Monitor user activity and system logs."
+              buttonText="View Activity Logs"
+              onClick={() => router.push("/dashboard/admin/logs")}
+              accentColor="from-emerald-500/10 to-emerald-600/5"
+            />
 
+            {/* Resource Management Card */}
+            <QuickActionCard
+              icon={FolderOpen}
+              title="Resource Management"
+              description="Upload and manage training materials and resources."
+              buttonText="Upload Materials"
+              onClick={() => router.push("/dashboard/admin/resource-manager")}
+              accentColor="from-violet-500/10 to-violet-600/5"
+            />
+          </div>
+        </section>
+
+        {/* User List Section */}
+        <section className="mb-8">
+          <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+            <Tabs defaultValue="users" className="w-full">
+              <CardHeader className="border-b border-border bg-secondary/30 py-5">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10">
+                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-semibold text-foreground">User Management</CardTitle>
+                      <p className="text-sm text-muted-foreground">View and manage all platform users</p>
+                    </div>
+                  </div>
+                  <TabsList className="bg-secondary/50 rounded-xl p-1">
+                    <TabsTrigger value="users" className="rounded-lg px-4">
+                      User List
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <TabsContent value="users" className="mt-0">
+                  <UserList key={refreshUserList ? "refresh" : "static"} />
+                </TabsContent>
+                <TabsContent value="chats" className="mt-0">
+                  <ChatList />
+                </TabsContent>
+              </CardContent>
+            </Tabs>
+          </Card>
+        </section>
+
+        {/* Notifications Dropdown */}
         {showNotifications && (
-          <div className="fixed top-14 right-16 bg-white shadow-lg rounded-md p-4 w-72 z-10">
-            <h3 className="font-bold text-lg">Verified User Notifications</h3>
+          <div className="fixed top-20 right-6 bg-card border border-border shadow-2xl rounded-2xl p-5 w-80 z-50">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-foreground">Verified Users</h3>
+              </div>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             {verifiedUserNotifications.length > 0 ? (
               <>
-                <ul className="mt-2 space-y-2">
+                <ul className="space-y-3 max-h-64 overflow-y-auto">
                   {verifiedUserNotifications.map((notification) => (
-                    <li key={notification.id} className="p-2 bg-gray-100 rounded">
-                      <p className="text-sm text-black">New user verified: {notification.email}</p>
-                      <p className="text-xs text-gray-500">
-                        Name: {notification.name} ({notification.role})
+                    <li
+                      key={notification.id}
+                      className="p-3 bg-secondary/50 rounded-xl border border-border"
+                    >
+                      <p className="text-sm font-medium text-foreground">{notification.email}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {notification.name} - <Badge variant="outline" className="text-xs">{notification.role}</Badge>
                       </p>
                       <button
                         onClick={() => handleMarkAsRead(notification)}
-                        className="mt-2 text-sm text-white bg-green-500 hover:bg-green-600 rounded px-2 py-1"
+                        className="mt-2 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
                       >
                         Mark as Read
                       </button>
                     </li>
                   ))}
                 </ul>
-                <button
+                <Button
                   onClick={handleMarkAllAsRead}
-                  className="mt-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded px-2 py-1"
+                  className="w-full mt-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20"
+                  variant="ghost"
                 >
                   Mark All as Read
-                </button>
+                </Button>
               </>
             ) : (
-              <p className="text-sm text-gray-500 mt-2">No new verified users</p>
+              <p className="text-sm text-muted-foreground text-center py-4">No new verified users</p>
             )}
           </div>
         )}
-      </div>
+      </main>
     </DashboardLayout>
   )
 }
