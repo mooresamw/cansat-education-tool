@@ -206,7 +206,7 @@ const LoginSignupPage = () => {
       //   setVerificationSent(true);
       //   await signOut(auth);
       //   const idToken = await user.getIdToken();
-      //   await fetch("https://cansat-education-tool.onrender.com/logout", {
+      //   await fetch("http://localhost:8080/logout", {
       //     method: "POST",
       //     headers: { "Content-Type": "application/json" },
       //     body: JSON.stringify({ idToken }),

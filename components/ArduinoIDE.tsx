@@ -47,7 +47,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     const fetchProgress = async () => {
       try {
         const response = await fetch(
-          `https://cansat-education-tool.onrender.com/get-user-progress?user_id=${userData.user_id}&type=coding-problem`,
+          `http://localhost:8080/get-user-progress?user_id=${userData.user_id}&type=coding-problem`,
         )
         const data = await response.json()
 
@@ -96,7 +96,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     setOutput("")
     setError("")
     try {
-      //const response = await fetch("https://cansat-education-tool.onrender.com/run", {
+      //const response = await fetch("http://localhost:8080/run", {
       const response = await fetch("http://localhost:8080/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,7 +158,7 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
           accessed_at: new Date().toISOString(),
         }
 
-        const response = await fetch("https://cansat-education-tool.onrender.com/mark-progress", {
+        const response = await fetch("http://localhost:8080/mark-progress", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),

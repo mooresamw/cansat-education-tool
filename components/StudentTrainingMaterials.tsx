@@ -732,14 +732,14 @@ void loop() {
 
       try {
         setLoading(true)
-        const pdfResponse = await fetch("https://cansat-education-tool.onrender.com/get-pdfs")
+        const pdfResponse = await fetch("http://localhost:8080/get-pdfs")
         if (!pdfResponse.ok) throw new Error("Failed to fetch PDFs")
         const pdfData: PDFFile[] = await pdfResponse.json()
         if (!isMounted) return
         setPdfs(pdfData)
 
         const progressResponse = await fetch(
-          `https://cansat-education-tool.onrender.com/get-user-progress?user_id=${userId}&type=training_material`,
+          `http://localhost:8080/get-user-progress?user_id=${userId}&type=training_material`,
         )
         if (!progressResponse.ok) throw new Error("Failed to fetch user progress")
         const progressData: CompletedPDF[] = await progressResponse.json()
@@ -855,7 +855,7 @@ void loop() {
         console.log("No authenticated user; skipping mark as completed")
         return
       }
-      const response = await fetch("https://cansat-education-tool.onrender.com/mark-progress", {
+      const response = await fetch("http://localhost:8080/mark-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

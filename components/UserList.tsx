@@ -39,7 +39,7 @@ export function UserList() {
     const fetchUsers = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch("https://cansat-education-tool.onrender.com/users")
+        const response = await fetch("http://localhost:8080/users")
         if (!response.ok) throw new Error("Failed to fetch users")
         const data: User[] = await response.json()
         setUsers(data)
@@ -65,7 +65,7 @@ export function UserList() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("https://cansat-education-tool.onrender.com/edit-user", {
+      const response = await fetch("http://localhost:8080/edit-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -101,7 +101,7 @@ export function UserList() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("https://cansat-education-tool.onrender.com/delete-user", {
+      const response = await fetch("http://localhost:8080/delete-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

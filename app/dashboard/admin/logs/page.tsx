@@ -335,7 +335,7 @@ export default function LogsPage() {
       if (user) {
         try {
           const token = await user.getIdToken();
-          const roleResponse = await fetch("https://cansat-education-tool.onrender.com/check-role", {
+          const roleResponse = await fetch("http://localhost:8080/check-role", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken: token }),
