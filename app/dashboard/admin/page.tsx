@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         if (!userId) setUserId(uid)
         const token = await user.getIdToken()
 
-        const response = await fetch("https://cansat-education-tool.onrender.com/check-role", {
+        const response = await fetch("http://localhost:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),

@@ -43,7 +43,7 @@ export default function InstructorDashboard() {
         setUserId(uid);
         const token = await user.getIdToken();
         console.log("Firebase Token:", token);
-        const response = await fetch("https://cansat-education-tool.onrender.com/check-role", {
+        const response = await fetch("https://localhost:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
@@ -207,7 +207,7 @@ export default function InstructorDashboard() {
     const token = await auth.currentUser?.getIdToken();
 
     try {
-      const response = await fetch("https://cansat-education-tool.onrender.com/clock", {
+      const response = await fetch("http://localhost:8080/clock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken: token, action }),
