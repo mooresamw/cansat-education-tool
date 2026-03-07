@@ -14,7 +14,6 @@ import {
   FolderIcon,
   FolderOpenIcon,
   LogOut,
-  MessageCircleIcon,
   MessageSquareIcon,
   UsersIcon,
   Settings,
@@ -23,6 +22,8 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Home,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,13 +113,6 @@ const SEARCH_ITEMS: SearchItem[] = [
     keywords: ["collaboration", "tools", "student", "teamwork", "group", "peers"],
   },
   {
-    title: "Instructor Communication",
-    href: "/dashboard/student/message",
-    icon: <MessageCircleIcon className="h-4 w-4" />,
-    roles: ["student"],
-    keywords: ["instructor", "communication", "message", "teacher", "help", "support"],
-  },
-  {
     title: "Settings",
     href: "/dashboard/settings",
     icon: <Settings className="h-4 w-4" />,
@@ -136,7 +130,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Sidebar open by default on large screens
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -201,7 +195,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const handleSearchItemClick = (item: SearchItem) => {
     setSearchQuery("");
     setShowSearchResults(false);
-    setMobileMenuOpen(false); // Close mobile menu when navigating
+    setMobileMenuOpen(false);
 
     if (pathname === item.href) {
       const element = document.querySelector(`[data-search-target="${item.title.toLowerCase().replace(/\s+/g, "-")}"]`);
@@ -232,7 +226,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   // Toggle sidebar visibility (for desktop)
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
-    console.log(!sidebarOpen);
   };
 
   // Sync avatar with backend
@@ -244,8 +237,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         const user = auth.currentUser;
         if (user && isMounted) {
           const token = await user.getIdToken();
-          console.log("Fetching avatar seed from backend");
-          const response = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/user/avatar", {
+          const response = await fetch("http://localhost:8080/user/avatar", {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -257,15 +249,11 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             const data = await response.json();
             const backendSeed = data.avatarSeed || 1;
             if (backendSeed !== userData.avatarSeed && isMounted) {
-              console.log("Updating avatar seed to:", backendSeed);
               setAvatarSeed(backendSeed);
               const updatedUser = { ...userData, avatarSeed: backendSeed };
               localStorage.setItem("user", JSON.stringify(updatedUser));
               setUserData(updatedUser);
             }
-          } else {
-            const errorData = await response.json();
-            console.error("Failed to fetch avatar seed:", errorData.error);
           }
           hasSyncedAvatar.current = true;
         }
@@ -292,8 +280,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
   const saveAvatarSeedToBackend = async (newSeed: number, token: string) => {
     try {
-      console.log("Saving avatar seed to backend:", newSeed);
-      const response = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/user/avatar", {
+      const response = await fetch("http://localhost:8080/user/avatar", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -317,7 +304,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const handleAvatarChange = async (index: number) => {
     try {
       const newSeed = index + 1;
-      console.log("Changing avatar seed to:", newSeed);
       setAvatarSeed(newSeed);
       setShowAvatarPicker(false);
 
@@ -339,53 +325,52 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     }
   };
 
-// DashboardLayout.tsx
-const handleSignOut = async () => {
-  try {
-    setIsSigningOut(true);
-    const user = auth.currentUser;
-    let token: string | null = null;
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true);
+      const user = auth.currentUser;
+      let token: string | null = null;
 
-    // Get the token before signing out
-    if (user) {
-      token = await user.getIdToken();
-    }
-
-    // Perform backend logout API call if token exists
-    if (token) {
-      try {
-        const logoutResponse = await fetch(/*`https://cansat-education-tool.onrender.com*/"http://localhost:8080/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken: token }),
-        });
-
-        if (!logoutResponse.ok) {
-          console.error("Logout logging failed:", await logoutResponse.text());
-        }
-      } catch (error) {
-        console.error("Error during logout API call:", error);
+      if (user) {
+        token = await user.getIdToken();
       }
+
+      if (token) {
+        try {
+          const logoutResponse = await fetch("http://localhost:8080/logout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken: token }),
+          });
+
+          if (!logoutResponse.ok) {
+            console.error("Logout logging failed:", await logoutResponse.text());
+          }
+        } catch (error) {
+          console.error("Error during logout API call:", error);
+        }
+      }
+
+      await signOut(auth);
+      localStorage.removeItem("user");
+      localStorage.removeItem("userId");
+      router.push("/login");
+    } catch (error: any) {
+      console.error("Error signing out:", error.message);
+    } finally {
+      setIsSigningOut(false);
     }
-
-    // Sign out from Firebase
-    await signOut(auth);
-
-    // Clear localStorage
-    localStorage.removeItem("user");
-    localStorage.removeItem("userId");
-
-    // Navigate to login page
-    router.push("/login");
-  } catch (error: any) {
-    console.error("Error signing out:", error.message);
-  } finally {
-    setIsSigningOut(false);
-  }
-};
+  };
 
   if (!mounted) {
-    return <p className="text-center mt-10">Loading...</p>;
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!userData) {
@@ -394,55 +379,75 @@ const handleSignOut = async () => {
 
   const avatarPath = LOCAL_AVATARS[(avatarSeed || 1) - 1]?.path || LOCAL_AVATARS[0].path;
 
-  // Sidebar content component to reuse in both desktop and mobile
+  // Get current page title based on pathname
+  const getPageTitle = () => {
+    if (pathname.includes("/logs")) return "Activity Monitoring";
+    if (pathname.includes("/resource-manager")) return "Resource Management";
+    if (pathname.includes("/training-materials")) return "Training Materials";
+    if (pathname.includes("/ide")) return "Virtual Arduino IDE";
+    if (pathname.includes("/message")) return "Messages";
+    if (pathname.includes("/settings")) return "Settings";
+    return "Dashboard";
+  };
+
+  // Sidebar content component
   const SidebarContent = ({ onNavClick, isMobile = false }: { onNavClick?: () => void; isMobile?: boolean }) => (
-    <div className="flex flex-col justify-between h-full">
-      <div className="p-4">
+    <div className="flex flex-col h-full">
+      {/* Logo Section */}
+      <div className="p-6 border-b border-border/50">
         <Link
           href={`/dashboard/${userData.role}`}
-          className="text-lg font-bold hover:text-primary transition-colors block mb-4"
+          className="flex items-center gap-3 group"
           onClick={onNavClick}
         >
-          CanSat Education Tool
-        </Link>
-
-        {/* Search Bar */}
-        <div className="relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={isMobile ? undefined : searchInputRef}
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full rounded-3xl bg-muted pl-9 pr-4 py-6 px-8"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearSearch}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform group-hover:scale-105">
+            <Sparkles className="h-5 w-5" />
           </div>
+          <div className="flex flex-col">
+            <span className="text-base font-semibold tracking-tight">CanSat</span>
+            <span className="text-xs text-muted-foreground">Education Tool</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Search Bar */}
+      <div className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={isMobile ? undefined : searchInputRef}
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className="w-full h-10 rounded-xl bg-secondary/50 border-0 pl-10 pr-10 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          )}
 
           {/* Search Results Dropdown */}
           {showSearchResults && (
-            <div className="absolute top-full w-full right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
               {searchResults.map((item, index) => (
                 <button
                   key={index}
                   onClick={() => handleSearchItemClick(item)}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground transition-colors first:rounded-t-md last:rounded-b-md"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-0"
                 >
-                  {item.icon}
-                  <span className="flex-1">{item.title}</span>
-                  <Badge variant="secondary" className="text-xs">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+                    {item.icon}
+                  </div>
+                  <span className="flex-1 font-medium">{item.title}</span>
+                  <Badge variant="secondary" className="text-[10px] font-medium uppercase tracking-wider">
                     {item.roles[0]}
                   </Badge>
                 </button>
@@ -452,16 +457,39 @@ const handleSignOut = async () => {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-2">
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-2 space-y-1">
+        <div className="mb-2 px-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            Menu
+          </span>
+        </div>
+
+        {/* Dashboard Home */}
+        <NavItem 
+          href={`/dashboard/${userData.role}`} 
+          icon={<Home className="h-4 w-4" />} 
+          onClick={onNavClick}
+          isActive={pathname === `/dashboard/${userData.role}`}
+        >
+          Dashboard
+        </NavItem>
+
         {userData.role === "admin" && (
           <>
-            <NavItem href="/dashboard/admin/logs" icon={<ActivityIcon className="h-4 w-4" />} onClick={onNavClick}>
+            <NavItem 
+              href="/dashboard/admin/logs" 
+              icon={<ActivityIcon className="h-4 w-4" />} 
+              onClick={onNavClick}
+              isActive={pathname.includes("/admin/logs")}
+            >
               Activity Monitoring
             </NavItem>
             <NavItem
               href="/dashboard/admin/resource-manager"
               icon={<FolderOpenIcon className="h-4 w-4" />}
               onClick={onNavClick}
+              isActive={pathname.includes("/resource-manager")}
             >
               Resource Management
             </NavItem>
@@ -473,6 +501,7 @@ const handleSignOut = async () => {
               href="/dashboard/student/training-materials"
               icon={<FolderIcon className="h-4 w-4" />}
               onClick={onNavClick}
+              isActive={pathname.includes("/training-materials")}
             >
               Access Materials
             </NavItem>
@@ -480,6 +509,7 @@ const handleSignOut = async () => {
               href="/dashboard/instructor/message"
               icon={<MessageSquareIcon className="h-4 w-4" />}
               onClick={onNavClick}
+              isActive={pathname.includes("/instructor/message")}
             >
               Student Communication
             </NavItem>
@@ -491,16 +521,23 @@ const handleSignOut = async () => {
               href="/dashboard/student/training-materials"
               icon={<BookOpenIcon className="h-4 w-4" />}
               onClick={onNavClick}
+              isActive={pathname.includes("/training-materials")}
             >
               Access Resources
             </NavItem>
-            <NavItem href="/dashboard/student/ide" icon={<CodeIcon className="h-4 w-4" />} onClick={onNavClick}>
+            <NavItem 
+              href="/dashboard/student/ide" 
+              icon={<CodeIcon className="h-4 w-4" />} 
+              onClick={onNavClick}
+              isActive={pathname.includes("/ide")}
+            >
               Virtual Arduino IDE
             </NavItem>
             <NavItem
               href="/dashboard/student/messages"
               icon={<UsersIcon className="h-4 w-4" />}
               onClick={onNavClick}
+              isActive={pathname.includes("/messages")}
             >
               Collaboration Tools
             </NavItem>
@@ -509,59 +546,57 @@ const handleSignOut = async () => {
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="border-t bottom-0 p-2 space-y-0">
-        {/* Settings Button */}
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 px-3 py-2 text-sm text-nav-item hover:bg-nav-item-hover hover:text-nav-item-hover-foreground transition-all duration-300"
-          onClick={() => {
-            router.push(`/dashboard/${userData.role}/`);
-            onNavClick?.();
-          }}
+      <div className="mt-auto border-t border-border/50 p-3 space-y-1">
+        <NavItem 
+          href={`/dashboard/${userData.role}/settings`} 
+          icon={<Settings className="h-4 w-4" />}
+          onClick={onNavClick}
+          isActive={pathname.includes("/settings")}
         >
-          <Settings className="h-4 w-4" />
-          <span>Settings</span>
-        </Button>
+          Settings
+        </NavItem>
 
-        {/* Secondary Profile Button */}
+        {/* User Profile Card */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 px-3 py-2 text-sm text-nav-item hover:bg-nav-item-hover hover:text-nav-item-hover-foreground transition-all duration-300"
-            >
+            <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all duration-200 group">
               <div className="relative">
-                <Image
-                  src={avatarPath || "/placeholder.svg"}
-                  alt="User Avatar"
-                  width={16}
-                  height={16}
-                  className="h-4 w-4 rounded-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/avatars/avatar1.png";
-                  }}
-                />
-              </div>
-              <span className="flex-1 text-left truncate">{userData.name}</span>
-              <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary border-primary/20">
-                {userData.role}
-              </Badge>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-72 bg-popover border border-border text-popover-foreground shadow-xl rounded-lg p-0"
-            side="right"
-            align="end"
-          >
-            <div className="flex flex-col space-y-4 p-4">
-              <div className="flex items-center space-x-4">
-                <div className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-primary/20">
+                <div className="h-10 w-10 rounded-xl overflow-hidden ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">
                   <Image
                     src={avatarPath || "/placeholder.svg"}
                     alt="User Avatar"
-                    width={56}
-                    height={56}
+                    width={40}
+                    height={40}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/avatars/avatar1.png";
+                    }}
+                  />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-card" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium truncate">{userData.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">{userData.role}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-72 bg-card border border-border shadow-2xl rounded-2xl p-0 overflow-hidden"
+            side="right"
+            align="end"
+            sideOffset={8}
+          >
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden ring-4 ring-background shadow-lg">
+                  <Image
+                    src={avatarPath || "/placeholder.svg"}
+                    alt="User Avatar"
+                    width={64}
+                    height={64}
                     className="h-full w-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -571,69 +606,63 @@ const handleSignOut = async () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">{userData.name}</h2>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-primary/10 text-primary border-primary/20 capitalize"
-                  >
+                  <Badge className="bg-primary/10 text-primary border-0 font-medium capitalize">
                     {userData.role}
                   </Badge>
                 </div>
               </div>
+            </div>
 
+            <div className="p-4 space-y-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                className="w-full border-primary/20 hover:bg-primary/5 text-primary transition-colors"
+                className="w-full justify-center rounded-xl h-10 border-dashed hover:border-primary hover:bg-primary/5 transition-colors"
               >
                 {showAvatarPicker ? "Close Avatar Picker" : "Change Avatar"}
               </Button>
 
               {showAvatarPicker && (
-                <div className="border-t border-border pt-4 -mx-4 px-4 bg-muted/10">
-                  <h3 className="text-sm font-medium mb-3 text-foreground">Select Your Avatar</h3>
-                  <div className="grid grid-cols-3 gap-3">
+                <div className="pt-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Select Your Avatar</p>
+                  <div className="grid grid-cols-3 gap-2">
                     {LOCAL_AVATARS.map((avatar, index) => (
                       <button
                         key={avatar.id}
                         onClick={() => handleAvatarChange(index)}
-                        className={`relative group rounded-full overflow-hidden transition-all duration-200 ${
+                        className={`relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
                           avatarSeed === index + 1
-                            ? "ring-2 ring-primary scale-105"
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
                             : "hover:ring-2 hover:ring-primary/50 hover:scale-105"
                         }`}
                       >
                         <Image
                           src={avatar.path || "/placeholder.svg"}
                           alt={`${avatar.id} avatar`}
-                          width={48}
-                          height={48}
+                          width={64}
+                          height={64}
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.src = "/avatars/avatar1.png";
                           }}
                         />
-                        <div
-                          className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
-                            avatarSeed === index + 1 ? "bg-black/20" : ""
-                          }`}
-                        ></div>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="space-y-2 text-sm text-muted-foreground pt-2">
-                <p>
-                  <strong className="text-foreground">Email:</strong> {userData.email}
+              <div className="py-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Email:</span> {userData.email}
                 </p>
               </div>
 
               <Button
-                variant="outline"
-                className="w-full border-border text-foreground hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
+                variant="ghost"
+                className="w-full justify-center rounded-xl h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -648,34 +677,34 @@ const handleSignOut = async () => {
 
   return (
     <SignOutContext.Provider value={{ isSigningOut, setIsSigningOut }}>
-      <div className="flex h-screen bg-background text-foreground">
-        {/* Desktop Sidebar - Open by default on large screens */}
-        <div
-          className={` w-64 bg-gradient-to-b border-r border-border shadow-lg transform transition-transform duration-300 
-          ${
-            sidebarOpen ? "translate-x-0 hidden md:block" : "-translate-x-full hidden"
+      <div className="flex h-screen bg-background">
+        {/* Desktop Sidebar */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-30 w-[280px] bg-card border-r border-border/50 shadow-xl transform transition-transform duration-300 ease-out hidden md:flex flex-col ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <SidebarContent />
-        </div>
+        </aside>
 
         {/* Main Content */}
-        <div id="main-content" className={`flex-1 flex flex-col
-          ${
-            sidebarOpen ? "" : ""
+        <div
+          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-out ${
+            sidebarOpen ? "md:ml-[280px]" : "md:ml-0"
           }`}
         >
-          <header className="flex items-center justify-between border-b border-border px-3 py-3 bg-header">
-            <div className="flex items-center gap-4">
+          {/* Top Bar */}
+          <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 md:px-6 bg-card/80 backdrop-blur-xl border-b border-border/50">
+            <div className="flex items-center gap-3">
               {/* Mobile Menu Button */}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="block md:hidden">
+                  <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-xl">
                     <Menu className="h-5 w-5" />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0 bg-gradient-to-b from-sidebar-from to-sidebar-to">
+                <SheetContent side="left" className="w-[280px] p-0 border-r-0">
                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                   <SidebarContent onNavClick={() => setMobileMenuOpen(false)} isMobile={true} />
                 </SheetContent>
@@ -684,33 +713,44 @@ const handleSignOut = async () => {
               {/* Desktop Sidebar Toggle */}
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={toggleSidebar}
-                className="hidden md:block lg:flex"
+                className="hidden md:flex h-10 w-10 rounded-xl hover:bg-secondary/50"
                 title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
               >
                 {sidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                <span className="sr-only">{sidebarOpen ? "Hide sidebar" : "Show sidebar"}</span>
               </Button>
+
+              {/* Page Title */}
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 md:gap-16">
-              <div className="relative w-8">
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Theme Toggle */}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50 transition-colors">
                 <ThemeToggle />
               </div>
-              <Notifications userId={userData.user_id} userRole={userData.role} />
+
+              {/* Notifications */}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-secondary/50 transition-colors">
+                <Notifications userId={userData.user_id} userRole={userData.role} />
+              </div>
+
+              {/* User Avatar - Header */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-12 w-12 rounded-full p-0 hover:scale-105 transition-transform focus:ring-2 focus:ring-primary"
+                    className="h-10 w-10 rounded-xl p-0 hover:bg-secondary/50 overflow-hidden ring-2 ring-border/50 hover:ring-primary/30 transition-all"
                   >
                     <Image
                       src={avatarPath || "/placeholder.svg"}
                       alt="User Avatar"
                       width={40}
                       height={40}
-                      className="h-full w-full rounded-full object-cover"
+                      className="h-full w-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = "/avatars/avatar1.png";
@@ -718,15 +758,19 @@ const handleSignOut = async () => {
                     />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-72 bg-popover border border-border text-popover-foreground shadow-xl rounded-lg p-0">
-                  <div className="flex flex-col space-y-4 p-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-primary/20">
+                <PopoverContent 
+                  className="w-72 bg-card border border-border shadow-2xl rounded-2xl p-0 overflow-hidden"
+                  align="end"
+                  sideOffset={8}
+                >
+                  <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-2xl overflow-hidden ring-4 ring-background shadow-lg">
                         <Image
                           src={avatarPath || "/placeholder.svg"}
                           alt="User Avatar"
-                          width={56}
-                          height={56}
+                          width={64}
+                          height={64}
                           className="h-full w-full object-cover"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -736,60 +780,63 @@ const handleSignOut = async () => {
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold">{userData.name}</h2>
-                        <p className="text-sm text-muted-foreground capitalize">{userData.role}</p>
+                        <Badge className="bg-primary/10 text-primary border-0 font-medium capitalize">
+                          {userData.role}
+                        </Badge>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="p-4 space-y-4">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                      className="w-full border-primary/20 hover:bg-primary/5 text-primary transition-colors"
+                      className="w-full justify-center rounded-xl h-10 border-dashed hover:border-primary hover:bg-primary/5 transition-colors"
                     >
                       {showAvatarPicker ? "Close Avatar Picker" : "Change Avatar"}
                     </Button>
+
                     {showAvatarPicker && (
-                      <div className="border-t border-border pt-4 -mx-4 px-4 bg-muted/10">
-                        <h3 className="text-sm font-medium mb-3 text-foreground">Select Your Avatar</h3>
-                        <div className="grid grid-cols-3 gap-3">
+                      <div className="pt-2">
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Select Your Avatar</p>
+                        <div className="grid grid-cols-3 gap-2">
                           {LOCAL_AVATARS.map((avatar, index) => (
                             <button
                               key={avatar.id}
                               onClick={() => handleAvatarChange(index)}
-                              className={`relative group rounded-full overflow-hidden transition-all duration-200 ${
+                              className={`relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
                                 avatarSeed === index + 1
-                                  ? "ring-2 ring-primary scale-105"
+                                  ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
                                   : "hover:ring-2 hover:ring-primary/50 hover:scale-105"
                               }`}
                             >
                               <Image
                                 src={avatar.path || "/placeholder.svg"}
                                 alt={`${avatar.id} avatar`}
-                                width={48}
-                                height={48}
+                                width={64}
+                                height={64}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.src = "/avatars/avatar1.png";
                                 }}
                               />
-                              <div
-                                className={`absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-opacity ${
-                                  avatarSeed === index + 1 ? "bg-black/20" : ""
-                                }`}
-                              ></div>
                             </button>
                           ))}
                         </div>
                       </div>
                     )}
-                    <div className="space-y-2 text-sm text-muted-foreground pt-2">
-                      <p>
-                        <strong className="text-foreground">Email:</strong> {userData.email}
+
+                    <div className="py-2 border-t border-border/50">
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">Email:</span> {userData.email}
                       </p>
                     </div>
+
                     <Button
-                      variant="outline"
-                      className="w-full border-border text-foreground hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent"
+                      variant="ghost"
+                      className="w-full justify-center rounded-xl h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
                       onClick={handleSignOut}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
@@ -800,7 +847,13 @@ const handleSignOut = async () => {
               </Popover>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6 bg-background">{children}</main>
+
+          {/* Main Content Area */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-4 md:p-6 lg:p-8">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </SignOutContext.Provider>
@@ -812,19 +865,31 @@ function NavItem({
   icon,
   children,
   onClick,
+  isActive = false,
 }: {
   href: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   onClick?: () => void;
+  isActive?: boolean;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-2 text-sm text-nav-item rounded-md hover:bg-nav-item-hover hover:text-nav-item-hover-foreground transition-all duration-300 hover:pl-6"
+      className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all duration-200 group ${
+        isActive
+          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-medium"
+          : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+      }`}
     >
-      {icon}
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+        isActive 
+          ? "bg-primary-foreground/20" 
+          : "bg-secondary group-hover:bg-secondary"
+      }`}>
+        {icon}
+      </div>
       <span>{children}</span>
     </Link>
   );
