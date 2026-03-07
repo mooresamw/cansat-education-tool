@@ -263,7 +263,7 @@ export default function StudentDashboard() {
       try {
         const memberProgressPromises = userGroup.members.map(async (member: GroupMember) => {
           try {
-            const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${member.user_id}`)
+            const response = await fetch(`https://localhost:8080/get-user-progress?user_id=${member.user_id}`)
             let progressData: ProgressItem[] = []
 
             if (response.ok) {
