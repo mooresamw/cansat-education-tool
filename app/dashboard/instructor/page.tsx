@@ -112,7 +112,7 @@ export default function InstructorDashboard() {
         setUserId(uid)
         const token = await user.getIdToken()
         console.log("Firebase Token:", token)
-        const response = await fetch("https://localhost:8080/check-role", {
+        const response = await fetch("http://localhost:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
