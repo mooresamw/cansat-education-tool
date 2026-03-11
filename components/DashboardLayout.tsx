@@ -404,8 +404,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             <Rocket className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-semibold tracking-tight">CanSat</span>
-            <span className="text-xs text-muted-foreground">Education Tool</span>
+            <span className="text-base font-semibold tracking-tight">Avakas</span>
+            <span className="text-xs text-muted-foreground">Cansat Education Tool</span>
           </div>
         </Link>
       </div>
