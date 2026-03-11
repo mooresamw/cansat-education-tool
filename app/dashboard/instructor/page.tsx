@@ -359,11 +359,11 @@ export default function InstructorDashboard() {
               </thead>
               <tbody>
                 ${clockHistory
-                  .filter((entry) => entry.action === "out")
-                  .map((entry) => {
-                    const clockInTime = new Date(entry.clockInTimestamp || "")
-                    const clockOutTime = new Date(entry.timestamp)
-                    return `
+          .filter((entry) => entry.action === "out")
+          .map((entry) => {
+            const clockInTime = new Date(entry.clockInTimestamp || "")
+            const clockOutTime = new Date(entry.timestamp)
+            return `
                       <tr>
                         <td>${clockInTime?.toLocaleDateString()}</td>
                         <td>${clockInTime?.toLocaleTimeString()}</td>
@@ -371,8 +371,8 @@ export default function InstructorDashboard() {
                         <td>${entry.duration ? formatDuration(entry.duration) : "N/A"}</td>
                       </tr>
                     `
-                  })
-                  .join("")}
+          })
+          .join("")}
               </tbody>
             </table>
             <button class="close-btn" onclick="window.close()">Close Tab</button>
