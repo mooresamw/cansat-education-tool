@@ -1,6 +1,6 @@
 import {useRouter} from "next/navigation";
 
-export function checkUserRole(allowedRoles) {
+export function checkUserRole(allowedRoles: string | any[]) {
   if (typeof window === "undefined") return null; //Prevent errors in SSR
   const router = useRouter();  
   const storedUser = localStorage.getItem("user");
