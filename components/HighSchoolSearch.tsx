@@ -104,6 +104,38 @@ const HighSchoolSearch = ({ onSelect, Style }) => {
         )}
       </div>
     );
+  } else if (Style === 'MaterialUI') {
+    return (
+      <div className="relative">
+        <FaBook className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search for your school"
+          className="w-full pl-12 pr-4 py-3 bg-secondary/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground border border-border transition-all"
+          value={query}
+          onChange={handleInput}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 150)}
+        />
+        {isFocused && suggestions.length > 0 && (
+          <ul
+            className="absolute z-50 bg-card border border-border rounded-xl w-full mt-2 max-h-60 overflow-auto shadow-lg"
+            onMouseDown={handleListMouseDown}
+          >
+            {suggestions.map((suggestion, index) => (
+              <li
+                key={index}
+                className="px-4 py-3 hover:bg-secondary cursor-pointer text-foreground transition-colors first:rounded-t-xl last:rounded-b-xl"
+                onClick={() => handleSelect(suggestion)}
+              >
+                {suggestion.placePrediction.text.text}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
   } else {
     return (
       <>
