@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebaseConfig.ts";
+import { db } from "@/lib/firebaseConfig";
 import { doc, onSnapshot, updateDoc, arrayUnion, setDoc, getDoc } from "firebase/firestore";
 
 export const getMessages = (chatId: string, callback: (messages: any[]) => void) => {
