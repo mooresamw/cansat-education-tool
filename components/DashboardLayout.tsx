@@ -52,6 +52,27 @@ interface SearchItem {
   keywords: string[];
 }
 
+interface SidebarContentProps {
+  userData: any;
+  avatarPath: string;
+  avatarSeed: number;
+  showAvatarPicker: boolean;
+  setShowAvatarPicker: React.Dispatch<React.SetStateAction<boolean>>;
+  handleAvatarChange: (index: number) => void;
+  handleSignOut: () => void;
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+  searchResults: SearchItem[];
+  showSearchResults: boolean;
+  handleSearchItemClick: (item: SearchItem) => void;
+  handleSearchKeyDown: (e: React.KeyboardEvent) => void;
+  clearSearch: () => void;
+  searchInputRef: React.RefObject<HTMLInputElement>;
+  pathname: string;
+  onNavClick?: () => void;
+  isMobile?: boolean;
+}
+
 const LOCAL_AVATARS = [
   { id: "avatar1", path: "/avatars/avatar1.png" },
   { id: "avatar2", path: "/avatars/avatar2.png" },
@@ -110,16 +131,332 @@ const SEARCH_ITEMS: SearchItem[] = [
     href: "/dashboard/student/messageStudent",
     icon: <UsersIcon className="h-4 w-4" />,
     roles: ["student"],
-    keywords: ["collaboration", "tools", "student", "teamwork", "group", "peers"],
+    keywords: ["messages", "collaboration", "tools", "student", "teamwork", "group", "peers"],
   },
   {
     title: "Settings",
-    href: "/dashboard/settings",
+    href: "/dashboard/{role}/settings",
     icon: <Settings className="h-4 w-4" />,
     roles: ["admin", "instructor", "student"],
     keywords: ["settings", "preferences", "configuration", "profile", "account"],
   },
+  {
+    title: "Dashboard",
+    href: "/dashboard/{role}",
+    icon: <Home className="h-4 w-4" />,
+    roles: ["admin", "instructor", "student"],
+    keywords: ["home", "dashboard", "back"],
+  },
 ];
+
+function SidebarContent({
+  userData,
+  avatarPath,
+  avatarSeed,
+  showAvatarPicker,
+  setShowAvatarPicker,
+  handleAvatarChange,
+  handleSignOut,
+  searchQuery,
+  setSearchQuery,
+  searchResults,
+  showSearchResults,
+  handleSearchItemClick,
+  handleSearchKeyDown,
+  clearSearch,
+  searchInputRef,
+  pathname,
+  onNavClick,
+  isMobile = false,
+}: SidebarContentProps) {
+  return (
+    <div className="flex flex-col h-full">
+      {/* Logo Section */}
+      <div className="p-6 border-b border-border/50">
+        <Link
+          href={`/dashboard/${userData.role}`}
+          className="flex items-center gap-3 group"
+          onClick={onNavClick}
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform group-hover:scale-105">
+            <Rocket className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-base font-semibold tracking-tight">Avakas</span>
+            <span className="text-xs text-muted-foreground">Cansat Education Tool</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Search Bar */}
+      <div className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={isMobile ? undefined : searchInputRef}
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className="w-full h-10 rounded-xl bg-secondary/50 border-0 pl-10 pr-10 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          )}
+
+          {/* Search Results Dropdown */}
+          {showSearchResults && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+              {searchResults.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground">No results found</div>
+              ) : (
+                searchResults.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSearchItemClick(item)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-0"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+                      {item.icon}
+                    </div>
+                    <span className="flex-1 font-medium">{item.title}</span>
+                    <Badge variant="secondary" className="text-[10px] font-medium uppercase tracking-wider">
+                      {userData.role}
+                    </Badge>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-2 space-y-1">
+        <div className="mb-2 px-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            Menu
+          </span>
+        </div>
+
+        {/* Dashboard Home */}
+        <NavItem
+          href={`/dashboard/${userData.role}`}
+          icon={<Home className="h-4 w-4" />}
+          onClick={onNavClick}
+          isActive={pathname === `/dashboard/${userData.role}`}
+        >
+          Dashboard
+        </NavItem>
+
+        {userData.role === "admin" && (
+          <>
+            <NavItem
+              href="/dashboard/admin/logs"
+              icon={<ActivityIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/admin/logs")}
+            >
+              Activity Monitoring
+            </NavItem>
+            <NavItem
+              href="/dashboard/admin/resource-manager"
+              icon={<FolderOpenIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/resource-manager")}
+            >
+              Resource Management
+            </NavItem>
+          </>
+        )}
+        {userData.role === "instructor" && (
+          <>
+            <NavItem
+              href="/dashboard/student/training-materials"
+              icon={<FolderIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/training-materials")}
+            >
+              Access Materials
+            </NavItem>
+            <NavItem
+              href="/dashboard/instructor/message"
+              icon={<MessageSquareIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/instructor/message")}
+            >
+              Student Communication
+            </NavItem>
+          </>
+        )}
+        {userData.role === "student" && (
+          <>
+            <NavItem
+              href="/dashboard/student/training-materials"
+              icon={<BookOpenIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/training-materials")}
+            >
+              Access Resources
+            </NavItem>
+            <NavItem
+              href="/dashboard/student/ide"
+              icon={<CodeIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/ide")}
+            >
+              Virtual Arduino IDE
+            </NavItem>
+            <NavItem
+              href="/dashboard/student/messages"
+              icon={<UsersIcon className="h-4 w-4" />}
+              onClick={onNavClick}
+              isActive={pathname.includes("/messages")}
+            >
+              Collaboration Tools
+            </NavItem>
+          </>
+        )}
+      </nav>
+
+      {/* Sidebar Footer */}
+      <div className="mt-auto border-t border-border/50 p-3 space-y-1">
+        <NavItem
+          href={`/dashboard/${userData.role}/settings`}
+          icon={<Settings className="h-4 w-4" />}
+          onClick={onNavClick}
+          isActive={pathname.includes("/settings")}
+        >
+          Settings
+        </NavItem>
+
+        {/* User Profile Card */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all duration-200 group">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-xl overflow-hidden ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">
+                  <Image
+                    src={avatarPath || "/placeholder.svg"}
+                    alt="User Avatar"
+                    width={40}
+                    height={40}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/avatars/avatar1.png";
+                    }}
+                  />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-card" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-medium truncate">{userData.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">{userData.role}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-72 bg-card border border-border shadow-2xl rounded-2xl p-0 overflow-hidden"
+            side="right"
+            align="end"
+            sideOffset={8}
+          >
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl overflow-hidden ring-4 ring-background shadow-lg">
+                  <Image
+                    src={avatarPath || "/placeholder.svg"}
+                    alt="User Avatar"
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/avatars/avatar1.png";
+                    }}
+                  />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">{userData.name}</h2>
+                  <Badge className="bg-primary/10 text-primary border-0 font-medium capitalize">
+                    {userData.role}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAvatarPicker((prev) => !prev)}
+                className="w-full justify-center rounded-xl h-10 border-dashed hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                {showAvatarPicker ? "Close Avatar Picker" : "Change Avatar"}
+              </Button>
+
+              {showAvatarPicker && (
+                <div className="pt-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Select Your Avatar</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {LOCAL_AVATARS.map((avatar, index) => (
+                      <button
+                        key={avatar.id}
+                        onClick={() => handleAvatarChange(index)}
+                        className={`relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
+                          avatarSeed === index + 1
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
+                            : "hover:ring-2 hover:ring-primary/50 hover:scale-105"
+                        }`}
+                      >
+                        <Image
+                          src={avatar.path || "/placeholder.svg"}
+                          alt={`${avatar.id} avatar`}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/avatars/avatar1.png";
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="py-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Email:</span> {userData.email}
+                </p>
+              </div>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-center rounded-xl h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+}
 
 export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const [userData, setUserData] = useState<any>(null);
@@ -188,7 +525,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     });
 
     setSearchResults(filteredItems);
-    setShowSearchResults(filteredItems.length > 0);
+    setShowSearchResults(true);
   }, [searchQuery, userData]);
 
   // Handle search item selection
@@ -197,13 +534,14 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     setShowSearchResults(false);
     setMobileMenuOpen(false);
 
-    if (pathname === item.href) {
+    const resolvedHref = item.href.replace("{role}", userData.role);
+    if (pathname === resolvedHref) {
       const element = document.querySelector(`[data-search-target="${item.title.toLowerCase().replace(/\s+/g, "-")}"]`);
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } else {
-      router.push(item.href);
+      router.push(resolvedHref);
     }
   };
 
@@ -390,291 +728,6 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
     return "Dashboard";
   };
 
-  // Sidebar content component
-  const SidebarContent = ({ onNavClick, isMobile = false }: { onNavClick?: () => void; isMobile?: boolean }) => (
-    <div className="flex flex-col h-full">
-      {/* Logo Section */}
-      <div className="p-6 border-b border-border/50">
-        <Link
-          href={`/dashboard/${userData.role}`}
-          className="flex items-center gap-3 group"
-          onClick={onNavClick}
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform group-hover:scale-105">
-            <Rocket className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-semibold tracking-tight">Avakas</span>
-            <span className="text-xs text-muted-foreground">Cansat Education Tool</span>
-          </div>
-        </Link>
-      </div>
-
-      {/* Search Bar */}
-      <div className="p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={isMobile ? undefined : searchInputRef}
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className="w-full h-10 rounded-xl bg-secondary/50 border-0 pl-10 pr-10 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearSearch}
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 hover:bg-transparent"
-            >
-              <X className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          )}
-
-          {/* Search Results Dropdown */}
-          {showSearchResults && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
-              {searchResults.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSearchItemClick(item)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-0"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
-                    {item.icon}
-                  </div>
-                  <span className="flex-1 font-medium">{item.title}</span>
-                  <Badge variant="secondary" className="text-[10px] font-medium uppercase tracking-wider">
-                    {item.roles[0]}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-1">
-        <div className="mb-2 px-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-            Menu
-          </span>
-        </div>
-
-        {/* Dashboard Home */}
-        <NavItem 
-          href={`/dashboard/${userData.role}`} 
-          icon={<Home className="h-4 w-4" />} 
-          onClick={onNavClick}
-          isActive={pathname === `/dashboard/${userData.role}`}
-        >
-          Dashboard
-        </NavItem>
-
-        {userData.role === "admin" && (
-          <>
-            <NavItem 
-              href="/dashboard/admin/logs" 
-              icon={<ActivityIcon className="h-4 w-4" />} 
-              onClick={onNavClick}
-              isActive={pathname.includes("/admin/logs")}
-            >
-              Activity Monitoring
-            </NavItem>
-            <NavItem
-              href="/dashboard/admin/resource-manager"
-              icon={<FolderOpenIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/resource-manager")}
-            >
-              Resource Management
-            </NavItem>
-          </>
-        )}
-        {userData.role === "instructor" && (
-          <>
-            <NavItem
-              href="/dashboard/student/training-materials"
-              icon={<FolderIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/training-materials")}
-            >
-              Access Materials
-            </NavItem>
-            <NavItem
-              href="/dashboard/instructor/message"
-              icon={<MessageSquareIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/instructor/message")}
-            >
-              Student Communication
-            </NavItem>
-          </>
-        )}
-        {userData.role === "student" && (
-          <>
-            <NavItem
-              href="/dashboard/student/training-materials"
-              icon={<BookOpenIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/training-materials")}
-            >
-              Access Resources
-            </NavItem>
-            <NavItem 
-              href="/dashboard/student/ide" 
-              icon={<CodeIcon className="h-4 w-4" />} 
-              onClick={onNavClick}
-              isActive={pathname.includes("/ide")}
-            >
-              Virtual Arduino IDE
-            </NavItem>
-            <NavItem
-              href="/dashboard/student/messages"
-              icon={<UsersIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/messages")}
-            >
-              Collaboration Tools
-            </NavItem>
-          </>
-        )}
-      </nav>
-
-      {/* Sidebar Footer */}
-      <div className="mt-auto border-t border-border/50 p-3 space-y-1">
-        <NavItem 
-          href={`/dashboard/${userData.role}/settings`} 
-          icon={<Settings className="h-4 w-4" />}
-          onClick={onNavClick}
-          isActive={pathname.includes("/settings")}
-        >
-          Settings
-        </NavItem>
-
-        {/* User Profile Card */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-all duration-200 group">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-xl overflow-hidden ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">
-                  <Image
-                    src={avatarPath || "/placeholder.svg"}
-                    alt="User Avatar"
-                    width={40}
-                    height={40}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "/avatars/avatar1.png";
-                    }}
-                  />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-card" />
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium truncate">{userData.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{userData.role}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-72 bg-card border border-border shadow-2xl rounded-2xl p-0 overflow-hidden"
-            side="right"
-            align="end"
-            sideOffset={8}
-          >
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl overflow-hidden ring-4 ring-background shadow-lg">
-                  <Image
-                    src={avatarPath || "/placeholder.svg"}
-                    alt="User Avatar"
-                    width={64}
-                    height={64}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "/avatars/avatar1.png";
-                    }}
-                  />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">{userData.name}</h2>
-                  <Badge className="bg-primary/10 text-primary border-0 font-medium capitalize">
-                    {userData.role}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                className="w-full justify-center rounded-xl h-10 border-dashed hover:border-primary hover:bg-primary/5 transition-colors"
-              >
-                {showAvatarPicker ? "Close Avatar Picker" : "Change Avatar"}
-              </Button>
-
-              {showAvatarPicker && (
-                <div className="pt-2">
-                  <p className="text-xs font-medium text-muted-foreground mb-3">Select Your Avatar</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {LOCAL_AVATARS.map((avatar, index) => (
-                      <button
-                        key={avatar.id}
-                        onClick={() => handleAvatarChange(index)}
-                        className={`relative aspect-square rounded-xl overflow-hidden transition-all duration-200 ${
-                          avatarSeed === index + 1
-                            ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
-                            : "hover:ring-2 hover:ring-primary/50 hover:scale-105"
-                        }`}
-                      >
-                        <Image
-                          src={avatar.path || "/placeholder.svg"}
-                          alt={`${avatar.id} avatar`}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/avatars/avatar1.png";
-                          }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="py-2 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Email:</span> {userData.email}
-                </p>
-              </div>
-
-              <Button
-                variant="ghost"
-                className="w-full justify-center rounded-xl h-10 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
-                onClick={handleSignOut}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-    </div>
-  );
-
   return (
     <SignOutContext.Provider value={{ isSigningOut, setIsSigningOut }}>
       <div className="flex h-screen bg-background">
@@ -684,7 +737,24 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <SidebarContent />
+          <SidebarContent
+            userData={userData}
+            avatarPath={avatarPath}
+            avatarSeed={avatarSeed}
+            showAvatarPicker={showAvatarPicker}
+            setShowAvatarPicker={setShowAvatarPicker}
+            handleAvatarChange={handleAvatarChange}
+            handleSignOut={handleSignOut}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchResults={searchResults}
+            showSearchResults={showSearchResults}
+            handleSearchItemClick={handleSearchItemClick}
+            handleSearchKeyDown={handleSearchKeyDown}
+            clearSearch={clearSearch}
+            searchInputRef={searchInputRef}
+            pathname={pathname}
+          />
         </aside>
 
         {/* Main Content */}
@@ -706,7 +776,26 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[280px] p-0 border-r-0">
                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <SidebarContent onNavClick={() => setMobileMenuOpen(false)} isMobile={true} />
+                  <SidebarContent
+                    userData={userData}
+                    avatarPath={avatarPath}
+                    avatarSeed={avatarSeed}
+                    showAvatarPicker={showAvatarPicker}
+                    setShowAvatarPicker={setShowAvatarPicker}
+                    handleAvatarChange={handleAvatarChange}
+                    handleSignOut={handleSignOut}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    searchResults={searchResults}
+                    showSearchResults={showSearchResults}
+                    handleSearchItemClick={handleSearchItemClick}
+                    handleSearchKeyDown={handleSearchKeyDown}
+                    clearSearch={clearSearch}
+                    searchInputRef={searchInputRef}
+                    pathname={pathname}
+                    onNavClick={() => setMobileMenuOpen(false)}
+                    isMobile={true}
+                  />
                 </SheetContent>
               </Sheet>
 
