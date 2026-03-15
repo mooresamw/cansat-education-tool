@@ -23,7 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
-  Sparkles,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -401,11 +401,11 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           onClick={onNavClick}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform group-hover:scale-105">
-            <Sparkles className="h-5 w-5" />
+            <Rocket className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-semibold tracking-tight">CanSat</span>
-            <span className="text-xs text-muted-foreground">Education Tool</span>
+            <span className="text-base font-semibold tracking-tight">Avakas</span>
+            <span className="text-xs text-muted-foreground">Cansat Education Tool</span>
           </div>
         </Link>
       </div>
