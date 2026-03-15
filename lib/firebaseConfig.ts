@@ -4,15 +4,14 @@ import { getFirestore, collection, getDocs, query, where } from "firebase/firest
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBBp7LFwOfwS-7AbeWPBeADCBFCdAV69hs",
-  authDomain: "cansat-education-tool.firebaseapp.com",
-  projectId: "cansat-education-tool",
-  storageBucket: "cansat-education-tool.firebasestorage.app",
-  messagingSenderId: "293736072539",
-  appId: "1:293736072539:web:d85cb7130cc4f0fd02867e",
-  measurementId: "G-FPX0J8647Q",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_KEY,
+  authDomain: process.env.NEXT_PUBLIC_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_MEASUREMENT_ID,
 };
-
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -50,4 +49,3 @@ export async function getStudents() {
     return [];
   }
 }
-
