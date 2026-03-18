@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { checkUserRole } from "@/lib/checkAuth"
+import { apiUrlBase } from "@/lib/configEnv";
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { db, auth, getInstructors } from "@/lib/firebaseConfig"
@@ -263,7 +264,7 @@ export default function StudentDashboard() {
       try {
         const memberProgressPromises = userGroup.members.map(async (member: GroupMember) => {
           try {
-            const response = await fetch(`https://localhost:8080/get-user-progress?user_id=${member.user_id}`)
+            const response = await fetch(`${apiUrlBase}/get-user-progress?user_id=${member.user_id}`)
             let progressData: ProgressItem[] = []
 
             if (response.ok) {
@@ -310,7 +311,7 @@ export default function StudentDashboard() {
     const fetchProgressData = async () => {
       try {
         setProgressLoading(true)
-        const response = await fetch(`http://localhost:8080/get-user-progress?user_id=${userId}`)
+        const response = await fetch(`${apiUrlBase}/get-user-progress?user_id=${userId}`)
         if (response.ok) {
           const data = await response.json()
           setProgressData(data)

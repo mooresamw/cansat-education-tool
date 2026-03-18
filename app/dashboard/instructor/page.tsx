@@ -111,7 +111,6 @@ export default function InstructorDashboard() {
         const uid = user.uid
         setUserId(uid)
         const token = await user.getIdToken()
-        console.log("Firebase Token:", token)
         const response = await fetch("http://localhost:8080/check-role", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -120,13 +119,14 @@ export default function InstructorDashboard() {
         const data = await response.json()
         if (data.role === "student") {
           router.push("/dashboard/student/")
+          return
         } else {
           setUserRole(data.role)
+          setLoading(false)
         }
       } else {
         router.push("/login")
       }
-      setLoading(false)
     })
 
     return () => unsubscribe()
@@ -134,34 +134,34 @@ export default function InstructorDashboard() {
 
   // Fetch students
   useEffect(() => {
+    if (userRole === "student") {
+      return
+    }
+
     const fetchStudents = async () => {
       try {
         const students = await getStudents()
         const ids = students.map((student: any) => student.user_id)
         setStudentIds(ids)
-        console.log("Student IDs:", ids)
       } catch (error) {
         console.error("Error fetching students:", error)
       }
     }
 
     fetchStudents()
-  }, [])
+  }, [userRole])
 
   // Fetch notifications
   useEffect(() => {
     if (!userRole || userRole !== "instructor") {
-      console.log("User role is not instructor or not authenticated:", userRole)
       return
     }
 
     if (!userId) {
-      console.log("No userId available yet")
       return
     }
 
     if (studentIds.length === 0) {
-      console.log("Student IDs not yet loaded")
       return
     }
 
@@ -206,10 +206,6 @@ export default function InstructorDashboard() {
             }
           })
         })
-
-        console.log("Student Unread Count:", studentUnread)
-        console.log("Student Unread Messages:", studentMessages)
-        console.log("All Unread Messages:", allMessages)
 
         setStudentUnreadCount(studentUnread)
         setNotifications(allMessages)
