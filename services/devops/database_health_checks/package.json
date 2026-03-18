@@ -1,0 +1,20 @@
+{
+  "name": "firestore-health-monitor",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && functions-framework --target=checkFirestoreHealth",
+    "gcp-build": "npm run build"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "@google-cloud/monitoring": "^4.1.0",
+    "firebase-admin": "^12.0.0",
+    "nodemailer": "^6.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/nodemailer": "^6.4.0"
+  }
+}
