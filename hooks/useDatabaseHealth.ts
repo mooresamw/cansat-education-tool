@@ -4,7 +4,7 @@ import {db} from "@/lib/firebaseConfig";
 
 interface HealthData {
     status: string;
-    avgLatency: number;
+    avgLatencyMs: number;
     activeUsers: number;
     lastCheck: any;
 }
