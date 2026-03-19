@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { checkUserRole } from "@/lib/checkAuth"
-import { auth } from "@/lib/firebaseConfig"
+import {auth, db} from "@/lib/firebaseConfig"
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
 import Image from "next/image"
 import {
@@ -38,6 +38,7 @@ import {
   FileText,
   ShieldCheck,
 } from "lucide-react"
+import {doc, collection, onSnapshot} from "firebase/firestore";
 
 const LOCAL_AVATARS = [
   { id: "avatar1", path: "/avatars/avatar1.png" },
@@ -90,13 +91,13 @@ function SettingsCard({
 
 export default function AdminSettings() {
   checkUserRole(["admin"])
-  
+
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -107,7 +108,7 @@ export default function AdminSettings() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
-  
+
   // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [userActivityNotifications, setUserActivityNotifications] = useState(true)
@@ -115,15 +116,18 @@ export default function AdminSettings() {
   const [securityAlerts, setSecurityAlerts] = useState(true)
   const [newUserNotifications, setNewUserNotifications] = useState(true)
   const [resourceUploadNotifications, setResourceUploadNotifications] = useState(true)
-  
+
   // System preferences
   const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [auditLogging, setAuditLogging] = useState(true)
   const [autoBackup, setAutoBackup] = useState(true)
-  
+
   // Avatar state
   const [avatarSeed, setAvatarSeed] = useState(1)
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
+
+  // Maintenance states
+  const [healthData, setHealthData] = useState({})
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
@@ -195,7 +199,7 @@ export default function AdminSettings() {
         const credential = EmailAuthProvider.credential(user.email, currentPassword)
         await reauthenticateWithCredential(user, credential)
         await updatePassword(user, newPassword)
-        
+
         setPasswordSuccess(true)
         setCurrentPassword("")
         setNewPassword("")
@@ -232,6 +236,20 @@ export default function AdminSettings() {
     setSaving(false)
     setTimeout(() => setSaveSuccess(false), 3000)
   }
+
+  // check db health
+  useEffect(() => {
+    const docRef = doc(db,'admin_metrics', 'app_status');
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if(snapshot.exists()) {
+        setHealthData(snapshot.data())
+      }
+    }, (error) => {
+      console.error("Error listening to health metrics: ", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (loading) {
     return (
@@ -824,7 +842,7 @@ export default function AdminSettings() {
                   </div>
                   <p className="font-medium text-foreground">Database</p>
                   <Badge className="mt-2 bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
-                    Connected
+                    {healthData.status}
                   </Badge>
                 </div>
 
