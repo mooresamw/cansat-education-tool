@@ -38,7 +38,7 @@ import {
   FileText,
   ShieldCheck,
 } from "lucide-react"
-import {doc, collection, onSnapshot} from "firebase/firestore";
+import {useDatabaseHealth} from "@/hooks/useDatabaseHealth";
 
 const LOCAL_AVATARS = [
   { id: "avatar1", path: "/avatars/avatar1.png" },
@@ -126,8 +126,9 @@ export default function AdminSettings() {
   const [avatarSeed, setAvatarSeed] = useState(1)
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
-  // Maintenance states
-  const [healthData, setHealthData] = useState({})
+  // Maintenance
+  // check db health
+  const databaseHealth = useDatabaseHealth();
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
@@ -236,20 +237,6 @@ export default function AdminSettings() {
     setSaving(false)
     setTimeout(() => setSaveSuccess(false), 3000)
   }
-
-  // check db health
-  useEffect(() => {
-    const docRef = doc(db,'admin_metrics', 'app_status');
-    const unsubscribe = onSnapshot(docRef, (snapshot) => {
-      if(snapshot.exists()) {
-        setHealthData(snapshot.data())
-      }
-    }, (error) => {
-      console.error("Error listening to health metrics: ", error);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   if (loading) {
     return (
@@ -842,8 +829,9 @@ export default function AdminSettings() {
                   </div>
                   <p className="font-medium text-foreground">Database</p>
                   <Badge className="mt-2 bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
-                    {healthData.status}
+                    {databaseHealth?.status.toUpperCase()}
                   </Badge>
+                  {/*Average Latency: {databaseHealth?.avgLatency}*/}
                 </div>
 
                 <div className="p-4 rounded-xl bg-secondary/30 border border-border text-center">
