@@ -519,14 +519,23 @@ export default function StudentDashboard() {
                 onClick={openIDE}
                 accentColor="from-emerald-500/10 to-emerald-600/5"
               />
-              <QuickActionCard
-                icon={MessageSquare}
-                title="Collaboration"
-                description="Chat and collaborate with teammates and instructors in real time."
-                buttonText="Join Chat"
-                onClick={goToChat}
-                accentColor="from-violet-500/10 to-violet-600/5"
-              />
+              {/*<QuickActionCard*/}
+              {/*  icon={MessageSquare}*/}
+              {/*  title="Collaboration"*/}
+              {/*  description="Chat and collaborate with teammates and instructors in real time."*/}
+              {/*  buttonText="Join Chat"*/}
+              {/*  onClick={goToChat}*/}
+              {/*  accentColor="from-violet-500/10 to-violet-600/5"*/}
+              {/*/>*/}
+              {<QuickActionCard
+                  icon={Sparkles}
+                  title="Open Laika"
+                  description="Laika: The Avakas Lab CanSat AI agent."
+                  buttonText="Join Chat"
+                  onClick={goToChat}
+                  accentColor="from-violet-500/10 to-violet-600/5"
+                  />
+              }
             </div>
           </section>
 
