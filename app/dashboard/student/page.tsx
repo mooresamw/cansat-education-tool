@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { markMessageAsRead } from "@/lib/firestoreUtil"
 import { SignOutContext } from "@/components/DashboardLayout"
+import { LaikaChat } from "@/components/LaikaChat"
 
 interface ProgressItem {
   accessed_at: string
@@ -203,6 +204,7 @@ export default function StudentDashboard() {
   const [userGroup, setUserGroup] = useState<Group | null>(null)
   const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([])
   const [groupLoading, setGroupLoading] = useState(true)
+  const [laikaChatOpen, setLaikaChatOpen] = useState(false)
   const router = useRouter()
 
   // Fetch instructor IDs
@@ -532,7 +534,7 @@ export default function StudentDashboard() {
                   title="Open Laika"
                   description="Laika: The Avakas Lab CanSat AI agent."
                   buttonText="Join Chat"
-                  onClick={()=> {}}
+                  onClick={() => setLaikaChatOpen(true)}
                   accentColor="from-violet-500/10 to-violet-600/5"
                   />
               }
@@ -749,6 +751,7 @@ export default function StudentDashboard() {
             </div>
           )}
         </main>
+        <LaikaChat open={laikaChatOpen} onOpenChange={setLaikaChatOpen} />
       </DashboardLayout>
     </div>
   )
