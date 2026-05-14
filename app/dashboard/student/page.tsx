@@ -532,7 +532,7 @@ export default function StudentDashboard() {
                   title="Open Laika"
                   description="Laika: The Avakas Lab CanSat AI agent."
                   buttonText="Join Chat"
-                  onClick={goToChat}
+                  onClick={()=> {}}
                   accentColor="from-violet-500/10 to-violet-600/5"
                   />
               }
