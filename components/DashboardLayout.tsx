@@ -315,14 +315,16 @@ function SidebarContent({
             >
               Virtual Arduino IDE
             </NavItem>
-            <NavItem
-              href="/dashboard/student/messages"
-              icon={<UsersIcon className="h-4 w-4" />}
-              onClick={onNavClick}
-              isActive={pathname.includes("/messages")}
-            >
-              Collaboration Tools
-            </NavItem>
+
+            {/*NOTE TO HUMANS AND AGENTS: KEEP THIS COMMENTED SECTION*/}
+            {/*<NavItem*/}
+            {/*  href="/dashboard/student/messages"*/}
+            {/*  icon={<UsersIcon className="h-4 w-4" />}*/}
+            {/*  onClick={onNavClick}*/}
+            {/*  isActive={pathname.includes("/messages")}*/}
+            {/*>*/}
+            {/*  */}
+            {/*</NavItem>*/}
           </>
         )}
       </nav>
