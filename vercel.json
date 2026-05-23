@@ -7,7 +7,7 @@
     }
   ],
   "functions": {
-    "api/**/*.py": {
+    "api/index.py": {
       "excludeFiles": "{server/venv/**,__pycache__/**,tests/**}"
     }
   }
