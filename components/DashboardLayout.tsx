@@ -200,7 +200,7 @@ function SidebarContent({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className="w-full h-10 rounded-xl bg-secondary/50 border-0 pl-10 pr-10 text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
+            className="w-full h-10 rounded-xl bg-secondary/50 border-0 pl-10 pr-10 text-base md:text-sm placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary/50 transition-all"
           />
           {searchQuery && (
             <Button

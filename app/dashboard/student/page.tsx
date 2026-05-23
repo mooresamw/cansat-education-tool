@@ -487,7 +487,7 @@ export default function StudentDashboard() {
   return (
     <div className="bg-background min-h-screen">
       <DashboardLayout userType="student">
-        <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+        <main className="max-w-7xl mx-auto w-full py-2 sm:px-6 sm:py-8">
           {/* Welcome Section */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
