@@ -708,7 +708,7 @@ def clock_in_out():
         return jsonify({"error": str(e)}), 400
 
 
-# API route to send the code to from student ide to the server
+# API route to send the code to from student ide to the backend
 @app.route('/run', methods=['POST'])
 def run_code():
     user_code = request.json.get("code", "")

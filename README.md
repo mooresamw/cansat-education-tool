@@ -42,9 +42,9 @@ Tip: You might want to open a second terminal window in your IDE
 
 Make sure you are in the `cansat-education-tool` directory and run:
 ```sh
-$ cd server
+$ cd backend
 $ pip install -r requirements.txt
-$ python app.py ( to run backend server )
+$ python app.py ( to run backend backend )
 ```
 
 ### Environment Variables
@@ -63,7 +63,7 @@ MEASUREMENT_ID=<your_key>
 ### Running the Application
 1. **Frontend**: Runs on `http://localhost:3000`
 ```sh
-$ npm run dev ( for dev server )
+$ npm run dev ( for dev backend )
 ```
 2. **Backend**: Runs on `http://localhost:8080` 
 
