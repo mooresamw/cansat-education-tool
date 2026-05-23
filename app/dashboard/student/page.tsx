@@ -527,6 +527,15 @@ export default function StudentDashboard() {
               {/*  onClick={goToChat}*/}
               {/*  accentColor="from-violet-500/10 to-violet-600/5"*/}
               {/*/>*/}
+              {<QuickActionCard
+                  icon={Sparkles}
+                  title="Open Laika"
+                  description="Laika: The Avakas Lab CanSat AI agent."
+                  buttonText="Join Chat"
+                  onClick={() => setLaikaChatOpen(true)}
+                  accentColor="from-violet-500/10 to-violet-600/5"
+                  />
+              }
             </div>
           </section>
 
