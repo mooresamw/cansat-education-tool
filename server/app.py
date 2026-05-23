@@ -33,7 +33,7 @@ def get_user_data(uid):
     user_doc = user_ref.get()
     return user_doc.to_dict() if user_doc.exists else {}
 
-@app.route("/", methods="GET")
+@app.route("/", methods=["GET"])
 def health():
     return jsonify({"message": "hello"})
 
