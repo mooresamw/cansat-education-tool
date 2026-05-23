@@ -9,6 +9,7 @@ import { SetStateAction, useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import {onAuthStateChanged} from "firebase/auth";
 import {auth, db} from "@/lib/firebaseConfig";
+import { apiUrlBase } from "@/lib/configEnv";
 import {collection, getDocs, query, orderBy} from "firebase/firestore";
 import {ChevronDown, ChevronUp, Download, ArrowLeftCircle} from "lucide-react";
 
@@ -335,7 +336,7 @@ export default function LogsPage() {
       if (user) {
         try {
           const token = await user.getIdToken();
-          const roleResponse = await fetch("http://localhost:8080/check-role", {
+          const roleResponse = await fetch(`${apiUrlBase}/check-role`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken: token }),

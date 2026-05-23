@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import firestore, credentials, auth, storage
@@ -9,10 +10,14 @@ import tempfile
 import subprocess
 
 # Set up Firestore database
-cred = credentials.Certificate("key.json")
-firebase_admin.initialize_app(cred, {
-    "storageBucket": "cansat-education-tool.firebasestorage.app"
-})
+service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+service_account_path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_PATH", "key.json")
+cred = credentials.Certificate(json.loads(service_account_json)) if service_account_json else credentials.Certificate(service_account_path)
+
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred, {
+        "storageBucket": "cansat-education-tool.firebasestorage.app"
+    })
 
 bucket = storage.bucket()
 db = firestore.client()

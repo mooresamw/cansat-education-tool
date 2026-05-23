@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { onAuthStateChanged } from "firebase/auth"
 import { auth } from "@/lib/firebaseConfig"
+import { apiUrlBase } from "@/lib/configEnv"
 
 // Define User interface for type safety
 interface User {
@@ -39,7 +40,7 @@ export function UserList() {
     const fetchUsers = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch("http://localhost:8080/users")
+        const response = await fetch(`${apiUrlBase}/users`)
         if (!response.ok) throw new Error("Failed to fetch users")
         const data: User[] = await response.json()
         setUsers(data)
@@ -65,7 +66,7 @@ export function UserList() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:8080/edit-user", {
+      const response = await fetch(`${apiUrlBase}/edit-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -101,7 +102,7 @@ export function UserList() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("http://localhost:8080/delete-user", {
+      const response = await fetch(`${apiUrlBase}/delete-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

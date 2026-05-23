@@ -17,6 +17,7 @@ import { ChatList } from "@/components/ChatList"
 import { useRouter } from "next/navigation"
 import { onAuthStateChanged, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth"
 import { auth, db } from "@/lib/firebaseConfig"
+import { apiUrlBase } from "@/lib/configEnv"
 import HighSchoolSearch from "@/components/HighSchoolSearch"
 import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, getDocs } from "firebase/firestore"
 import {
@@ -137,7 +138,7 @@ export default function AdminDashboard() {
         if (!userId) setUserId(uid)
         const token = await user.getIdToken()
 
-        const response = await fetch("http://localhost:8080/check-role", {
+        const response = await fetch(`${apiUrlBase}/check-role`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
@@ -230,7 +231,7 @@ export default function AdminDashboard() {
       }
 
       console.log("Step 9: Registering with backend")
-      const response = await fetch("http://localhost:8080/register", {
+      const response = await fetch(`${apiUrlBase}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

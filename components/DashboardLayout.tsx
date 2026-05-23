@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebaseConfig";
+import { apiUrlBase } from "@/lib/configEnv";
 import {
   ActivityIcon,
   BookOpenIcon,
@@ -577,7 +578,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
         const user = auth.currentUser;
         if (user && isMounted) {
           const token = await user.getIdToken();
-          const response = await fetch("http://localhost:8080/user/avatar", {
+          const response = await fetch(`${apiUrlBase}/user/avatar`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -620,7 +621,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
   const saveAvatarSeedToBackend = async (newSeed: number, token: string) => {
     try {
-      const response = await fetch("http://localhost:8080/user/avatar", {
+      const response = await fetch(`${apiUrlBase}/user/avatar`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -677,7 +678,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
       if (token) {
         try {
-          const logoutResponse = await fetch("http://localhost:8080/logout", {
+          const logoutResponse = await fetch(`${apiUrlBase}/logout`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken: token }),

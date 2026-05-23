@@ -13,6 +13,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import HighSchoolSearch from "@/components/HighSchoolSearch";
+import { apiUrlBase } from "@/lib/configEnv";
 import { 
   Mail, 
   Lock, 
@@ -160,7 +161,7 @@ const LoginSignupPage = () => {
       await sendEmailVerification(user);
       setVerificationSent(true);
 
-      const response = await fetch("http://localhost:8080/register", {
+      const response = await fetch(`${apiUrlBase}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -219,7 +220,7 @@ const LoginSignupPage = () => {
 
       const idToken = await user.getIdToken();
 
-      const loginResponse = await fetch("http://localhost:8080/login", {
+      const loginResponse = await fetch(`${apiUrlBase}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken }),

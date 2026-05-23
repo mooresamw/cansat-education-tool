@@ -2,12 +2,7 @@
 Return the API URL base from configured ENV
  */
 function getAPIURLBase(): string {
-    if(process.env.NEXT_PUBLIC_ENV === 'production') {
-        return 'http://localhost:8080';
-    }
-    else {
-        return 'http://localhost:8080';
-    }
+    return process.env.NEXT_PUBLIC_API_URL_BASE || "/backend";
 }
 
 export const apiUrlBase = getAPIURLBase();

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Search, ChevronDown, ChevronUp, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { getUser } from "@/lib/getUser"
+import { apiUrlBase } from "@/lib/configEnv"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
@@ -43,7 +44,7 @@ export function StudentProgressTable() {
     const userData = getUser()
     const fetchStudentProgress = async () => {
       try {
-        const response = await fetch(/*`http://localhost:8080*/`https://localhost:8080/student-progress?user_id=${userData.user_id}`)
+        const response = await fetch(`${apiUrlBase}/student-progress?user_id=${userData.user_id}`)
         if (!response.ok) {
           throw new Error("Failed to fetch student progress")
         }
@@ -51,7 +52,7 @@ export function StudentProgressTable() {
 
         // Fetch user details for each student
         const userDetailsPromises = progressData.map(async (student: any) => {
-          const userResponse = await fetch(/*`http://localhost:8080*/`https://localhost:8080/users/${student.user_id}`)
+          const userResponse = await fetch(`${apiUrlBase}/users/${student.user_id}`)
           if (!userResponse.ok) {
             throw new Error(`Failed to fetch user data for user_id: ${student.user_id}`)
           }

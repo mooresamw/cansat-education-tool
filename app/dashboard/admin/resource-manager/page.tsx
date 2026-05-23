@@ -26,6 +26,7 @@ import { toast } from "sonner"
 import { FileText, Trash2, Upload, Code, Pencil } from "lucide-react"
 import { onAuthStateChanged } from "firebase/auth"
 import { auth, db } from "@/lib/firebaseConfig"
+import { apiUrlBase } from "@/lib/configEnv"
 import { doc, getDoc, collection, setDoc } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -91,7 +92,7 @@ export default function AdminPdfManager() {
         if (!userId) setUserId(uid)
         const token = await user.getIdToken()
 
-        const response = await fetch("http://localhost:8080/check-role", {
+        const response = await fetch(`${apiUrlBase}/check-role`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
@@ -121,7 +122,7 @@ export default function AdminPdfManager() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://localhost:8080/get-pdfs", {})
+        const response = await fetch(`${apiUrlBase}/get-pdfs`, {})
         const data = await response.json()
         setPdfs(data)
       } catch (error) {
@@ -172,7 +173,7 @@ export default function AdminPdfManager() {
     formData.append("userId", userId)
 
     try {
-      const response = await fetch("http://localhost:8080/upload-pdf", {
+      const response = await fetch(`${apiUrlBase}/upload-pdf`, {
         method: "POST",
         body: formData,
       })
@@ -216,7 +217,7 @@ export default function AdminPdfManager() {
         // Get the current user's ID token
         const idToken = await auth.currentUser?.getIdToken()
 
-        const response = await fetch("http://localhost:8080/delete-pdf", {
+        const response = await fetch(`${apiUrlBase}/delete-pdf`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

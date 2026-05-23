@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { checkUserRole } from "@/lib/checkAuth"
+import { apiUrlBase } from "@/lib/configEnv"
 import {auth, db} from "@/lib/firebaseConfig"
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
 import Image from "next/image"
@@ -149,7 +150,7 @@ export default function AdminSettings() {
       const user = auth.currentUser
       if (user) {
         const token = await user.getIdToken()
-        const response = await fetch("http://localhost:8080/user/avatar", {
+        const response = await fetch(`${apiUrlBase}/user/avatar`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

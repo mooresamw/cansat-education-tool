@@ -15,6 +15,7 @@ import Loading from "@/components/Loading"
 import { Progress } from "@/components/ui/progress"
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore"
 import { db, auth } from "@/lib/firebaseConfig"
+import { apiUrlBase } from "@/lib/configEnv"
 import { SignOutContext } from "@/components/DashboardLayout"
 import { onAuthStateChanged } from "firebase/auth"
 import Editor from "@monaco-editor/react"
@@ -732,14 +733,14 @@ void loop() {
 
       try {
         setLoading(true)
-        const pdfResponse = await fetch("http://localhost:8080/get-pdfs")
+        const pdfResponse = await fetch(`${apiUrlBase}/get-pdfs`)
         if (!pdfResponse.ok) throw new Error("Failed to fetch PDFs")
         const pdfData: PDFFile[] = await pdfResponse.json()
         if (!isMounted) return
         setPdfs(pdfData)
 
         const progressResponse = await fetch(
-          `http://localhost:8080/get-user-progress?user_id=${userId}&type=training_material`,
+          `${apiUrlBase}/get-user-progress?user_id=${userId}&type=training_material`,
         )
         if (!progressResponse.ok) throw new Error("Failed to fetch user progress")
         const progressData: CompletedPDF[] = await progressResponse.json()
@@ -855,7 +856,7 @@ void loop() {
         console.log("No authenticated user; skipping mark as completed")
         return
       }
-      const response = await fetch("http://localhost:8080/mark-progress", {
+      const response = await fetch(`${apiUrlBase}/mark-progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

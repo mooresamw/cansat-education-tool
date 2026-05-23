@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { checkUserRole } from "@/lib/checkAuth"
 import { useRouter } from "next/navigation"
 import { db, auth, getStudents } from "@/lib/firebaseConfig"
+import { apiUrlBase } from "@/lib/configEnv"
 import { collection, doc, setDoc, onSnapshot, where, query } from "firebase/firestore"
 import { onAuthStateChanged } from "firebase/auth"
 import { markMessageAsRead } from "@/lib/firestoreUtil"
@@ -111,7 +112,7 @@ export default function InstructorDashboard() {
         const uid = user.uid
         setUserId(uid)
         const token = await user.getIdToken()
-        const response = await fetch("http://localhost:8080/check-role", {
+        const response = await fetch(`${apiUrlBase}/check-role`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken: token }),
@@ -272,7 +273,7 @@ export default function InstructorDashboard() {
     const token = await auth.currentUser?.getIdToken()
 
     try {
-      const response = await fetch("https://cansat-education-tool.onrender.com/clock", {
+      const response = await fetch(`${apiUrlBase}/clock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken: token, action }),
