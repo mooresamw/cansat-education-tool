@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { UserList } from "@/components/UserList"
 import { ChatList } from "@/components/ChatList"
 import { useRouter } from "next/navigation"
-import { onAuthStateChanged, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth"
+import { onAuthStateChanged } from "firebase/auth"
 import { auth, db } from "@/lib/firebaseConfig"
 import { apiUrlBase } from "@/lib/configEnv"
 import HighSchoolSearch from "@/components/HighSchoolSearch"
@@ -216,34 +216,20 @@ export default function AdminDashboard() {
         return
       }
 
-      console.log("Step 5: Creating Firebase user")
-      const currentUser = auth.currentUser
-      const userCredential = await createUserWithEmailAndPassword(auth, newUser.email, newUser.password)
-      const user = userCredential.user
-      console.log("Step 6: Firebase user created, UID:", user.uid)
-
-      console.log("Step 7: Sending verification email")
-      await sendEmailVerification(user)
-      console.log("Step 8: Verification email sent")
-
-      if (currentUser) {
-        await auth.updateCurrentUser(currentUser)
-      }
-
-      console.log("Step 9: Registering with backend")
+      console.log("Step 5: Creating user in backend")
       const response = await fetch(`${apiUrlBase}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: user.uid,
           email: newUser.email,
+          password: newUser.password,
           name: newUser.name,
           role: newUser.role,
           school_name: selectedSchool.school_name,
           school_id: selectedSchool.school_id,
         }),
       })
-      console.log("Step 10: Backend response status:", response.status)
+      console.log("Step 6: Backend response status:", response.status)
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -251,9 +237,9 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json()
-      console.log("Step 11: User registered successfully:", data)
+      console.log("Step 7: User registered successfully:", data)
 
-      setNotification("Account created successfully. A verification email has been sent to the user.")
+      setNotification("Account created successfully.")
       setIsCreateUserDialogOpen(false)
       setNewUser({ name: "", email: "", password: "", role: "" })
       setSelectedSchool({ school_name: "", school_id: "" })

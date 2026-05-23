@@ -164,29 +164,41 @@ def avatar():
 def register():
     if request.method == "OPTIONS":
         return "", 200
+    created_user_id = None
     try:
         data = request.json
-        user_id = data["user_id"]
         email = data["email"]
+        password = data.get("password")
         name = data["name"]
         role = data["role"]
         school_name = data["school_name"]
-        school_id = data["school_id"]
+        create_session_token = data.get("createSessionToken", False)
 
-        user = auth.get_user(user_id)
+        if not password:
+            return jsonify({"error": "Password is required"}), 400
+
+        user = auth.create_user(
+            email=email,
+            password=password,
+            display_name=name,
+            email_verified=False,
+        )
+        user_id = user.uid
+        created_user_id = user_id
         verified = user.email_verified
 
         user_ref = db.collection("users").document(user_id)
-        user_ref.set({
+        user_data = {
             "user_id": user_id,
             "email": email,
             "name": name,
             "role": role,
             "school_name": school_name,
-            "school_id": school_id,
             "verified": verified,
             "avatarSeed": 1  # Default to avatar 1
-        })
+        }
+
+        user_ref.set(user_data)
 
         log_ref = db.collection("logs").document(user_id)
         log_entry = {
@@ -206,14 +218,32 @@ def register():
             "entries": [log_entry]
             })
 
-        return jsonify({
+        response = {
             "message": "User registered successfully.",
             "uid": user_id,
+            "user_id": user_id,
             "email": email,
             "name": name,
-            "role": role
-        }), 200
+            "role": role,
+            "school_name": school_name,
+            "verified": verified,
+            "avatarSeed": 1
+        }
+
+        if create_session_token:
+            response["customToken"] = auth.create_custom_token(user_id).decode("utf-8")
+
+        return jsonify(response), 200
+    except auth.EmailAlreadyExistsError:
+        return jsonify({"error": "Email already in use"}), 409
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
+        if created_user_id:
+            try:
+                auth.delete_user(created_user_id)
+            except Exception as cleanup_error:
+                print(f"Failed to clean up auth user {created_user_id}: {str(cleanup_error)}")
         print(f"Register error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 

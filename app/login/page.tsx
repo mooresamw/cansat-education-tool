@@ -5,7 +5,7 @@ import Link from "next/link";
 import { auth, db } from "@/lib/firebaseConfig";
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  signInWithCustomToken,
   sendEmailVerification,
   signOut,
   sendPasswordResetEmail,
@@ -28,6 +28,7 @@ import {
   GraduationCap,
   Loader2
 } from "lucide-react";
+import {FaBook} from "react-icons/fa";
 
 const LoginSignupPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -45,6 +46,7 @@ const LoginSignupPage = () => {
     school_name: "",
     school_id: "",
   });
+  const [schoolName, setSchoolName] = useState("");
   const [errors, setErrors] = useState<any>({});
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [passwordCriteria, setPasswordCriteria] = useState({
@@ -108,7 +110,8 @@ const LoginSignupPage = () => {
     setPassword("");
     setFirstName("");
     setLastName("");
-    setSelectedSchool({ school_name: "", school_id: "" });
+    //setSelectedSchool({ school_name: "", school_id: "" });
+    setSchoolName("")
     setShowPassword(false);
     setNotification("");
     setErrors({});
@@ -125,6 +128,14 @@ const LoginSignupPage = () => {
     setErrors((prev: any) => ({ ...prev, school: "" }));
   };
 
+  const resolveErrorMessage = (error: string): string => {
+    switch(error){
+      case 'Firebase: Error (auth/email-already-in-use).':
+        return "Email already in use";
+    }
+    return error;
+  }
+
   const validateForm = () => {
     const newErrors: any = {};
 
@@ -132,7 +143,7 @@ const LoginSignupPage = () => {
     if (!lastName.trim()) newErrors.lastName = "Last name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     if (!password.trim()) newErrors.password = "Password is required";
-    if (!selectedSchool.school_name) newErrors.school = "Please select a high school";
+    if (!schoolName.trim()) newErrors.school = "Please enter your school name";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -155,22 +166,16 @@ const LoginSignupPage = () => {
     setIsLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await sendEmailVerification(user);
-      setVerificationSent(true);
-
       const response = await fetch(`${apiUrlBase}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: user.uid,
           email,
+          password,
           name: `${firstName} ${lastName}`,
           role,
-          school_name: selectedSchool.school_name,
-          school_id: selectedSchool.school_id,
+          school_name: schoolName,
+          createSessionToken: true,
         }),
       });
 
@@ -180,6 +185,12 @@ const LoginSignupPage = () => {
       }
 
       const data = await response.json();
+      const userCredential = await signInWithCustomToken(auth, data.customToken);
+      const user = userCredential.user;
+
+      await sendEmailVerification(user);
+      setVerificationSent(true);
+
       localStorage.setItem("user", JSON.stringify(data));
       setUser(data);
 
@@ -199,12 +210,12 @@ const LoginSignupPage = () => {
       setPassword("");
       setFirstName("");
       setLastName("");
-      setSelectedSchool({ school_name: "", school_id: "" });
+      //setSelectedSchool({ school_name: "", school_id: "" });
+      setSchoolName("");
       setErrors({});
       setShowPasswordRequirements(false);
     } catch (error: any) {
-      console.error("Error signing up:", error.message);
-      showNotification(`Error: ${error.message}. Please try again.`, "error");
+      showNotification(`Error: ${resolveErrorMessage(error.message)}. Please try again.`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -265,7 +276,6 @@ const LoginSignupPage = () => {
         showNotification("User data not found. Please contact support.", "error");
       }
     } catch (error: any) {
-      console.error("Error logging in:", error.message);
       showNotification("Error logging in. Please check your credentials.", "error");
     } finally {
       setIsLoading(false);
@@ -287,7 +297,6 @@ const LoginSignupPage = () => {
       setResetEmail("");
       setIsForgotPassword(false);
     } catch (error: any) {
-      console.error("Error sending password reset email:", error.message);
       showNotification(`Error: ${error.message}. Please try again.`, "error");
     } finally {
       setIsLoading(false);
@@ -615,18 +624,35 @@ const LoginSignupPage = () => {
                     )}
                   </div>
 
+                  {/*<div className="space-y-2">*/}
+                  {/*  <label className="text-sm font-medium text-foreground">School</label>*/}
+                  {/*  <HighSchoolSearch onSelect={handleSchoolSelect} Style={"MaterialUI"} />*/}
+                  {/*  {selectedSchool.school_name ? (*/}
+                  {/*    <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">*/}
+                  {/*      <CheckCircle2 className="h-4 w-4" />*/}
+                  {/*      {selectedSchool.school_name}*/}
+                  {/*    </p>*/}
+                  {/*  ) : (*/}
+                  {/*    <p className="text-sm text-muted-foreground">Search and select your school</p>*/}
+                  {/*  )}*/}
+                  {/*  {errors.school && <p className="text-red-500 text-xs">{errors.school}</p>}*/}
+                  {/*</div>*/}
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">School</label>
-                    <HighSchoolSearch onSelect={handleSchoolSelect} Style={"MaterialUI"} />
-                    {selectedSchool.school_name ? (
-                      <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {selectedSchool.school_name}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Search and select your school</p>
-                    )}
-                    {errors.school && <p className="text-red-500 text-xs">{errors.school}</p>}
+                    <div className="relative">
+                      <FaBook className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <input
+                        type="School"
+                        placeholder="Enter your school"
+                        value={schoolName}
+                        onChange={(e) => setSchoolName(e.target.value)}
+                        className={`w-full pl-12 pr-4 py-3 bg-secondary/50 rounded-xl focus:outline-none focus:ring-2 text-foreground placeholder-muted-foreground border transition-all ${
+                          errors.school ? "border-red-500 focus:ring-red-500" : "border-border focus:ring-primary"
+                        }`}
+                      />
+                    </div>
+                    {errors.school && <p className="text-red-500 text-xs">{errors.schoolName}</p>}
                   </div>
 
                   <button
@@ -644,15 +670,15 @@ const LoginSignupPage = () => {
                     )}
                   </button>
 
-                  {verificationSent && (
-                    <button
-                      type="button"
-                      onClick={handleResendVerification}
-                      className="w-full text-sm text-primary hover:text-primary/80 underline underline-offset-4 transition-colors"
-                    >
-                      Resend Verification Email
-                    </button>
-                  )}
+                  {/*{verificationSent && (*/}
+                  {/*  <button*/}
+                  {/*    type="button"*/}
+                  {/*    onClick={handleResendVerification}*/}
+                  {/*    className="w-full text-sm text-primary hover:text-primary/80 underline underline-offset-4 transition-colors"*/}
+                  {/*  >*/}
+                  {/*    Resend Verification Email*/}
+                  {/*  </button>*/}
+                  {/*)}*/}
 
                   <div className="text-center pt-4">
                     <span className="text-muted-foreground text-sm">
