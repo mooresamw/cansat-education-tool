@@ -243,6 +243,18 @@ def check_role():
 @app.route("/users", methods=["GET"])
 def get_users():
     try:
+
+        id_token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not id_token:
+            return jsonify({"error": "No idToken provided"}), 401
+        decoded_token = auth.verify_id_token(id_token)
+        admin_uid = decoded_token["uid"]
+
+        # Verify admin role
+        admin_data = get_user_data(admin_uid)
+        if admin_data.get("role") != "admin":
+            return jsonify({"error": "Unauthorized: Admin access required"}), 403
+
         users_ref = db.collection("users")
         users = users_ref.stream()
         user_list = [{"user_id": user.id, **user.to_dict()} for user in users]
