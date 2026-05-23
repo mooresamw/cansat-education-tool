@@ -5,10 +5,5 @@
       "source": "/backend/:path*",
       "destination": "/api/index.py"
     }
-  ],
-  "functions": {
-    "api/index.py": {
-      "excludeFiles": "{server/venv/**,__pycache__/**,tests/**}"
-    }
-  }
+  ]
 }
