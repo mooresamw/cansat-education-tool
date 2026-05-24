@@ -191,7 +191,6 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
 
     return () => {
       unsubscribes.forEach((unsubscribe) => {
-        console.log("Unsubscribing from role IDs listener");
         unsubscribe();
       });
     };
@@ -328,7 +327,6 @@ export function Notifications({ userId, userRole }: NotificationsProps) {
 
     return () => {
       if (unsubscribe) {
-        console.log("Unsubscribing from notifications listener");
         unsubscribe();
       }
     };

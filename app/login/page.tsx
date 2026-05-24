@@ -244,9 +244,6 @@ const LoginSignupPage = () => {
         return;
       }
 
-      const loginData = await loginResponse.json();
-      console.log("Backend login successful:", loginData);
-
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {

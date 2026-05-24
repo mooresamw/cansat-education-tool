@@ -3,18 +3,43 @@
 import { useState, useRef, useEffect } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
+import type { UIMessage } from "ai"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sparkles, Send, Bot, User, Loader2, X, MessageCircle } from "lucide-react"
 
+const LAIKA_MESSAGES_STORAGE_KEY = "laika-chat-messages"
+const LAIKA_OPEN_STORAGE_KEY = "laika-chat-open"
+export const LAIKA_TOGGLE_EVENT = "laika:toggle"
+
+function readStoredMessages(): UIMessage[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const storedMessages = window.sessionStorage.getItem(LAIKA_MESSAGES_STORAGE_KEY)
+    return storedMessages ? JSON.parse(storedMessages) : []
+  } catch {
+    return []
+  }
+}
+
+function readStoredOpenState(): boolean {
+  if (typeof window === "undefined") return false
+
+  return window.sessionStorage.getItem(LAIKA_OPEN_STORAGE_KEY) === "true"
+}
+
 export function LaikaChat() {
-  const [isOpen, setIsOpen] = useState(false)
+  const initialMessagesRef = useRef<UIMessage[]>(readStoredMessages())
+  const [isOpen, setIsOpen] = useState(readStoredOpenState)
   const [input, setInput] = useState("")
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const { messages, sendMessage, status } = useChat({
+    id: "laika-dashboard-chat",
+    messages: initialMessagesRef.current,
     transport: new DefaultChatTransport({ api: "/api/laika" }),
   })
 
@@ -36,6 +61,21 @@ export function LaikaChat() {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    window.sessionStorage.setItem(LAIKA_MESSAGES_STORAGE_KEY, JSON.stringify(messages))
+  }, [messages])
+
+  useEffect(() => {
+    window.sessionStorage.setItem(LAIKA_OPEN_STORAGE_KEY, String(isOpen))
+  }, [isOpen])
+
+  useEffect(() => {
+    const handleToggle = () => setIsOpen((current) => !current)
+
+    window.addEventListener(LAIKA_TOGGLE_EVENT, handleToggle)
+    return () => window.removeEventListener(LAIKA_TOGGLE_EVENT, handleToggle)
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
