@@ -203,6 +203,7 @@ export default function StudentDashboard() {
   const [userGroup, setUserGroup] = useState<Group | null>(null)
   const [groupMemberProgress, setGroupMemberProgress] = useState<MemberProgress[]>([])
   const [groupLoading, setGroupLoading] = useState(true)
+  const [laikaChatOpen, setLaikaChatOpen] = useState(false)
   const router = useRouter()
 
   // Fetch instructor IDs
