@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Notifications } from "@/components/Notifications";
+import { LaikaChat } from "@/components/LaikaChat";
 
 // Context to signal sign-out to child components
 export const SignOutContext = createContext<{ isSigningOut: boolean; setIsSigningOut: (value: boolean) => void }>({
@@ -946,6 +947,9 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
               {children}
             </div>
           </main>
+
+          {/* Laika Chat Floating Widget */}
+          <LaikaChat />
         </div>
       </div>
     </SignOutContext.Provider>

@@ -29,7 +29,6 @@ import {
 } from "lucide-react"
 import { markMessageAsRead } from "@/lib/firestoreUtil"
 import { SignOutContext } from "@/components/DashboardLayout"
-import { LaikaChat } from "@/components/LaikaChat"
 
 interface ProgressItem {
   accessed_at: string
@@ -751,7 +750,6 @@ export default function StudentDashboard() {
             </div>
           )}
         </main>
-        <LaikaChat open={laikaChatOpen} onOpenChange={setLaikaChatOpen} />
       </DashboardLayout>
     </div>
   )
