@@ -34,6 +34,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Notifications } from "@/components/Notifications";
 import { LaikaChat } from "@/components/LaikaChat";
+import { LaikaPageContextProvider } from "@/components/LaikaPageContext";
 
 // Context to signal sign-out to child components
 export const SignOutContext = createContext<{ isSigningOut: boolean; setIsSigningOut: (value: boolean) => void }>({
@@ -734,6 +735,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
   return (
     <SignOutContext.Provider value={{ isSigningOut, setIsSigningOut }}>
+      <LaikaPageContextProvider>
       <div className="flex h-screen bg-background">
         {/* Desktop Sidebar */}
         <aside
@@ -952,6 +954,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           <LaikaChat />
         </div>
       </div>
+      </LaikaPageContextProvider>
     </SignOutContext.Provider>
   );
 }

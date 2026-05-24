@@ -7,6 +7,7 @@ import type { UIMessage } from "ai"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useLaikaPageContext } from "@/components/LaikaPageContext"
 import { Sparkles, Send, Bot, User, Loader2, X, MessageCircle } from "lucide-react"
 
 const LAIKA_MESSAGES_STORAGE_KEY = "laika-chat-messages"
@@ -31,6 +32,8 @@ function readStoredOpenState(): boolean {
 }
 
 export function LaikaChat() {
+  const { pageContext } = useLaikaPageContext()
+  const pageContextRef = useRef(pageContext)
   const initialMessagesRef = useRef<UIMessage[]>(readStoredMessages())
   const [isOpen, setIsOpen] = useState(readStoredOpenState)
   const [input, setInput] = useState("")
@@ -40,7 +43,17 @@ export function LaikaChat() {
   const { messages, sendMessage, status } = useChat({
     id: "laika-dashboard-chat",
     messages: initialMessagesRef.current,
-    transport: new DefaultChatTransport({ api: "/api/laika" }),
+    transport: new DefaultChatTransport({
+      api: "/api/laika",
+      prepareSendMessagesRequest({ messages }) {
+        return {
+          body: {
+            messages,
+            pageContext: pageContextRef.current,
+          },
+        }
+      },
+    }),
   })
 
   const isLoading = status === "streaming" || status === "submitted"
@@ -69,6 +82,10 @@ export function LaikaChat() {
   useEffect(() => {
     window.sessionStorage.setItem(LAIKA_OPEN_STORAGE_KEY, String(isOpen))
   }, [isOpen])
+
+  useEffect(() => {
+    pageContextRef.current = pageContext
+  }, [pageContext])
 
   useEffect(() => {
     const handleToggle = () => setIsOpen((current) => !current)

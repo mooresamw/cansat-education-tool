@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getUser } from "@/lib/getUser"
 import type { CodingProblem } from "@/lib/CodingProblem"
 import { apiUrlBase } from "@/lib/configEnv"
+import { useLaikaPageContext } from "@/components/LaikaPageContext"
 import { Loader2 } from "lucide-react"
 
 interface ArduinoIDEProps {
@@ -19,6 +20,7 @@ interface ArduinoIDEProps {
 }
 
 export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
+  const { setPageContext } = useLaikaPageContext()
   const [currentProblem, setCurrentProblem] = useState(0)
   const [code, setCode] = useState("")
   const [output, setOutput] = useState("")
@@ -35,6 +37,41 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
   const unescapeNewlines = (str: string): string => {
     return str.replace(/\\n/g, "\n").replace(/\\t/g, "\t")
   }
+
+  useEffect(() => {
+    const problem = problems[currentProblem]
+
+    if (!problem) {
+      setPageContext({
+        page: "Virtual Arduino IDE",
+        route: "/dashboard/student/ide",
+        state: "No coding problem selected",
+      })
+      return
+    }
+
+    setPageContext({
+      page: "Virtual Arduino IDE",
+      route: "/dashboard/student/ide",
+      currentProblem: {
+        id: problem.id,
+        title: problem.title,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        initialCode: unescapeNewlines(problem.initialCode),
+        hintViewed: hintsUsed[currentProblem]?.viewed ?? false,
+        completed: progress[currentProblem] ?? false,
+      },
+      editor: {
+        currentCode: code,
+        lastRunOutput: output || null,
+        lastRunError: error || null,
+        lastRunMatchedExpectedOutput: isCorrect,
+      },
+    })
+
+    return () => setPageContext(null)
+  }, [code, currentProblem, error, hintsUsed, isCorrect, output, problems, progress, setPageContext])
 
   useEffect(() => {
     // Initialize state based on problems length
