@@ -23,9 +23,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { v4 as uuidv4 } from "uuid"
 import { FileText, Trash2, Upload, Code, Pencil } from "lucide-react"
 import { onAuthStateChanged } from "firebase/auth"
-import { auth, db } from "@/lib/firebaseConfig"
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
+import { auth, db, storage } from "@/lib/firebaseConfig"
 import { apiUrlBase } from "@/lib/configEnv"
 import { doc, getDoc, collection, setDoc } from "firebase/firestore"
 import { useRouter } from "next/navigation"
@@ -161,48 +163,109 @@ export default function AdminPdfManager() {
     fetchCodingProblems()
   }, [])
 
-  const handlePdfUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!pdfUpload) {
-      setUploadMessage("Please select a file first.")
-      return
-    }
+  // const handlePdfUpload = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   if (!pdfUpload) {
+  //     setUploadMessage("Please select a file first.")
+  //     return
+  //   }
+  //
+  //   const formData = new FormData()
+  //   formData.append("file", pdfUpload) // Send file as "file" key
+  //   formData.append("userId", userId)
+  //
+  //   try {
+  //     const response = await fetch(`${apiUrlBase}/upload-pdf`, {
+  //       method: "POST",
+  //       body: formData,
+  //     })
+  //
+  //     const data = await response.json()
+  //     if (response.ok) {
+  //       toast.success("PDF uploaded", {
+  //         description: `${pdfUpload.name} has been successfully uploaded.`,
+  //       })
+  //     } else {
+  //       setUploadMessage(`Error: ${data.error}`)
+  //     }
+  //   } catch (error) {
+  //     setUploadMessage(`Error uploading file: ${error}`)
+  //   }
+  //
+  //   const currentDate = new Date().toUTCString()
+  //   const fileSize = pdfUpload ? `${(pdfUpload.size / (1024 * 1024)).toFixed(2)}` : "0 MB"
+  //   const newPdfEntry = {
+  //     id: (pdfs.length + 1).toString(),
+  //     name: pdfUpload.name,
+  //     last_modified: currentDate,
+  //     size_mb: fileSize,
+  //   }
+  //   setPdfs([...pdfs, newPdfEntry])
+  //   setIsUploadDialogOpen(false)
+  //   setPdfUpload(null)
+  // }
+const handlePdfUpload = async (e: React.FormEvent) => {
+  e.preventDefault()
 
-    const formData = new FormData()
-    formData.append("file", pdfUpload) // Send file as "file" key
-    formData.append("userId", userId)
+  if (!pdfUpload) {
+    setUploadMessage("Please select a file first.")
+    return
+  }
 
-    try {
-      const response = await fetch(`${apiUrlBase}/upload-pdf`, {
-        method: "POST",
-        body: formData,
-      })
+  try {
+    const uniqueFileName = `${uuidv4()}-${pdfUpload.name}`
 
-      const data = await response.json()
-      if (response.ok) {
+    const storageRef = ref(storage, `pdfs/${uniqueFileName}`)
+
+    const uploadTask = uploadBytesResumable(storageRef, pdfUpload)
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+
+        console.log(`Upload is ${progress}% done`)
+      },
+      (error) => {
+        console.error(error)
+
+        setUploadMessage(`Upload failed: ${error.message}`)
+      },
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref)
+
         toast.success("PDF uploaded", {
           description: `${pdfUpload.name} has been successfully uploaded.`,
         })
-      } else {
-        setUploadMessage(`Error: ${data.error}`)
+
+        const currentDate = new Date().toUTCString()
+
+        const fileSize = `${(
+          pdfUpload.size /
+          (1024 * 1024)
+        ).toFixed(2)} MB`
+
+        const newPdfEntry = {
+          id: (pdfs.length + 1).toString(),
+          name: pdfUpload.name,
+          last_modified: currentDate,
+          size_mb: fileSize,
+          url: downloadURL,
+        }
+
+        setPdfs([...pdfs, newPdfEntry])
+
+        setIsUploadDialogOpen(false)
+        setPdfUpload(null)
       }
-    } catch (error) {
-      setUploadMessage(`Error uploading file: ${error}`)
-    }
+    )
+  } catch (error: any) {
+    console.error(error)
 
-    const currentDate = new Date().toUTCString()
-    const fileSize = pdfUpload ? `${(pdfUpload.size / (1024 * 1024)).toFixed(2)}` : "0 MB"
-    const newPdfEntry = {
-      id: (pdfs.length + 1).toString(),
-      name: pdfUpload.name,
-      last_modified: currentDate,
-      size_mb: fileSize,
-    }
-    setPdfs([...pdfs, newPdfEntry])
-    setIsUploadDialogOpen(false)
-    setPdfUpload(null)
+    setUploadMessage(`Error uploading file: ${error.message}`)
   }
-
+}
   const handleDeletePdf = (id: string) => {
     setPdfToDelete(id)
     setIsDeleteDialogOpen(true)
