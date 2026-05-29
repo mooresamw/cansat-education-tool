@@ -1,13 +1,10 @@
 import os
-import re
 import json
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import firestore, credentials, auth, storage
 from flask_cors import CORS
 from flask import Flask, request, jsonify
-import tempfile
-import subprocess
 
 # Set up Firestore database
 service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
@@ -789,78 +786,6 @@ def clock_in_out():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
-# API route to send the code to from student ide to the backend
-@app.route('/run', methods=['POST'])
-def run_code():
-    user_code = request.json.get("code", "")
-    TEMPLATE = """
-        #include <iostream>
-        using namespace std;
-
-        class serial {
-            public:
-                static void println(const string& msg) { cout << msg << endl; }
-                static void println(int num) { 
-                    cout << num; 
-                    cout << endl;
-                }
-                static void begin(int rate) { int baudRate = rate; }
-        };
-
-        void setup();
-        void loop();
-
-        serial Serial;
-
-        int main() {
-            setup();
-            for (int i = 0; i < 1; i++) loop();
-            return 0;
-        }
-
-        {}
-    """
-    complete_code = TEMPLATE.replace("{}", user_code)
-
-    with tempfile.NamedTemporaryFile(suffix=".cpp", delete=False) as temp:
-        temp.write(complete_code.encode())
-        temp.close()
-
-        try:
-            # Compile the code
-            compile_result = subprocess.run(
-                ["g++", temp.name, "-o", "arduino_sim"],
-                capture_output=True,
-                text=True
-            )
-            if compile_result.returncode != 0:
-                # Compilation failed, extract error message
-                error_message = compile_result.stderr
-                # Remove file path like /var/folders/.../tmp3pu1i8rh.cpp:25:33:
-                error_message = re.sub(r'/[^:]+:\d+:\d+:', '', error_message)
-                # Extract the relevant error line
-                error_lines = error_message.splitlines()
-                relevant_error = next(
-                    (line for line in error_lines if "error:" in line),
-                    error_message.strip()  # Fallback to cleaned error message
-                )
-                return jsonify({"error": relevant_error.strip()})
-
-            # If compilation succeeded, run the program
-            result = subprocess.check_output(["./arduino_sim"]).decode()
-            print(result)
-            return jsonify({"output": result})
-
-        except subprocess.CalledProcessError as e:
-            # Handle runtime errors (if any)
-            return jsonify({"error": e.output.decode()})
-        finally:
-            # Clean up temporary files
-            if os.path.exists("arduino_sim"):
-                os.remove("arduino_sim")
-            if os.path.exists(temp.name):
-                os.remove(temp.name)
 
 if __name__ == "__main__":
     app.run(debug=True, port=8080)
