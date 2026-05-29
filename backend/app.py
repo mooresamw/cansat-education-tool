@@ -455,6 +455,46 @@ def get_pdfs():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# API route to get code resources from the database
+@app.route("/get-code", methods=["GET"])
+def get_code():
+    extension_languages = {
+        ".ino": "cpp",
+        ".c": "c",
+        ".cpp": "cpp",
+        ".h": "cpp",
+        ".py": "python",
+        ".js": "javascript",
+        ".ts": "typescript",
+    }
+    try:
+        blobs = bucket.list_blobs(prefix="code/")
+        code_files = [
+            blob for blob in blobs
+            if any(blob.name.endswith(ext) for ext in extension_languages)
+        ]
+
+        code_list = []
+        for idx, blob in enumerate(code_files):
+            filename = blob.name.split("/")[-1]
+            name, ext = os.path.splitext(filename)
+            content = blob.download_as_text()
+            url = blob.generate_signed_url(expiration=timedelta(hours=1), method="GET")
+
+            code_list.append({
+                "id": str(idx + 1),
+                "name": name,
+                "filename": filename,
+                "language": extension_languages.get(ext, "plaintext"),
+                "code": content,
+                "description": "",
+                "url": url,
+            })
+
+        return jsonify(code_list), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # API route to upload pdfs to the database
 @app.route("/upload-pdf", methods=["POST"])
 def upload_pdf():
