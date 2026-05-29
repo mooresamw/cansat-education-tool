@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
-import { FileText, Trash2, Upload, Code, Pencil, Loader2 } from "lucide-react"
+import { FileText, Trash2, Upload, Code, Pencil } from "lucide-react"
 import { onAuthStateChanged } from "firebase/auth"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { auth, db, storage } from "@/lib/firebaseConfig"
@@ -32,7 +33,6 @@ import { apiUrlBase } from "@/lib/configEnv"
 import { doc, getDoc, collection, setDoc } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
 import Editor from "@monaco-editor/react"
 
 // Update these utility functions at the top of the file, after the imports
@@ -85,8 +85,15 @@ export default function AdminPdfManager() {
   })
   const [editingProblem, setEditingProblem] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
+  // Code resources state
+  const [codeResources, setCodeResources] = useState([])
+  const [codeUpload, setCodeUpload] = useState<File | null>(null)
+  const [isCodeUploadDialogOpen, setIsCodeUploadDialogOpen] = useState(false)
+  const [codeUploadMessage, setCodeUploadMessage] = useState("")
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploadingCode, setIsUploadingCode] = useState(false)
+  const [codeToDelete, setCodeToDelete] = useState<any>(null)
+  const [isCodeDeleteDialogOpen, setIsCodeDeleteDialogOpen] = useState(false)
 
   // Auth state listener for admin only
   useEffect(() => {
@@ -166,6 +173,21 @@ export default function AdminPdfManager() {
     fetchCodingProblems()
   }, [])
 
+  // Fetch code resources from Firebase Storage
+  const fetchCodeResources = async () => {
+    try {
+      const response = await fetch(`${apiUrlBase}/get-code`)
+      const data = await response.json()
+      setCodeResources(data)
+    } catch (error) {
+      console.log("Error fetching code resources:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchCodeResources()
+  }, [])
+
   // const handlePdfUpload = async (e: React.FormEvent) => {
   //   e.preventDefault()
   //   if (!pdfUpload) {
@@ -222,22 +244,17 @@ const handlePdfUpload = async (e: React.FormEvent) => {
 
     const uploadTask = uploadBytesResumable(storageRef, pdfUpload)
 
-    setIsUploading(true)
-    setUploadProgress(0)
-
     uploadTask.on(
       "state_changed",
       (snapshot) => {
         const progress =
           (snapshot.bytesTransferred / snapshot.totalBytes) * 100
 
-        setUploadProgress(progress)
         console.log(`Upload is ${progress}% done`)
       },
       (error) => {
         console.error(error)
-        setIsUploading(false)
-        setUploadProgress(null)
+
         setUploadMessage(`Upload failed: ${error.message}`)
       },
       async () => {
@@ -264,16 +281,13 @@ const handlePdfUpload = async (e: React.FormEvent) => {
 
         setPdfs([...pdfs, newPdfEntry])
 
-        setIsUploading(false)
-        setUploadProgress(null)
         setIsUploadDialogOpen(false)
         setPdfUpload(null)
       }
     )
   } catch (error: any) {
     console.error(error)
-    setIsUploading(false)
-    setUploadProgress(null)
+
     setUploadMessage(`Error uploading file: ${error.message}`)
   }
 }
@@ -471,6 +485,94 @@ const handlePdfUpload = async (e: React.FormEvent) => {
     }
   }
 
+  // Upload a code resource to Firebase Storage (same flow as PDF upload)
+  const handleCodeUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!codeUpload) {
+      setCodeUploadMessage("Please select a file first.")
+      return
+    }
+
+    try {
+      setIsUploadingCode(true)
+      setUploadProgress(0)
+
+      const storageRef = ref(storage, `code/${codeUpload.name}`)
+
+      const uploadTask = uploadBytesResumable(storageRef, codeUpload)
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+
+          setUploadProgress(progress)
+        },
+        (error) => {
+          console.error(error)
+
+          setCodeUploadMessage(`Upload failed: ${error.message}`)
+          setIsUploadingCode(false)
+        },
+        async () => {
+          await getDownloadURL(uploadTask.snapshot.ref)
+
+          toast.success("Code resource uploaded", {
+            description: `${codeUpload.name} has been successfully uploaded.`,
+          })
+
+          await fetchCodeResources()
+
+          setIsUploadingCode(false)
+          setUploadProgress(0)
+          setIsCodeUploadDialogOpen(false)
+          setCodeUpload(null)
+          setCodeUploadMessage("")
+        },
+      )
+    } catch (error: any) {
+      console.error(error)
+
+      setCodeUploadMessage(`Error uploading file: ${error.message}`)
+      setIsUploadingCode(false)
+    }
+  }
+
+  const handleDeleteCode = (resource: any) => {
+    setCodeToDelete(resource)
+    setIsCodeDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteCode = async () => {
+    if (!codeToDelete) return
+
+    try {
+      const idToken = await auth.currentUser?.getIdToken()
+      const fileName = codeToDelete.path ?? `code/${codeToDelete.filename}`
+
+      const response = await fetch(`${apiUrlBase}/delete-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_name: fileName, idToken }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete code resource")
+      }
+
+      setCodeResources(codeResources.filter((c) => c.id !== codeToDelete.id))
+      setIsCodeDeleteDialogOpen(false)
+      setCodeToDelete(null)
+      toast.success("Code resource deleted", {
+        description: `${codeToDelete.filename} has been successfully deleted.`,
+      })
+    } catch (error) {
+      console.error("Error deleting code resource:", error)
+      toast.error("Failed to delete code resource")
+    }
+  }
+
   return (
     <DashboardLayout userType="admin">
       <div className="flex justify-between items-center mb-6">
@@ -481,6 +583,7 @@ const handlePdfUpload = async (e: React.FormEvent) => {
         <TabsList className="inline-flex w-full mb-6">
           <TabsTrigger value="pdf">PDF Resources</TabsTrigger>
           <TabsTrigger value="coding">Coding Problems</TabsTrigger>
+          <TabsTrigger value="code">Code Resources</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pdf">
@@ -597,29 +700,64 @@ const handlePdfUpload = async (e: React.FormEvent) => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="code">
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => setIsCodeUploadDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload New Code
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Code Resources</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Filename</TableHead>
+                    <TableHead>Language</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {codeResources.map((resource) => (
+                    <TableRow key={resource.id}>
+                      <TableCell className="flex items-center">
+                        <Code className="mr-2 h-4 w-4 text-gray-500" />
+                        {resource.filename}
+                      </TableCell>
+                      <TableCell>{resource.language}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteCode(resource)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Upload PDF Dialog */}
-      <Dialog
-        open={isUploadDialogOpen}
-        onOpenChange={(open) => {
-          if (!isUploading) {
-            setIsUploadDialogOpen(open)
-            if (!open) {
-              setUploadProgress(null)
-              setUploadMessage("")
-              setPdfUpload(null)
-            }
-          }
-        }}
-      >
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload New PDF</DialogTitle>
           </DialogHeader>
           <form onSubmit={handlePdfUpload}>
             <div className="grid gap-4 py-4">
-              {uploadMessage && <p className="text-sm text-red-500">{uploadMessage}</p>}
+              <p>{uploadMessage}</p>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="pdf-file" className="text-right">
                   PDF File
@@ -629,32 +767,13 @@ const handlePdfUpload = async (e: React.FormEvent) => {
                     id="pdf-file"
                     type="file"
                     accept=".pdf"
-                    disabled={isUploading}
                     onChange={(e) => setPdfUpload(e.target.files ? e.target.files[0] : null)}
                   />
                 </div>
               </div>
-              {isUploading && uploadProgress !== null && (
-                <div className="grid gap-2">
-                  <div className="flex justify-between items-center text-sm text-muted-foreground">
-                    <span>Uploading {pdfUpload?.name}…</span>
-                    <span>{Math.round(uploadProgress)}%</span>
-                  </div>
-                  <Progress value={uploadProgress} className="h-2" />
-                </div>
-              )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isUploading}>
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading…
-                  </>
-                ) : (
-                  "Upload PDF"
-                )}
-              </Button>
+              <Button type="submit">Upload PDF</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -910,6 +1029,74 @@ const handlePdfUpload = async (e: React.FormEvent) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Upload Code Dialog */}
+      <Dialog
+        open={isCodeUploadDialogOpen}
+        onOpenChange={(open) => {
+          if (isUploadingCode) return
+          setIsCodeUploadDialogOpen(open)
+          if (!open) {
+            setCodeUpload(null)
+            setCodeUploadMessage("")
+            setUploadProgress(0)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload New Code Resource</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCodeUpload}>
+            <div className="grid gap-4 py-4">
+              {codeUploadMessage && <p className="text-sm text-red-500">{codeUploadMessage}</p>}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="code-file" className="text-right">
+                  Code File
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="code-file"
+                    type="file"
+                    accept=".ino,.c,.cpp,.h,.py,.js,.ts"
+                    onChange={(e) => setCodeUpload(e.target.files ? e.target.files[0] : null)}
+                    disabled={isUploadingCode}
+                  />
+                </div>
+              </div>
+              {isUploadingCode && (
+                <div className="grid gap-2">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-sm text-gray-500 text-center">{Math.round(uploadProgress)}% uploaded</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isUploadingCode || !codeUpload}>
+                {isUploadingCode ? "Uploading..." : "Upload Code"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Code Confirmation Dialog */}
+      <AlertDialog open={isCodeDeleteDialogOpen} onOpenChange={setIsCodeDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the code resource.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteCode} className="bg-red-500 hover:bg-red-600">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
