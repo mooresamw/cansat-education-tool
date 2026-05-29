@@ -9,3 +9,9 @@ function getAPIURLBase(): string {
 }
 
 export const apiUrlBase = getAPIURLBase();
+
+// Cloud Run service that compiles and runs submitted code. Called directly from
+// the browser with the user's Firebase ID token, so it must be a full URL.
+export const codeExecUrl =
+    process.env.NEXT_PUBLIC_CODE_EXEC_URL ||
+    'https://cpp-runner-293736072539.us-central1.run.app';

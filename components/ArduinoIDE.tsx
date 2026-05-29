@@ -11,7 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { getUser } from "@/lib/getUser"
 import type { CodingProblem } from "@/lib/CodingProblem"
-import { apiUrlBase } from "@/lib/configEnv"
+import { apiUrlBase, codeExecUrl } from "@/lib/configEnv"
+import { auth } from "@/lib/firebaseConfig"
 import { useLaikaPageContext } from "@/components/LaikaPageContext"
 import { Loader2 } from "lucide-react"
 
@@ -134,9 +135,18 @@ export default function ArduinoIDE({ problems }: ArduinoIDEProps) {
     setOutput("")
     setError("")
     try {
-      const response = await fetch(`${apiUrlBase}/run`, {
+      const idToken = await auth.currentUser?.getIdToken()
+      if (!idToken) {
+        setError("Error: You must be logged in to run code.")
+        setIsCorrect(false)
+        return
+      }
+      const response = await fetch(codeExecUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({ code }),
       })
       const result = await response.json()
