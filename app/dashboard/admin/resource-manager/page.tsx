@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
-import { FileText, Trash2, Upload, Code, Pencil } from "lucide-react"
+import { FileText, Trash2, Upload, Code, Pencil, Loader2 } from "lucide-react"
 import { onAuthStateChanged } from "firebase/auth"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { auth, db, storage } from "@/lib/firebaseConfig"
@@ -32,6 +32,7 @@ import { apiUrlBase } from "@/lib/configEnv"
 import { doc, getDoc, collection, setDoc } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Progress } from "@/components/ui/progress"
 import Editor from "@monaco-editor/react"
 
 // Update these utility functions at the top of the file, after the imports
@@ -84,6 +85,8 @@ export default function AdminPdfManager() {
   })
   const [editingProblem, setEditingProblem] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Auth state listener for admin only
   useEffect(() => {
@@ -219,17 +222,22 @@ const handlePdfUpload = async (e: React.FormEvent) => {
 
     const uploadTask = uploadBytesResumable(storageRef, pdfUpload)
 
+    setIsUploading(true)
+    setUploadProgress(0)
+
     uploadTask.on(
       "state_changed",
       (snapshot) => {
         const progress =
           (snapshot.bytesTransferred / snapshot.totalBytes) * 100
 
+        setUploadProgress(progress)
         console.log(`Upload is ${progress}% done`)
       },
       (error) => {
         console.error(error)
-
+        setIsUploading(false)
+        setUploadProgress(null)
         setUploadMessage(`Upload failed: ${error.message}`)
       },
       async () => {
@@ -256,13 +264,16 @@ const handlePdfUpload = async (e: React.FormEvent) => {
 
         setPdfs([...pdfs, newPdfEntry])
 
+        setIsUploading(false)
+        setUploadProgress(null)
         setIsUploadDialogOpen(false)
         setPdfUpload(null)
       }
     )
   } catch (error: any) {
     console.error(error)
-
+    setIsUploading(false)
+    setUploadProgress(null)
     setUploadMessage(`Error uploading file: ${error.message}`)
   }
 }
@@ -589,14 +600,26 @@ const handlePdfUpload = async (e: React.FormEvent) => {
       </Tabs>
 
       {/* Upload PDF Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+      <Dialog
+        open={isUploadDialogOpen}
+        onOpenChange={(open) => {
+          if (!isUploading) {
+            setIsUploadDialogOpen(open)
+            if (!open) {
+              setUploadProgress(null)
+              setUploadMessage("")
+              setPdfUpload(null)
+            }
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload New PDF</DialogTitle>
           </DialogHeader>
           <form onSubmit={handlePdfUpload}>
             <div className="grid gap-4 py-4">
-              <p>{uploadMessage}</p>
+              {uploadMessage && <p className="text-sm text-red-500">{uploadMessage}</p>}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="pdf-file" className="text-right">
                   PDF File
@@ -606,13 +629,32 @@ const handlePdfUpload = async (e: React.FormEvent) => {
                     id="pdf-file"
                     type="file"
                     accept=".pdf"
+                    disabled={isUploading}
                     onChange={(e) => setPdfUpload(e.target.files ? e.target.files[0] : null)}
                   />
                 </div>
               </div>
+              {isUploading && uploadProgress !== null && (
+                <div className="grid gap-2">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground">
+                    <span>Uploading {pdfUpload?.name}…</span>
+                    <span>{Math.round(uploadProgress)}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button type="submit">Upload PDF</Button>
+              <Button type="submit" disabled={isUploading}>
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading…
+                  </>
+                ) : (
+                  "Upload PDF"
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
