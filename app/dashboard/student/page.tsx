@@ -484,9 +484,9 @@ export default function StudentDashboard() {
     .slice(0, 3)
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen overflow-x-hidden">
       <DashboardLayout userType="student">
-        <main className="max-w-7xl mx-auto w-full py-2 sm:px-6 sm:py-8">
+        <main className="max-w-7xl mx-auto w-full py-4 px-4 sm:px-6 sm:py-8 min-w-0 overflow-x-hidden">
           {/* Welcome Section */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
