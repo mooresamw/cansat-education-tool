@@ -6,7 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, CheckCircle, Download } from "lucide-react"
+import { ChevronLeft, ChevronRight, CheckCircle, Download, XCircle } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { getQuizForTitle, type QuizQuestion } from "@/lib/quizzes"
 import { pdfjs } from "react-pdf"
 import "react-pdf/dist/esm/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
@@ -64,6 +73,12 @@ export default function StudentTrainingMaterials() {
 
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const [pageWidth, setPageWidth] = useState(700)
+
+  // Quiz gating: a passing quiz is required before a PDF is marked complete.
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
 
   useEffect(() => {
     const updateWidth = () => {
@@ -217,10 +232,34 @@ export default function StudentTrainingMaterials() {
     setPageNumber((prevPageNumber) => {
       const newPageNumber = prevPageNumber + offset
       if (numPages && newPageNumber === numPages && selectedPdf && !isPdfCompleted(selectedPdf.id)) {
-        markAsCompleted()
+        const quiz = getQuizForTitle(formatPdfName(selectedPdf.name))
+        if (quiz && quiz.length > 0) {
+          openQuiz(quiz)
+        } else {
+          markAsCompleted()
+        }
       }
       return Math.min(Math.max(1, newPageNumber), numPages || 1)
     })
+  }
+
+  const openQuiz = (quiz: QuizQuestion[]) => {
+    setQuizQuestions(quiz)
+    setQuizAnswers({})
+    setQuizSubmitted(false)
+    setQuizOpen(true)
+  }
+
+  const isQuizPassed = () =>
+    quizQuestions.length > 0 &&
+    quizQuestions.every((q) => q.options.find((o) => o.id === quizAnswers[q.id])?.correct)
+
+  const handleQuizSubmit = () => {
+    setQuizSubmitted(true)
+    if (isQuizPassed()) {
+      setQuizOpen(false)
+      markAsCompleted()
+    }
   }
 
   const isPdfCompleted = (pdfId: string) => {
@@ -327,6 +366,18 @@ export default function StudentTrainingMaterials() {
                   <ChevronRight className="h-4 w-4 sm:ml-2" />
                 </Button>
               </div>
+
+              {selectedPdf &&
+                !isPdfCompleted(selectedPdf.id) &&
+                numPages !== null &&
+                pageNumber >= numPages &&
+                (getQuizForTitle(formatPdfName(selectedPdf.name))?.length ?? 0) > 0 && (
+                  <div className="mt-4 max-w-[700px] mx-auto text-center">
+                    <Button onClick={() => openQuiz(getQuizForTitle(formatPdfName(selectedPdf.name))!)}>
+                      Take Quiz to Complete
+                    </Button>
+                  </div>
+                )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -386,6 +437,87 @@ export default function StudentTrainingMaterials() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Quick Quiz{selectedPdf ? `: ${formatPdfName(selectedPdf.name)}` : ""}</DialogTitle>
+            <DialogDescription>
+              Answer every question correctly to complete this material and unlock the next one.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {quizQuestions.map((q, qIndex) => {
+              const selected = quizAnswers[q.id]
+              const correctOptionId = q.options.find((o) => o.correct)?.id
+              return (
+                <div key={q.id} className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {qIndex + 1}. {q.question}
+                  </p>
+                  <div className="space-y-2">
+                    {q.options.map((option) => {
+                      const isSelected = selected === option.id
+                      let stateClass = "border-gray-200 hover:bg-gray-50"
+                      if (quizSubmitted && option.id === correctOptionId) {
+                        stateClass = "border-green-400 bg-green-50 text-green-800"
+                      } else if (quizSubmitted && isSelected) {
+                        stateClass = "border-red-400 bg-red-50 text-red-800"
+                      } else if (isSelected) {
+                        stateClass = "border-primary ring-1 ring-primary"
+                      }
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          disabled={quizSubmitted}
+                          onClick={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: option.id }))}
+                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors ${stateClass}`}
+                        >
+                          <span>{option.text}</span>
+                          {quizSubmitted && option.id === correctOptionId && (
+                            <CheckCircle className="h-4 w-4 shrink-0 text-green-600" />
+                          )}
+                          {quizSubmitted && isSelected && option.id !== correctOptionId && (
+                            <XCircle className="h-4 w-4 shrink-0 text-red-600" />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {quizSubmitted && !isQuizPassed() && (
+            <p className="text-sm font-medium text-red-600">
+              Some answers are incorrect. Review the highlighted answers and try again.
+            </p>
+          )}
+
+          <DialogFooter>
+            {quizSubmitted && !isQuizPassed() ? (
+              <Button
+                onClick={() => {
+                  setQuizSubmitted(false)
+                  setQuizAnswers({})
+                }}
+              >
+                Try Again
+              </Button>
+            ) : (
+              <Button
+                onClick={handleQuizSubmit}
+                disabled={quizQuestions.some((q) => !quizAnswers[q.id])}
+              >
+                Submit Quiz
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
