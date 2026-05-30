@@ -15,13 +15,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { getQuizForTitle, type QuizQuestion } from "@/lib/quizzes"
+import { fetchQuizzes, formatPdfName, getQuizForTitle, type QuizQuestion } from "@/lib/quizzes"
 import { pdfjs } from "react-pdf"
 import "react-pdf/dist/esm/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import Loading from "@/components/Loading"
 import { Progress } from "@/components/ui/progress"
-import { auth } from "@/lib/firebaseConfig"
+import { auth, db } from "@/lib/firebaseConfig"
 import { apiUrlBase } from "@/lib/configEnv"
 import { SignOutContext } from "@/components/DashboardLayout"
 import { onAuthStateChanged } from "firebase/auth"
@@ -33,8 +33,6 @@ const PDF_OPTIONS = {
   cMapUrl: "/cmaps/",
   cMapPacked: true,
 }
-
-const formatPdfName = (name: string) => name.split("-").pop()?.replace(/\.pdf$/i, "") ?? name
 
 interface PDFFile {
   id: string
@@ -75,10 +73,17 @@ export default function StudentTrainingMaterials() {
   const [pageWidth, setPageWidth] = useState(700)
 
   // Quiz gating: a passing quiz is required before a PDF is marked complete.
+  // All quizzes are fetched once on load and looked up locally by PDF title.
+  const [quizzesByTitle, setQuizzesByTitle] = useState<Record<string, QuizQuestion[]>>({})
   const [quizOpen, setQuizOpen] = useState(false)
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
+
+  const getQuiz = (pdf: PDFFile): QuizQuestion[] | undefined => {
+    const title = formatPdfName(pdf.name)
+    return quizzesByTitle[title] ?? getQuizForTitle(title)
+  }
 
   useEffect(() => {
     const updateWidth = () => {
@@ -120,6 +125,13 @@ export default function StudentTrainingMaterials() {
       }
     })
     return () => unsubscribe()
+  }, [])
+
+  // Fetch every quiz once on load so completion never has to wait on a per-PDF request
+  useEffect(() => {
+    fetchQuizzes(db)
+      .then(setQuizzesByTitle)
+      .catch((error) => console.error("Error fetching quizzes:", error))
   }, [])
 
   // Fetch PDFs and progress
@@ -232,7 +244,7 @@ export default function StudentTrainingMaterials() {
     setPageNumber((prevPageNumber) => {
       const newPageNumber = prevPageNumber + offset
       if (numPages && newPageNumber === numPages && selectedPdf && !isPdfCompleted(selectedPdf.id)) {
-        const quiz = getQuizForTitle(formatPdfName(selectedPdf.name))
+        const quiz = getQuiz(selectedPdf)
         if (quiz && quiz.length > 0) {
           openQuiz(quiz)
         } else {
@@ -371,11 +383,9 @@ export default function StudentTrainingMaterials() {
                 !isPdfCompleted(selectedPdf.id) &&
                 numPages !== null &&
                 pageNumber >= numPages &&
-                (getQuizForTitle(formatPdfName(selectedPdf.name))?.length ?? 0) > 0 && (
+                (getQuiz(selectedPdf)?.length ?? 0) > 0 && (
                   <div className="mt-4 max-w-[700px] mx-auto text-center">
-                    <Button onClick={() => openQuiz(getQuizForTitle(formatPdfName(selectedPdf.name))!)}>
-                      Take Quiz to Complete
-                    </Button>
+                    <Button onClick={() => openQuiz(getQuiz(selectedPdf)!)}>Take Quiz to Complete</Button>
                   </div>
                 )}
             </CardContent>

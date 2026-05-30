@@ -1,12 +1,14 @@
 // Quiz bank for the student training PDFs.
 //
-// Keyed by the PDF's display title (see `formatPdfName` in
-// StudentTrainingMaterials) rather than the backend PDF id, because that id is
+// Quizzes live in the Firestore `quizzes` collection, one document per PDF with
+// the document id set to the PDF's display title (see `formatPdfName`). The PDF
+// title is used as the key rather than the backend PDF id, because that id is
 // just the storage listing index and shifts when PDFs are added or reordered.
 //
-// The shape mirrors the intended Firestore schema (questions carry an id, each
-// option carries a `correct` flag) so this can later be swapped for a
-// `/get-quiz?material_id=` fetch with no consumer changes.
+// The hardcoded QUIZZES below act as a fallback for PDFs that don't yet have a
+// quiz uploaded by an admin.
+
+import { collection, getDocs, type Firestore } from "firebase/firestore"
 
 export interface QuizOption {
   id: string
@@ -18,6 +20,30 @@ export interface QuizQuestion {
   id: string
   question: string
   options: QuizOption[]
+}
+
+export interface Quiz {
+  title: string
+  questions: QuizQuestion[]
+}
+
+export const QUIZ_COLLECTION = "quizzes"
+
+// Strips the uuid prefix and ".pdf" suffix from a stored PDF blob name to get
+// the human-readable title used as the quiz key.
+export const formatPdfName = (name: string) => name.split("-").pop()?.replace(/\.pdf$/i, "") ?? name
+
+// Fetches every uploaded quiz in one read, keyed by PDF title.
+export async function fetchQuizzes(db: Firestore): Promise<Record<string, QuizQuestion[]>> {
+  const snapshot = await getDocs(collection(db, QUIZ_COLLECTION))
+  const result: Record<string, QuizQuestion[]> = {}
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data() as Quiz
+    if (data?.questions?.length) {
+      result[docSnap.id] = data.questions
+    }
+  })
+  return result
 }
 
 export const QUIZZES: Record<string, QuizQuestion[]> = {
