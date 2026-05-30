@@ -484,9 +484,9 @@ export default function StudentDashboard() {
     .slice(0, 3)
 
   return (
-    <div className="bg-background min-h-screen overflow-x-hidden">
+    <div className="bg-background min-h-screen">
       <DashboardLayout userType="student">
-        <main className="max-w-7xl mx-auto w-full py-4 px-4 sm:px-6 sm:py-8 min-w-0 overflow-x-hidden">
+        <main className="max-w-7xl mx-auto w-full px-4 py-4 sm:px-6 sm:py-8">
           {/* Welcome Section */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
@@ -699,7 +699,7 @@ export default function StudentDashboard() {
 
           {/* Notification Dropdown */}
           {showNotifications && (
-            <div className="fixed top-16 right-4 sm:right-8 z-50 w-80 max-w-[calc(100vw-2rem)]">
+            <div className="fixed top-16 right-2 sm:right-4 md:right-8 z-50 w-[calc(100vw-1rem)] sm:w-80 max-w-sm">
               <Card className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
                 <CardHeader className="border-b border-border bg-secondary/30 py-4">
                   <div className="flex items-center justify-between">
