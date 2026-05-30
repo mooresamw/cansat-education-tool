@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState, useContext } from "react"
+import { useEffect, useRef, useState, useContext } from "react"
 import { Document, Page } from "react-pdf"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, CheckCircle, Download } from "lucide-react"
@@ -13,14 +12,20 @@ import "react-pdf/dist/esm/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import Loading from "@/components/Loading"
 import { Progress } from "@/components/ui/progress"
-import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore"
-import { db, auth } from "@/lib/firebaseConfig"
+import { auth } from "@/lib/firebaseConfig"
 import { apiUrlBase } from "@/lib/configEnv"
 import { SignOutContext } from "@/components/DashboardLayout"
 import { onAuthStateChanged } from "firebase/auth"
 import Editor from "@monaco-editor/react"
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+
+const PDF_OPTIONS = {
+  cMapUrl: "/cmaps/",
+  cMapPacked: true,
+}
+
+const formatPdfName = (name: string) => name.split("-").pop()?.replace(/\.pdf$/i, "") ?? name
 
 interface PDFFile {
   id: string
@@ -47,7 +52,6 @@ export default function StudentTrainingMaterials() {
   const [selectedPdf, setSelectedPdf] = useState<PDFFile | undefined>(undefined)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
-  const [notes, setNotes] = useState("")
   const [pdfs, setPdfs] = useState<PDFFile[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -57,6 +61,21 @@ export default function StudentTrainingMaterials() {
 
   const [codeResources, setCodeResources] = useState<CodeResource[]>([])
   const [selectedCodeResource, setSelectedCodeResource] = useState<CodeResource | undefined>(undefined)
+
+  const pdfContainerRef = useRef<HTMLDivElement>(null)
+  const [pageWidth, setPageWidth] = useState(700)
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (pdfContainerRef.current) {
+        setPageWidth(pdfContainerRef.current.clientWidth)
+      }
+    }
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    if (pdfContainerRef.current) observer.observe(pdfContainerRef.current)
+    return () => observer.disconnect()
+  }, [selectedPdf, loading])
 
   useEffect(() => {
     if (codeResources.length > 0 && !selectedCodeResource) {
@@ -83,7 +102,6 @@ export default function StudentTrainingMaterials() {
         setUserId(user.uid)
       } else {
         setUserId(null)
-        setNotes("")
       }
     })
     return () => unsubscribe()
@@ -138,83 +156,6 @@ export default function StudentTrainingMaterials() {
       isMounted = false
     }
   }, [userId, isSigningOut])
-
-  // Load notes when selected PDF changes
-  useEffect(() => {
-    let isMounted = true
-
-    const loadNotes = async () => {
-      if (!isMounted || !selectedPdf || !userId || isSigningOut) return
-
-      try {
-        const user = auth.currentUser
-        if (!user) {
-          console.log("No authenticated user; skipping note loading")
-          return
-        }
-        const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
-        const noteDoc = await getDoc(noteDocRef)
-        if (!isMounted) return
-        setNotes(noteDoc.exists() ? noteDoc.data().content || "" : "")
-      } catch (error: any) {
-        console.error("Error loading notes:", error)
-        if (error.code === "permission-denied") {
-          console.log("Permission denied; likely due to sign-out")
-          if (isMounted) setNotes("")
-        }
-      }
-    }
-
-    loadNotes()
-    return () => {
-      isMounted = false
-    }
-  }, [selectedPdf, userId, isSigningOut])
-
-  // Save notes to Firestore
-  const saveNotes = async () => {
-    if (!selectedPdf || !userId || isSigningOut) return
-
-    try {
-      const user = auth.currentUser
-      if (!user) {
-        console.log("No authenticated user; skipping note saving")
-        return
-      }
-      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
-      await setDoc(noteDocRef, {
-        content: notes,
-        pdfId: selectedPdf.id,
-        updatedAt: new Date().toISOString(),
-      })
-    } catch (error: any) {
-      console.error("Error saving notes:", error)
-      if (error.code !== "permission-denied") {
-        alert("Failed to save notes. Please try again.")
-      }
-    }
-  }
-
-  // Delete notes from Firestore
-  const deleteNotes = async () => {
-    if (!selectedPdf || !userId || isSigningOut) return
-
-    try {
-      const user = auth.currentUser
-      if (!user) {
-        console.log("No authenticated user; skipping note deletion")
-        return
-      }
-      const noteDocRef = doc(db, "users", userId, "notes", selectedPdf.id)
-      await deleteDoc(noteDocRef)
-      setNotes("")
-    } catch (error: any) {
-      console.error("Error deleting notes:", error)
-      if (error.code !== "permission-denied") {
-        alert("Failed to delete notes. Please try again.")
-      }
-    }
-  }
 
   // Mark PDF as completed and move to next uncompleted PDF
   const markAsCompleted = async () => {
@@ -286,14 +227,6 @@ export default function StudentTrainingMaterials() {
     return completedPdfs.some((pdf) => pdf.material_id === pdfId)
   }
 
-  const pdfOptions = useMemo(
-    () => ({
-      cMapUrl: "/cmaps/",
-      cMapPacked: true,
-    }),
-    [],
-  )
-
   if (loading || !userId) return <Loading />
 
   return (
@@ -315,7 +248,7 @@ export default function StudentTrainingMaterials() {
         </div>
 
         <TabsContent value="pdfs" className="space-y-4">
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="hidden md:flex flex-wrap gap-2 mb-4">
             {pdfs.map((pdf, index) => (
               <div
                 key={pdf.id}
@@ -327,106 +260,75 @@ export default function StudentTrainingMaterials() {
                 onClick={() => setSelectedPdf(pdf)}
               >
                 {isPdfCompleted(pdf.id) && <CheckCircle className="h-3 w-3" />}
-                {index + 1}. {pdf.name.length > 15 ? `${pdf.name.substring(0, 15)}...` : pdf.name}
+                {index + 1}. {formatPdfName(pdf.name)}
               </div>
             ))}
           </div>
 
-          <div className="flex space-x-4">
-            <div className="w-2/3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    {selectedPdf && isPdfCompleted(selectedPdf.id) && (
-                      <span className="text-sm text-green-600 flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-1" /> Completed
-                      </span>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <Select
-                      value={selectedPdf?.id}
-                      onValueChange={(value) => {
-                        const newSelectedPdf = pdfs.find((pdf) => pdf.id === value)
-                        if (newSelectedPdf) {
-                          setSelectedPdf(newSelectedPdf)
-                          setPageNumber(1)
-                          setNumPages(null)
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="block md:hidden">
-                        <SelectValue placeholder="Select a PDF" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pdfs.map((pdf) => (
-                          <SelectItem key={pdf.id} value={pdf.id}>
-                            <div className="flex items-center">
-                              {isPdfCompleted(pdf.id) && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
-                              {pdf.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                {selectedPdf && isPdfCompleted(selectedPdf.id) && (
+                  <span className="text-sm text-green-600 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" /> Completed
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 block md:hidden">
+                <Select
+                  value={selectedPdf?.id}
+                  onValueChange={(value) => {
+                    const newSelectedPdf = pdfs.find((pdf) => pdf.id === value)
+                    if (newSelectedPdf) {
+                      setSelectedPdf(newSelectedPdf)
+                      setPageNumber(1)
+                      setNumPages(null)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a PDF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pdfs.map((pdf) => (
+                      <SelectItem key={pdf.id} value={pdf.id}>
+                        <div className="flex items-center">
+                          {isPdfCompleted(pdf.id) && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
+                          {formatPdfName(pdf.name)}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="border rounded-lg overflow-auto h-[450px] w-[700px]">
-                    {selectedPdf && (
-                      <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess} options={pdfOptions}>
-                        <Page pageNumber={pageNumber} width={700} />
-                      </Document>
-                    )}
-                  </div>
+              <div ref={pdfContainerRef} className="w-full max-w-[700px] mx-auto">
+                <div className="border rounded-lg overflow-hidden w-fit mx-auto">
+                  {selectedPdf && (
+                    <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess} options={PDF_OPTIONS}>
+                      <Page pageNumber={pageNumber} width={pageWidth} />
+                    </Document>
+                  )}
+                </div>
+              </div>
 
-                  <div className="flex justify-between items-center mt-4">
-                    <Button onClick={() => changePage(-1)} disabled={pageNumber <= 1}>
-                      <ChevronLeft className="h-4 w-4 mr-2" />
-                      Previous
-                    </Button>
-                    <p>
-                      Page {pageNumber} of {numPages}
-                    </p>
-                    <Button onClick={() => changePage(1)} disabled={pageNumber >= (numPages || 1)}>
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="w-1/3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    placeholder="Add your notes here..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="h-[400px] mb-2"
-                    disabled={isSigningOut || !userId}
-                  />
-                  <div className="flex space-x-2">
-                    <Button onClick={saveNotes} disabled={!selectedPdf || !notes.trim() || isSigningOut || !userId}>
-                      Save Notes
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={deleteNotes}
-                      disabled={!selectedPdf || !notes || isSigningOut || !userId}
-                    >
-                      Delete Notes
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+              <div className="flex justify-between items-center mt-4 max-w-[700px] mx-auto">
+                <Button onClick={() => changePage(-1)} disabled={pageNumber <= 1}>
+                  <ChevronLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Button>
+                <p className="text-sm">
+                  Page {pageNumber} of {numPages}
+                </p>
+                <Button onClick={() => changePage(1)} disabled={pageNumber >= (numPages || 1)}>
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4 sm:ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="coding" className="space-y-4">
