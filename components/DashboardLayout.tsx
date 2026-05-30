@@ -765,7 +765,7 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
 
         {/* Main Content */}
         <div
-          className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-out ${
+          className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ease-out ${
             sidebarOpen ? "md:ml-[280px]" : "md:ml-0"
           }`}
         >
@@ -944,8 +944,8 @@ export function DashboardLayout({ children, userType }: DashboardLayoutProps) {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="p-4 md:p-6 lg:p-8 min-w-0">
               {children}
             </div>
           </main>
