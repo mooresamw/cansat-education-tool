@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -29,6 +31,29 @@ function readStoredOpenState(): boolean {
   if (typeof window === "undefined") return false
 
   return window.sessionStorage.getItem(LAIKA_OPEN_STORAGE_KEY) === "true"
+}
+
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("")
+}
+
+function MarkdownBubble({ children }: { children: string }) {
+  return (
+    <div className="space-y-2 text-sm leading-relaxed [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-2.5 [&_pre]:text-xs [&_:not(pre)>code]:rounded [&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:text-[0.85em] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_a]:font-medium [&_a]:text-violet-600 [&_a]:underline dark:[&_a]:text-violet-400 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:italic">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noopener noreferrer" />
+          ),
+        }}
+      >
+        {children}
+      </ReactMarkdown>
+    </div>
+  )
 }
 
 export function LaikaChat() {
@@ -171,14 +196,13 @@ export function LaikaChat() {
                         : "bg-secondary/50 text-foreground mr-8"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">
-                      {message.parts.map((part, index) => {
-                        if (part.type === "text") {
-                          return <span key={index}>{part.text}</span>
-                        }
-                        return null
-                      })}
-                    </div>
+                    {message.role === "user" ? (
+                      <div className="whitespace-pre-wrap">
+                        {getMessageText(message)}
+                      </div>
+                    ) : (
+                      <MarkdownBubble>{getMessageText(message)}</MarkdownBubble>
+                    )}
                   </div>
                 </div>
               ))}
