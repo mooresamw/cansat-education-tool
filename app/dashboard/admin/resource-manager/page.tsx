@@ -25,12 +25,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
-import { FileText, Trash2, Upload, Code, Pencil } from "lucide-react"
+import { FileText, Trash2, Upload, Code, Pencil, ClipboardList, Plus, X } from "lucide-react"
 import { onAuthStateChanged } from "firebase/auth"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { auth, db, storage } from "@/lib/firebaseConfig"
 import { apiUrlBase } from "@/lib/configEnv"
-import { doc, getDoc, collection, setDoc } from "firebase/firestore"
+import { doc, getDoc, getDocs, collection, setDoc, deleteDoc } from "firebase/firestore"
+import { QUIZ_COLLECTION, formatPdfName, type QuizQuestion } from "@/lib/quizzes"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Editor from "@monaco-editor/react"
@@ -94,6 +95,16 @@ export default function AdminPdfManager() {
   const [isUploadingCode, setIsUploadingCode] = useState(false)
   const [codeToDelete, setCodeToDelete] = useState<any>(null)
   const [isCodeDeleteDialogOpen, setIsCodeDeleteDialogOpen] = useState(false)
+  // Quiz state
+  const [quizzes, setQuizzes] = useState<{ title: string; questions: QuizQuestion[] }[]>([])
+  const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false)
+  const [isEditingQuiz, setIsEditingQuiz] = useState(false)
+  const [quizForm, setQuizForm] = useState<{ title: string; questions: QuizQuestion[] }>({
+    title: "",
+    questions: [],
+  })
+  const [quizToDelete, setQuizToDelete] = useState<string | null>(null)
+  const [isQuizDeleteDialogOpen, setIsQuizDeleteDialogOpen] = useState(false)
 
   // Auth state listener for admin only
   useEffect(() => {
@@ -186,6 +197,24 @@ export default function AdminPdfManager() {
 
   useEffect(() => {
     fetchCodeResources()
+  }, [])
+
+  // Fetch quizzes from Firestore
+  const fetchQuizzes = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, QUIZ_COLLECTION))
+      const list = snapshot.docs.map((d) => ({
+        title: d.id,
+        questions: (d.data().questions || []) as QuizQuestion[],
+      }))
+      setQuizzes(list)
+    } catch (error) {
+      console.log("Error fetching quizzes:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchQuizzes()
   }, [])
 
   // const handlePdfUpload = async (e: React.FormEvent) => {
@@ -573,6 +602,163 @@ const handlePdfUpload = async (e: React.FormEvent) => {
     }
   }
 
+  // ---- Quiz handlers ----
+  const blankOption = (correct = false) => ({ id: uuidv4(), text: "", correct })
+  const blankQuestion = (): QuizQuestion => ({
+    id: uuidv4(),
+    question: "",
+    options: [blankOption(true), blankOption(), blankOption(), blankOption()],
+  })
+
+  const openAddQuiz = () => {
+    setIsEditingQuiz(false)
+    setQuizForm({ title: "", questions: [blankQuestion()] })
+    setIsQuizDialogOpen(true)
+  }
+
+  const openEditQuiz = (quiz: { title: string; questions: QuizQuestion[] }) => {
+    setIsEditingQuiz(true)
+    setQuizForm({ title: quiz.title, questions: JSON.parse(JSON.stringify(quiz.questions)) })
+    setIsQuizDialogOpen(true)
+  }
+
+  const updateQuestionText = (qId: string, value: string) => {
+    setQuizForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) => (q.id === qId ? { ...q, question: value } : q)),
+    }))
+  }
+
+  const updateOptionText = (qId: string, oId: string, value: string) => {
+    setQuizForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === qId
+          ? { ...q, options: q.options.map((o) => (o.id === oId ? { ...o, text: value } : o)) }
+          : q,
+      ),
+    }))
+  }
+
+  const setCorrectOption = (qId: string, oId: string) => {
+    setQuizForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === qId
+          ? { ...q, options: q.options.map((o) => ({ ...o, correct: o.id === oId })) }
+          : q,
+      ),
+    }))
+  }
+
+  const addOption = (qId: string) => {
+    setQuizForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) =>
+        q.id === qId ? { ...q, options: [...q.options, blankOption()] } : q,
+      ),
+    }))
+  }
+
+  const removeOption = (qId: string, oId: string) => {
+    setQuizForm((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q) => {
+        if (q.id !== qId) return q
+        const options = q.options.filter((o) => o.id !== oId)
+        // Ensure at least one option stays marked correct
+        if (!options.some((o) => o.correct) && options.length > 0) options[0].correct = true
+        return { ...q, options }
+      }),
+    }))
+  }
+
+  const addQuestion = () => {
+    setQuizForm((prev) => ({ ...prev, questions: [...prev.questions, blankQuestion()] }))
+  }
+
+  const removeQuestion = (qId: string) => {
+    setQuizForm((prev) => ({ ...prev, questions: prev.questions.filter((q) => q.id !== qId) }))
+  }
+
+  const handleSaveQuiz = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!quizForm.title) {
+      toast.error("Select a PDF", { description: "A quiz must be linked to a PDF." })
+      return
+    }
+    if (quizForm.questions.length === 0) {
+      toast.error("Add at least one question")
+      return
+    }
+    for (const q of quizForm.questions) {
+      if (!q.question.trim()) {
+        toast.error("Every question needs text")
+        return
+      }
+      const filledOptions = q.options.filter((o) => o.text.trim())
+      if (filledOptions.length < 2) {
+        toast.error("Each question needs at least 2 answer options")
+        return
+      }
+      if (!q.options.some((o) => o.correct && o.text.trim())) {
+        toast.error("Each question needs a correct answer marked")
+        return
+      }
+    }
+
+    if (!isEditingQuiz && quizzes.some((qz) => qz.title === quizForm.title)) {
+      toast.error("Quiz already exists", { description: "This PDF already has a quiz. Edit it instead." })
+      return
+    }
+
+    try {
+      // Drop blank trailing options before saving
+      const cleaned = quizForm.questions.map((q) => ({
+        ...q,
+        options: q.options.filter((o) => o.text.trim()),
+      }))
+
+      await setDoc(doc(db, QUIZ_COLLECTION, quizForm.title), {
+        title: quizForm.title,
+        questions: cleaned,
+      })
+
+      setQuizzes((prev) => {
+        const others = prev.filter((qz) => qz.title !== quizForm.title)
+        return [...others, { title: quizForm.title, questions: cleaned }]
+      })
+
+      setIsQuizDialogOpen(false)
+      toast.success(isEditingQuiz ? "Quiz updated" : "Quiz added", {
+        description: `${quizForm.title} quiz has been saved.`,
+      })
+    } catch (error) {
+      console.error("Error saving quiz:", error)
+      toast.error("Failed to save quiz")
+    }
+  }
+
+  const handleDeleteQuiz = (title: string) => {
+    setQuizToDelete(title)
+    setIsQuizDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteQuiz = async () => {
+    if (!quizToDelete) return
+    try {
+      await deleteDoc(doc(db, QUIZ_COLLECTION, quizToDelete))
+      setQuizzes((prev) => prev.filter((qz) => qz.title !== quizToDelete))
+      setIsQuizDeleteDialogOpen(false)
+      setQuizToDelete(null)
+      toast.success("Quiz deleted")
+    } catch (error) {
+      console.error("Error deleting quiz:", error)
+      toast.error("Failed to delete quiz")
+    }
+  }
+
   return (
     <DashboardLayout userType="admin">
       <div className="flex justify-between items-center mb-6">
@@ -584,6 +770,7 @@ const handlePdfUpload = async (e: React.FormEvent) => {
           <TabsTrigger value="pdf">PDF Resources</TabsTrigger>
           <TabsTrigger value="coding">Coding Problems</TabsTrigger>
           <TabsTrigger value="code">Code Resources</TabsTrigger>
+          <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pdf">
@@ -742,6 +929,68 @@ const handlePdfUpload = async (e: React.FormEvent) => {
                       </TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="quizzes">
+          <div className="flex justify-end mb-4">
+            <Button onClick={openAddQuiz}>
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Add New Quiz
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Quizzes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PDF</TableHead>
+                    <TableHead>Questions</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {quizzes.map((quiz) => (
+                    <TableRow key={quiz.title}>
+                      <TableCell className="flex items-center">
+                        <ClipboardList className="mr-2 h-4 w-4 text-gray-500" />
+                        {quiz.title}
+                      </TableCell>
+                      <TableCell>{quiz.questions.length}</TableCell>
+                      <TableCell className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditQuiz(quiz)}
+                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteQuiz(quiz.title)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {quizzes.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-gray-500">
+                        No quizzes yet. Add one to gate a PDF's completion.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -1016,6 +1265,134 @@ const handlePdfUpload = async (e: React.FormEvent) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add/Edit Quiz Dialog */}
+      <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
+        <DialogContent style={customDialogStyles} className="fixed inset-0 m-auto">
+          <div className="flex flex-col h-full w-full">
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>{isEditingQuiz ? "Edit Quiz" : "Add New Quiz"}</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <form onSubmit={handleSaveQuiz} className="h-full">
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="quiz-pdf">PDF</Label>
+                    {isEditingQuiz ? (
+                      <Input id="quiz-pdf" value={quizForm.title} disabled className="bg-gray-100" />
+                    ) : (
+                      <Select
+                        value={quizForm.title}
+                        onValueChange={(value) => setQuizForm({ ...quizForm, title: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select the PDF this quiz belongs to" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={5} align="start">
+                          {pdfs.map((pdf) => {
+                            const title = formatPdfName(pdf.name)
+                            return (
+                              <SelectItem key={pdf.id} value={title}>
+                                {title}
+                              </SelectItem>
+                            )
+                          })}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {quizForm.questions.map((question, qIndex) => (
+                    <div key={question.id} className="rounded-md border p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <Label htmlFor={`q-${question.id}`} className="pt-2">
+                          Question {qIndex + 1}
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeQuestion(question.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Textarea
+                        id={`q-${question.id}`}
+                        placeholder="Question text"
+                        value={question.question}
+                        onChange={(e) => updateQuestionText(question.id, e.target.value)}
+                        rows={2}
+                      />
+
+                      <div className="space-y-2">
+                        <Label>Answer options (select the correct one)</Label>
+                        {question.options.map((option) => (
+                          <div key={option.id} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${question.id}`}
+                              checked={!!option.correct}
+                              onChange={() => setCorrectOption(question.id, option.id)}
+                              className="h-4 w-4 shrink-0"
+                            />
+                            <Input
+                              placeholder="Answer option"
+                              value={option.text}
+                              onChange={(e) => updateOptionText(question.id, option.id, e.target.value)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeOption(question.id, option.id)}
+                              disabled={question.options.length <= 2}
+                              className="shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" onClick={() => addOption(question.id)}>
+                          <Plus className="mr-1 h-4 w-4" />
+                          Add Option
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button type="button" variant="outline" onClick={addQuestion}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Question
+                  </Button>
+                </div>
+                <DialogFooter className="mt-4">
+                  <Button type="submit">{isEditingQuiz ? "Update Quiz" : "Add Quiz"}</Button>
+                </DialogFooter>
+              </form>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Quiz Confirmation Dialog */}
+      <AlertDialog open={isQuizDeleteDialogOpen} onOpenChange={setIsQuizDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the quiz for this PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteQuiz} className="bg-red-500 hover:bg-red-600">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
